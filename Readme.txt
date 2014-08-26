@@ -1,1 +1,1 @@
-The samples & tutorials for the Azure DocumentDB .NET SDK will be published shortly.
+The samples for the Azure DocumentDB .NET SDK will be published shortly.
