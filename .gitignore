@@ -218,3 +218,5 @@ tutorials/todo.net/.nuget/NuGet.targets
 *.dll
 tutorials/todo.net/todo.net/bin/todo.net.dll
 *.dll
+*.dll
+*.pdb
