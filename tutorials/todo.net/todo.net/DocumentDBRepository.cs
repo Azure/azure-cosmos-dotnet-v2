@@ -77,8 +77,8 @@
             {
                 if (client == null)
                 {
-                    String endpoint = ConfigurationManager.AppSettings["database"];
-                    string authKey = ConfigurationManager.AppSettings["database"];
+                    String endpoint = ConfigurationManager.AppSettings["endpoint"];
+                    string authKey = ConfigurationManager.AppSettings["authKey"];
 
                     Uri endpointUri = new Uri(endpoint);
                     client = new DocumentClient(endpointUri, authKey);
