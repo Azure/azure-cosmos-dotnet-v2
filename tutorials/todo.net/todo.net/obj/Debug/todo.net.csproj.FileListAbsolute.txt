@@ -53,3 +53,4 @@ C:\Dev\GitHub\azure-documentdb-net\tutorials\todo.net\todo.net\bin\Microsoft.Owi
 C:\Dev\GitHub\azure-documentdb-net\tutorials\todo.net\todo.net\bin\Microsoft.Owin.Security.MicrosoftAccount.xml
 C:\Dev\GitHub\azure-documentdb-net\tutorials\todo.net\todo.net\obj\Debug\todo.net.dll
 C:\Dev\GitHub\azure-documentdb-net\tutorials\todo.net\todo.net\obj\Debug\todo.net.pdb
+C:\Dev\GitHub\azure-documentdb-net\tutorials\todo.net\todo.net\obj\Debug\todo.net.csprojResolveAssemblyReference.cache

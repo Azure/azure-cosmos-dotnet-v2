@@ -28,7 +28,7 @@ namespace Todo.NET.Controllers
         {
             if (ModelState.IsValid)
             {
-                await repo.CreateDocument(item);
+                await repo.CreateDocumentAsync(item);
                 return RedirectToAction("Index");
             }
 
@@ -56,7 +56,7 @@ namespace Todo.NET.Controllers
         {
             if (ModelState.IsValid)
             {
-                await repo.UpdateDocument(item);
+                await repo.UpdateDocumentAsync(item);
                 return RedirectToAction("Index");
             }
 

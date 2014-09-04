@@ -19,7 +19,7 @@
             {
                 if (database == null)
                 {
-                    ReadOrCreateDatabase().Wait();
+                    ReadOrCreateDatabaseAsync().Wait();
                 }
 
                 return database;
@@ -33,7 +33,7 @@
             {
                 if (collection == null)
                 {
-                    ReadOrCreateCollection(Database.SelfLink).Wait();
+                    ReadOrCreateCollectionAsync(Database.SelfLink).Wait();
                 }
 
                 return collection;
@@ -85,7 +85,7 @@
             }
         }
 
-        public static async Task<Document> CreateDocument(dynamic item)
+        public static async Task<Document> CreateDocumentAsync(dynamic item)
         {
             return await Client.CreateDocumentAsync(Collection.SelfLink, item);
         }
@@ -100,7 +100,7 @@
             return Client.CreateDocumentQuery<Item>(Collection.DocumentsLink).Where(d => !d.Completed).AsEnumerable();
         }
 
-        public static async Task<Document> UpdateDocument(Item item)
+        public static async Task<Document> UpdateDocumentAsync(Item item)
         {
             Document doc = Client.CreateDocumentQuery<Document>(Collection.DocumentsLink)
                                 .Where(d => d.Id == item.ID).AsEnumerable().FirstOrDefault(); ;
@@ -108,7 +108,7 @@
             return await Client.ReplaceDocumentAsync(doc.SelfLink, item);
         }
 
-        private static async Task ReadOrCreateCollection(string databaseLink)
+        private static async Task ReadOrCreateCollectionAsync(string databaseLink)
         {
             collection = Client.CreateDocumentCollectionQuery(databaseLink).Where(col => col.Id == CollectionId).AsEnumerable().FirstOrDefault(); ;
             if (collection == null)
@@ -117,7 +117,7 @@
             }
         }
 
-        private static async Task ReadOrCreateDatabase()
+        private static async Task ReadOrCreateDatabaseAsync()
         {
             database = Client.CreateDatabaseQuery().Where(db => db.Id == DatabaseId).AsEnumerable().FirstOrDefault();            
             if (database == null)
