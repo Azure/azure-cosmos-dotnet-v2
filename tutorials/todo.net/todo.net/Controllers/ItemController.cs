@@ -12,9 +12,9 @@ namespace Todo.NET.Controllers
 {
     public class ItemController : Controller
     {
-        public async Task<ActionResult> Index()
+        public ActionResult Index()
         {
-            var items = await repo.GetIncompleteItems();
+            var items = repo.GetIncompleteItems();
             return View(items);
         }
         
@@ -35,13 +35,14 @@ namespace Todo.NET.Controllers
             return View(item);
         }
 
-        public async Task<ActionResult> Edit(string id)
+        public ActionResult Edit(string id)
         {
             if (id == null)
             {
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
-            Item item = await repo.GetDocument(id);
+
+            Item item = repo.GetDocument(id);
             if (item == null)
             {
                 return HttpNotFound();

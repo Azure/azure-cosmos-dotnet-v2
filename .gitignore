@@ -8,7 +8,7 @@
 bin/
 tmp/
 *.tmp
-*.bak
+*.bak 
 *.swp
 *~.nib
 local.properties
@@ -42,7 +42,6 @@ local.properties
 *.sln.docstates
 
 # Build results
-
 [Dd]ebug/
 [Rr]elease/
 x64/
@@ -130,7 +129,7 @@ publish/
 
 # NuGet Packages Directory
 ## TODO: If you have NuGet Package Restore enabled, uncomment the next line
-#packages/
+packages/
 
 # Windows Azure Build Output
 csx
@@ -213,3 +212,6 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+tutorials/todo.net/.nuget/NuGet.Config
+*.exe
+tutorials/todo.net/.nuget/NuGet.targets

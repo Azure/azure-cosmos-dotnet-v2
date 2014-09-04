@@ -3,13 +3,11 @@
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using Microsoft.Azure.Documents.Linq;
-    using Microsoft.WindowsAzure;
     using System;
     using System.Collections.Generic;
     using System.Configuration;
     using System.Linq;
     using System.Threading.Tasks;
-    using System.Web;
     using Todo.NET.Models;
 
     public class DocumentDBRepository
@@ -63,7 +61,7 @@
             {
                 if (string.IsNullOrEmpty(collectionId))
                 {
-                    collectionId = ConfigurationManager.AppSettings["database"];
+                    collectionId = ConfigurationManager.AppSettings["collection"];
                 }
 
                 return collectionId;
@@ -77,8 +75,8 @@
             {
                 if (client == null)
                 {
-                    String endpoint = ConfigurationManager.AppSettings["database"];
-                    string authKey = ConfigurationManager.AppSettings["database"];
+                    String endpoint = ConfigurationManager.AppSettings["endpoint"];
+                    string authKey = ConfigurationManager.AppSettings["authkey"];
 
                     Uri endpointUri = new Uri(endpoint);
                     client = new DocumentClient(endpointUri, authKey);
@@ -92,60 +90,37 @@
             return await Client.CreateDocumentAsync(Collection.SelfLink, item);
         }
 
-        public static async Task<Item> GetDocument(string id)
+        public static Item GetDocument(string id)
         {
-            return await Task<Item>.Run(() =>
-                Client.CreateDocumentQuery<Item>(Collection.DocumentsLink)
-                    .Where(d => d.ID == id)
-                    .AsEnumerable().FirstOrDefault());
+            return Client.CreateDocumentQuery<Item>(Collection.DocumentsLink).Where(d => d.ID == id).AsEnumerable().FirstOrDefault(); ;
         }
 
-        public static async Task<List<Item>> GetIncompleteItems()
+        public static IEnumerable<Item> GetIncompleteItems()
         {
-            return await Task<List<Item>>.Run(() =>
-                Client.CreateDocumentQuery<Item>(Collection.DocumentsLink)
-                        .Where(d => !d.Completed)
-                        .AsEnumerable()
-                        .ToList<Item>());
+            return Client.CreateDocumentQuery<Item>(Collection.DocumentsLink).Where(d => !d.Completed).AsEnumerable();
         }
 
         public static async Task<Document> UpdateDocument(Item item)
         {
-            var doc = Client.CreateDocumentQuery<Document>(Collection.DocumentsLink)
-                        .Where(d => d.Id == item.ID)
-                        .AsEnumerable().FirstOrDefault();
-
-
+            Document doc = Client.CreateDocumentQuery<Document>(Collection.DocumentsLink)
+                                .Where(d => d.Id == item.ID).AsEnumerable().FirstOrDefault(); ;
+            
             return await Client.ReplaceDocumentAsync(doc.SelfLink, item);
         }
 
         private static async Task ReadOrCreateCollection(string databaseLink)
         {
-            var collections = Client.CreateDocumentCollectionQuery(databaseLink)
-                              .Where(col => col.Id == CollectionId).ToArray();
-
-            if (collections.Any())
+            collection = Client.CreateDocumentCollectionQuery(databaseLink).Where(col => col.Id == CollectionId).AsEnumerable().FirstOrDefault(); ;
+            if (collection == null)
             {
-                collection = collections.First();
-            }
-            else
-            {
-                collection = await Client.CreateDocumentCollectionAsync(databaseLink,
-                    new DocumentCollection { Id = CollectionId });
+                collection = await Client.CreateDocumentCollectionAsync(databaseLink, new DocumentCollection { Id = CollectionId });
             }
         }
 
         private static async Task ReadOrCreateDatabase()
         {
-            var query = Client.CreateDatabaseQuery()
-                            .Where(db => db.Id == DatabaseId);
-
-            var databases = query.ToArray();
-            if (databases.Any())
-            {
-                database = databases.First();
-            }
-            else
+            database = Client.CreateDatabaseQuery().Where(db => db.Id == DatabaseId).AsEnumerable().FirstOrDefault();            
+            if (database == null)
             {
                 database = await Client.CreateDatabaseAsync(new Database { Id = DatabaseId });
             }
