@@ -134,19 +134,29 @@
         public static Item GetItem(string id)
         {
             return Client.CreateDocumentQuery<Item>(Collection.DocumentsLink)
-                        .Where(d => d.ID == id)
+                        .Where(d => d.Id == id)
                         .AsEnumerable()
                         .FirstOrDefault();
         }
 
-        public static async Task<Document> UpdateItemAsync(Item item)
+        public static Document GetDocument(string id)
         {
-            Document doc = Client.CreateDocumentQuery(Collection.DocumentsLink)
-                                .Where(d => d.Id == item.ID)
+            return Client.CreateDocumentQuery(Collection.DocumentsLink)
+                                .Where(d => d.Id == id)
                                 .AsEnumerable()
                                 .FirstOrDefault();
+        }
 
+        public static async Task<Document> UpdateItemAsync(Item item)
+        {
+            Document doc = GetDocument(item.Id);
             return await Client.ReplaceDocumentAsync(doc.SelfLink, item);
+        }
+
+        public static async Task DeleteItemAsync(string id)
+        {
+            Document doc = GetDocument(id);
+            await client.DeleteDocumentAsync(doc.SelfLink);
         }
     }
 }

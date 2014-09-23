@@ -55,5 +55,17 @@
 
             return View(item);
         }
+
+        public async Task<ActionResult> Delete(string id)
+        {
+            await DocumentDBRepository.DeleteItemAsync(id);
+            return RedirectToAction("Index");
+        }
+
+        public ActionResult Details (string id)
+        {
+            Item item = DocumentDBRepository.GetItem(id);
+            return View(item);
+        }
     }
 }
