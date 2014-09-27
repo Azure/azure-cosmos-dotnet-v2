@@ -20,6 +20,7 @@ build/
 
 # Debug.config files
 *.Debug.config
+*.Release.config
 
 # ReSharper is a .NET coding add-in
 _ReSharper*/
