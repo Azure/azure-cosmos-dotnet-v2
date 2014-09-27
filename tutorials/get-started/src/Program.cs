@@ -1,0 +1,267 @@
+﻿//--------------------------------------------------------------------------------- 
+// Microsoft (R)  Azure SDK 
+// Software Development Kit 
+//  
+// Copyright (c) Microsoft Corporation. All rights reserved.   
+// 
+// THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,  
+// EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES  
+// OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.  
+//---------------------------------------------------------------------------------
+
+namespace DocumentDB.GetStarted
+{
+    using System;
+    using System.Configuration;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+
+    //Add DocumentDB references
+    using Microsoft.Azure.Documents;
+    using Microsoft.Azure.Documents.Client;
+    using Microsoft.Azure.Documents.Linq;
+    using Newtonsoft.Json;
+
+    /// <summary>
+    /// This get-started sample demonstrates the creation of resources and execution of simple queries
+    /// For more detailed samples with best practices, visit http://code.msdn.microsoft.com/Azure-DocumentDB-NET-Code-6b3da8af
+    /// </summary>
+    public class Program
+    {
+        //Read the DocumentDB endpointUrl and authorizationKey from config file
+        //WARNING: Never store credentials in source code
+        //For more information, visit http://azure.microsoft.com/blog/2013/07/17/windows-azure-web-sites-how-application-strings-and-connection-strings-work/
+        private static readonly string endpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
+        private static readonly string authorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
+
+        public static void Main(string[] args)
+        {
+            try
+            {
+                GetStartedDemo().Wait();
+            }
+            catch (DocumentClientException de)
+            {
+                Exception baseException = de.GetBaseException();
+                Console.WriteLine("{0} error occurred: {1}, Message: {2}", de.StatusCode, de.Message, baseException.Message);
+            }
+            catch (Exception e)
+            {
+                Exception baseException = e.GetBaseException();
+                Console.WriteLine("Error: {0}, Message: {1}", e.Message, baseException.Message);
+            }
+            finally
+            {
+                Console.WriteLine("End of demo, press any key to exit.");
+                Console.ReadKey();
+            }
+        }
+
+        private static async Task GetStartedDemo()
+        {
+            //Make sure to call client.Dispose() once you've finished all DocumentDB interactions
+            //Create a new instance of the DocumentClient
+            var client = new DocumentClient(new Uri(endpointUrl), authorizationKey);
+
+            //Check to verify a database with the id=FamilyRegistry does not exist
+            Database database = client.CreateDatabaseQuery().Where(db => db.Id == "FamilyRegistry").AsEnumerable().FirstOrDefault();
+
+            if (database == null)
+            {
+                //Create a database
+                database = await client.CreateDatabaseAsync(
+                    new Database
+                    {
+                        Id = "FamilyRegistry"
+                    });
+            }
+            else { Warn("database"); }
+
+            //Check to verify a document collection with the id=FamilyCollection does not exist
+            DocumentCollection documentCollection = client.CreateDocumentCollectionQuery(database.CollectionsLink).Where(c => c.Id == "FamilyCollection").AsEnumerable().FirstOrDefault();
+
+            if (documentCollection == null)
+            {
+                //Create a document collection
+                documentCollection = await client.CreateDocumentCollectionAsync(database.CollectionsLink,
+                    new DocumentCollection
+                    {
+                        Id = "FamilyCollection"
+                    });
+            }
+            else { Warn("document collection"); }
+
+            //Check to verify a document with the id=AndersenFamily does not exist
+            Document document = client.CreateDocumentQuery(documentCollection.DocumentsLink).Where(d => d.Id == "AndersenFamily").AsEnumerable().FirstOrDefault();
+
+            if (document == null)
+            {
+                //Create the Andersen Family document
+                Family AndersonFamily = new Family
+                {
+                    Id = "AndersenFamily",
+                    LastName = "Andersen",
+                    Parents = new Parent[] {
+                        new Parent { FirstName = "Thomas" },
+                        new Parent { FirstName = "Mary Kay"}
+                    },
+                    Children = new Child[] {
+                        new Child
+                        { 
+                            FirstName = "Henriette Thaulow", 
+                            Gender = "female", 
+                            Grade = 5, 
+                            Pets = new [] {
+                                new Pet { GivenName = "Fluffy" } 
+                            }
+                        } 
+                    },
+                    Address = new Address { State = "WA", County = "King", City = "Seattle" },
+                    IsRegistered = true
+                };
+
+                await client.CreateDocumentAsync(documentCollection.DocumentsLink, AndersonFamily);
+            }
+            else { Warn("document"); }
+
+            //Check to verify a document with the id=AndersenFamily does not exist
+            document = client.CreateDocumentQuery(documentCollection.DocumentsLink).Where(d => d.Id == "WakefieldFamily").AsEnumerable().FirstOrDefault();
+
+            if (document == null)
+            {
+                //Create the WakeField document
+                Family WakefieldFamily = new Family
+                {
+                    Id = "WakefieldFamily",
+                    Parents = new[] {
+                        new Parent { FamilyName= "Wakefield", FirstName= "Robin" },
+                        new Parent { FamilyName= "Miller", FirstName= "Ben" }
+                    },
+                    Children = new Child[] {
+                        new Child {
+                            FamilyName= "Merriam", 
+                            FirstName= "Jesse", 
+                            Gender= "female", 
+                            Grade= 8,
+                            Pets= new Pet[] {
+                                new Pet { GivenName= "Goofy" },
+                                new Pet { GivenName= "Shadow" }
+                            }
+                        },
+                        new Child {
+                            FamilyName= "Miller", 
+                            FirstName= "Lisa", 
+                            Gender= "female", 
+                            Grade= 1
+                        }
+                    },
+                    Address = new Address { State = "NY", County = "Manhattan", City = "NY" },
+                    IsRegistered = false
+                };
+
+                await client.CreateDocumentAsync(documentCollection.DocumentsLink, WakefieldFamily);
+            }
+            else { Warn("document"); }
+
+
+            //Query the documents using DocumentDB SQL for the Andersen family
+            foreach (var family in client.CreateDocumentQuery(documentCollection.DocumentsLink,
+            "SELECT * FROM Families f WHERE f.id = \"AndersenFamily\""))
+            {
+                Console.WriteLine("\tRead {0} from SQL", family);
+            }
+
+            //Query the documents using LINQ for the Andersen family
+            foreach (var family in (
+            from f in client.CreateDocumentQuery(documentCollection.DocumentsLink)
+            where f.Id == "AndersenFamily"
+            select f))
+            {
+                Console.WriteLine("\tRead {0} from LINQ", family);
+            }
+
+            //Query the documents using LINQ lambdas for the Andersen family
+            foreach (var family in client.CreateDocumentQuery(documentCollection.DocumentsLink)
+            .Where(f => f.Id == "AndersenFamily")
+            .Select(f => f))
+            {
+                Console.WriteLine("\tRead {0} from LINQ query", family);
+            }
+
+            //Query the documents using DocumentSQl with one join
+            var cc = client.CreateDocumentQuery<dynamic>(documentCollection.DocumentsLink,
+                    "SELECT f.id, c.FirstName AS child " +
+                    "FROM Families f " +
+                    "JOIN c IN f.Children ");
+            foreach (var item in cc.ToList())
+            {
+                Console.WriteLine(item);
+            }
+
+            //Query the documents using LINQ with one join
+            var dd = client.CreateDocumentQuery<Family>(documentCollection.DocumentsLink)
+                    .SelectMany(family => family.Children
+                    .Select(children => new
+                    {
+                        family = family.Id,
+                        child = children.FirstName
+                    }));
+            foreach (var item in dd.ToList())
+            {
+                Console.WriteLine(item);
+            }
+
+            //Clean up/delete the database and client
+            await client.DeleteDatabaseAsync(database.SelfLink);
+            client.Dispose();
+        }
+
+        private static void Warn(string resource)
+        {
+            Console.WriteLine("Warning: A " + resource + " with the same id already exists");
+            Console.WriteLine("Continuing may modify the existing " + resource + ".\nPress any key to continue.");
+            Console.ReadKey();
+            Console.Clear();
+        }
+
+        internal sealed class Parent
+        {
+            public string FamilyName { get; set; }
+            public string FirstName { get; set; }
+        }
+
+        internal sealed class Child
+        {
+            public string FamilyName { get; set; }
+            public string FirstName { get; set; }
+            public string Gender { get; set; }
+            public int Grade { get; set; }
+            public Pet[] Pets { get; set; }
+        }
+
+        internal sealed class Pet
+        {
+            public string GivenName { get; set; }
+        }
+
+        internal sealed class Address
+        {
+            public string State { get; set; }
+            public string County { get; set; }
+            public string City { get; set; }
+        }
+
+        internal sealed class Family
+        {
+            [JsonProperty(PropertyName = "id")]
+            public string Id { get; set; }
+            public string LastName { get; set; }
+            public Parent[] Parents { get; set; }
+            public Child[] Children { get; set; }
+            public Address Address { get; set; }
+            public bool IsRegistered { get; set; }
+        }
+    }
+}
