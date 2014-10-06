@@ -12,13 +12,13 @@
 namespace DocumentDB.GetStarted
 {
     using System;
-    using System.Configuration;
     using System.Collections.Generic;
+    using System.Configuration;
     using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
 
-    //Add DocumentDB references
+    // Add DocumentDB references
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using Microsoft.Azure.Documents.Linq;
@@ -30,11 +30,11 @@ namespace DocumentDB.GetStarted
     /// </summary>
     public class Program
     {
-        //Read the DocumentDB endpointUrl and authorizationKey from config file
-        //WARNING: Never store credentials in source code
-        //For more information, visit http://azure.microsoft.com/blog/2013/07/17/windows-azure-web-sites-how-application-strings-and-connection-strings-work/
-        private static readonly string endpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
-        private static readonly string authorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
+        // Read the DocumentDB endpointUrl and authorizationKey from config file
+        // WARNING: Never store credentials in source code
+        // For more information, visit http://azure.microsoft.com/blog/2013/07/17/windows-azure-web-sites-how-application-strings-and-connection-strings-work/
+        private static readonly string EndpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
+        private static readonly string AuthorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
 
         public static void Main(string[] args)
         {
@@ -61,16 +61,16 @@ namespace DocumentDB.GetStarted
 
         private static async Task GetStartedDemo()
         {
-            //Make sure to call client.Dispose() once you've finished all DocumentDB interactions
-            //Create a new instance of the DocumentClient
-            var client = new DocumentClient(new Uri(endpointUrl), authorizationKey);
+            // Make sure to call client.Dispose() once you've finished all DocumentDB interactions
+            // Create a new instance of the DocumentClient
+            var client = new DocumentClient(new Uri(EndpointUrl), AuthorizationKey);
 
-            //Check to verify a database with the id=FamilyRegistry does not exist
+            // Check to verify a database with the id=FamilyRegistry does not exist
             Database database = client.CreateDatabaseQuery().Where(db => db.Id == "FamilyRegistry").AsEnumerable().FirstOrDefault();
 
             if (database == null)
             {
-                //Create a database
+                // Create a database
                 database = await client.CreateDatabaseAsync(
                     new Database
                     {
@@ -79,12 +79,12 @@ namespace DocumentDB.GetStarted
             }
             else { Warn("database"); }
 
-            //Check to verify a document collection with the id=FamilyCollection does not exist
+            // Check to verify a document collection with the id=FamilyCollection does not exist
             DocumentCollection documentCollection = client.CreateDocumentCollectionQuery(database.CollectionsLink).Where(c => c.Id == "FamilyCollection").AsEnumerable().FirstOrDefault();
 
             if (documentCollection == null)
             {
-                //Create a document collection
+                // Create a document collection
                 documentCollection = await client.CreateDocumentCollectionAsync(database.CollectionsLink,
                     new DocumentCollection
                     {
@@ -93,12 +93,12 @@ namespace DocumentDB.GetStarted
             }
             else { Warn("document collection"); }
 
-            //Check to verify a document with the id=AndersenFamily does not exist
+            // Check to verify a document with the id=AndersenFamily does not exist
             Document document = client.CreateDocumentQuery(documentCollection.DocumentsLink).Where(d => d.Id == "AndersenFamily").AsEnumerable().FirstOrDefault();
 
             if (document == null)
             {
-                //Create the Andersen Family document
+                // Create the Andersen Family document
                 Family AndersonFamily = new Family
                 {
                     Id = "AndersenFamily",
@@ -113,7 +113,7 @@ namespace DocumentDB.GetStarted
                             FirstName = "Henriette Thaulow", 
                             Gender = "female", 
                             Grade = 5, 
-                            Pets = new [] {
+                            Pets = new Pet[] {
                                 new Pet { GivenName = "Fluffy" } 
                             }
                         } 
@@ -126,16 +126,16 @@ namespace DocumentDB.GetStarted
             }
             else { Warn("document"); }
 
-            //Check to verify a document with the id=AndersenFamily does not exist
+            // Check to verify a document with the id=AndersenFamily does not exist
             document = client.CreateDocumentQuery(documentCollection.DocumentsLink).Where(d => d.Id == "WakefieldFamily").AsEnumerable().FirstOrDefault();
 
             if (document == null)
             {
-                //Create the WakeField document
+                // Create the WakeField document
                 Family WakefieldFamily = new Family
                 {
                     Id = "WakefieldFamily",
-                    Parents = new[] {
+                    Parents = new Parent[] {
                         new Parent { FamilyName= "Wakefield", FirstName= "Robin" },
                         new Parent { FamilyName= "Miller", FirstName= "Ben" }
                     },
@@ -166,54 +166,64 @@ namespace DocumentDB.GetStarted
             else { Warn("document"); }
 
 
-            //Query the documents using DocumentDB SQL for the Andersen family
-            foreach (var family in client.CreateDocumentQuery(documentCollection.DocumentsLink,
-            "SELECT * FROM Families f WHERE f.id = \"AndersenFamily\""))
+            // Query the documents using DocumentDB SQL for the Andersen family
+            var families = client.CreateDocumentQuery(documentCollection.DocumentsLink,
+                "SELECT * " +
+                "FROM Families f " +
+                "WHERE f.id = \"AndersenFamily\"");
+
+            foreach (var family in families)
             {
                 Console.WriteLine("\tRead {0} from SQL", family);
             }
 
-            //Query the documents using LINQ for the Andersen family
-            foreach (var family in (
-            from f in client.CreateDocumentQuery(documentCollection.DocumentsLink)
-            where f.Id == "AndersenFamily"
-            select f))
+            // Query the documents using LINQ for the Andersen family
+            families =
+                from f in client.CreateDocumentQuery(documentCollection.DocumentsLink)
+                where f.Id == "AndersenFamily"
+                select f;
+
+            foreach (var family in families)
             {
                 Console.WriteLine("\tRead {0} from LINQ", family);
             }
 
-            //Query the documents using LINQ lambdas for the Andersen family
-            foreach (var family in client.CreateDocumentQuery(documentCollection.DocumentsLink)
-            .Where(f => f.Id == "AndersenFamily")
-            .Select(f => f))
+            // Query the documents using LINQ lambdas for the Andersen family
+            families = client.CreateDocumentQuery(documentCollection.DocumentsLink)
+                .Where(f => f.Id == "AndersenFamily")
+                .Select(f => f);
+
+            foreach (var family in families)
             {
                 Console.WriteLine("\tRead {0} from LINQ query", family);
             }
 
-            //Query the documents using DocumentSQl with one join
-            var cc = client.CreateDocumentQuery<dynamic>(documentCollection.DocumentsLink,
-                    "SELECT f.id, c.FirstName AS child " +
-                    "FROM Families f " +
-                    "JOIN c IN f.Children ");
-            foreach (var item in cc.ToList())
+            // Query the documents using DocumentSQl with one join
+            var items = client.CreateDocumentQuery<dynamic>(documentCollection.DocumentsLink,
+                "SELECT f.id, c.FirstName AS child " +
+                "FROM Families f " +
+                "JOIN c IN f.Children");
+
+            foreach (var item in items.ToList())
             {
                 Console.WriteLine(item);
             }
 
-            //Query the documents using LINQ with one join
-            var dd = client.CreateDocumentQuery<Family>(documentCollection.DocumentsLink)
-                    .SelectMany(family => family.Children
+            // Query the documents using LINQ with one join
+            items = client.CreateDocumentQuery<Family>(documentCollection.DocumentsLink)
+                .SelectMany(family => family.Children
                     .Select(children => new
                     {
                         family = family.Id,
                         child = children.FirstName
                     }));
-            foreach (var item in dd.ToList())
+
+            foreach (var item in items.ToList())
             {
                 Console.WriteLine(item);
             }
 
-            //Clean up/delete the database and client
+            // Clean up/delete the database and client
             await client.DeleteDatabaseAsync(database.SelfLink);
             client.Dispose();
         }
