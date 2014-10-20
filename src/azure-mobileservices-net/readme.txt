@@ -1,0 +1,1 @@
+Azure Mobile Services DomainManager for DocumentDB
