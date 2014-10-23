@@ -22,7 +22,7 @@ namespace Documents.MobileServices.Controllers
         protected override void Initialize(HttpControllerContext controllerContext)
         {
             base.Initialize(controllerContext);
-            DomainManager = new DocumentEntityDomainManager<DocumentTodoItem>("AMSDocumentDB", "todolist", Request, Services);
+            DomainManager = new DocumentEntityDomainManager<DocumentTodoItem>(Request, Services);
         }
 
         public IQueryable<DocumentTodoItem> GetAllTodoItems()
