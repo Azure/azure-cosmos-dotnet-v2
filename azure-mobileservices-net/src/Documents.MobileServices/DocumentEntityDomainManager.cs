@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.Documents.Linq;
 using System.Web.Http;
 using System.Configuration;
+using Microsoft.Azure.Documents.MobileServices;
 
 namespace Documents.MobileServices
 {
@@ -33,7 +34,19 @@ namespace Documents.MobileServices
                 _databaseId = databaseId;
             }
 
-            public async Task<bool> DeleteAsync(string id)
+        public DocumentEntityDomainManager(HttpRequestMessage request, ApiServices services)
+        {
+            var attribute = typeof(TDocument).GetCustomAttributes(typeof(DocumentAttribute), true).FirstOrDefault() as DocumentAttribute;
+            if (attribute == null)
+                throw new ArgumentException("the model class must be decorated with the Document attribute");
+
+            Request = request;
+            Services = services;
+            _collectionId = attribute.CollectionId;
+            _databaseId = attribute.DatabaseId;
+        }
+
+        public async Task<bool> DeleteAsync(string id)
             {
                 try
                 {
