@@ -155,6 +155,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DocumentAttribute.cs" />
     <Compile Include="DocumentController.cs" />
     <Compile Include="DocumentEntityDomainManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
