@@ -11,10 +11,15 @@ using Microsoft.Azure.Documents.Linq;
 using System.Web.Http;
 using System.Configuration;
 using Microsoft.Azure.Documents.MobileServices;
+using Microsoft.WindowsAzure.Mobile.Service.Tables;
+using System.IO;
+using System.Net;
+using Newtonsoft.Json;
+using System.Web.Http.OData;
 
 namespace Documents.MobileServices
 {
-        public class DocumentEntityDomainManager<TDocument> where TDocument : Resource
+        public class DocumentDBDomainManager<TDocument> :IDomainManager<TDocument>  where TDocument : DocumentResource , new()
         {
             public HttpRequestMessage Request { get; set; }
             public ApiServices Services { get; set; }
@@ -26,7 +31,7 @@ namespace Documents.MobileServices
             private DocumentCollection _collection;
             private DocumentClient _client;
 
-            public DocumentEntityDomainManager(string collectionId, string databaseId, HttpRequestMessage request, ApiServices services)
+            public DocumentDBDomainManager(string collectionId, string databaseId, HttpRequestMessage request, ApiServices services)
             {
                 Request = request;
                 Services = services;
@@ -34,7 +39,7 @@ namespace Documents.MobileServices
                 _databaseId = databaseId;
             }
 
-        public DocumentEntityDomainManager(HttpRequestMessage request, ApiServices services)
+            public DocumentDBDomainManager(HttpRequestMessage request, ApiServices services)
         {
             var attribute = typeof(TDocument).GetCustomAttributes(typeof(DocumentAttribute), true).FirstOrDefault() as DocumentAttribute;
             if (attribute == null)
@@ -46,7 +51,7 @@ namespace Documents.MobileServices
             _databaseId = attribute.DatabaseId;
         }
 
-        public async Task<bool> DeleteAsync(string id)
+            public async Task<bool> DeleteAsync(string id)
             {
                 try
                 {
@@ -71,12 +76,14 @@ namespace Documents.MobileServices
                 }
             }
 
-            public async Task<Document> InsertAsync(TDocument data)
+            public Task<TDocument> InsertAsync(TDocument data)
             {
                 try
                 {
-                    return await Client.CreateDocumentAsync(Collection.SelfLink, data);
-
+                    data.CreatedAt = DateTimeOffset.UtcNow;
+                    data.UpdatedAt = DateTimeOffset.UtcNow;
+                    return  Client.CreateDocumentAsync(Collection.SelfLink, data)
+                                   .ContinueWith<TDocument>(t=> GetDocFromResponse(t));                
 
                 }
                 catch (Exception ex)
@@ -85,18 +92,43 @@ namespace Documents.MobileServices
                     throw new HttpResponseException(System.Net.HttpStatusCode.InternalServerError);
                 }
             }
+            private TDocument GetDocFromResponse(Task<ResourceResponse<Document>> source)
+            {
+                if (source.IsFaulted)
+                {
+                    new InvalidOperationException("Parent task is faulted.",source.Exception);
+                }
+
+                return  GetDocEntity(source.Result.Resource);                
+            }
+
+            private TDocument GetDocEntity(Document source)
+            {
+                if (source == null)
+                {
+                    new ArgumentNullException("source");
+                }
+                
+                return JsonConvert.DeserializeObject<TDocument>(JsonConvert.SerializeObject(source));
+               
+            }
 
             public SingleResult<TDocument> Lookup(string id)
             {
+                var qry = this.Query().Where(d => d.Id == id)
+                            .Select<TDocument, TDocument>(d => d);
+
+                var result = qry.ToList<TDocument>();
+
+                return SingleResult.Create<TDocument>(result.AsQueryable());
+            }
+
+            public Task<SingleResult<TDocument>> LookupAsync(string id)
+            {
                 try
                 {
-                    return SingleResult.Create<TDocument>(
-                        Client.CreateDocumentQuery<TDocument>(Collection.DocumentsLink)
-                        .Where(d => d.Id == id)
-                        .Select<TDocument, TDocument>(d => d)
-                        );
-
-
+                    return Task<SingleResult<TDocument>>.Run(()=> Lookup(id));
+                    
                 }
                 catch (Exception ex)
                 {
@@ -109,7 +141,12 @@ namespace Documents.MobileServices
             {
                 try
                 {
-                    return Client.CreateDocumentQuery<TDocument>(Collection.DocumentsLink);
+                    var qry = Client
+                            .CreateDocumentQuery<TDocument>(Collection.DocumentsLink)
+                            .ToList()
+                            .AsQueryable();
+
+                    return qry;
                 }
                 catch (Exception ex)
                 {
@@ -118,34 +155,80 @@ namespace Documents.MobileServices
                 }
             }
 
-            public async Task<bool> ReplaceAsync(string id, TDocument item)
+            public Task<IEnumerable<TDocument>> QueryAsync()
             {
+                throw new NotImplementedException();
+            }
 
-                if (item == null || id != item.Id)
+            public Task<TDocument> UpdateAsync(string id, Delta<TDocument> patch)
+            {
+                if (id == null)
                 {
-                    throw new HttpResponseException(System.Net.HttpStatusCode.BadRequest);
+                    throw new ArgumentNullException("id");
                 }
+
+                if (patch == null)
+                {
+                    throw new ArgumentNullException("patch");
+                }
+
+
+                var doc = this.GetDocument(id);
+                if (doc  == null)
+                {
+                    Services.Log.Error(string.Format( "Resource with id {0} not found", id));
+                    throw new HttpResponseException(System.Net.HttpStatusCode.NotFound);
+                }
+
+
+                TDocument current =  this.GetDocEntity(doc);
+
+                patch.Patch(current);
+                this.VerifyUpdatedKey(id, current);
+                current.UpdatedAt = DateTimeOffset.UtcNow;
 
                 try
                 {
-                    var doc = GetDocument(id);
-
-                    if (doc == null)
-                    {
-                        return false;
-                    }
-
-                    await Client.ReplaceDocumentAsync(doc.SelfLink, item);
-
-                    return true;
-
+                    return Client.ReplaceDocumentAsync(current.SelfLink, current)
+                        .ContinueWith<TDocument>(t => GetDocFromResponse(t));
                 }
+
                 catch (Exception ex)
                 {
                     Services.Log.Error(ex);
                     throw new HttpResponseException(System.Net.HttpStatusCode.InternalServerError);
                 }
             }
+
+            public  Task<TDocument> ReplaceAsync(string id, TDocument data)
+            {
+
+                if (id == null)
+                {
+                    throw new ArgumentNullException("id");
+                }
+                if (data == null)
+                {
+                    throw new ArgumentNullException("data");
+                }
+
+                this.VerifyUpdatedKey(id, data);
+                data.CreatedAt = DateTimeOffset.UtcNow;
+
+                try
+                {
+                    return Client.ReplaceDocumentAsync(data.SelfLink, data)
+                        .ContinueWith<TDocument>(t => GetDocFromResponse(t));
+                }
+
+                catch (Exception ex)
+                {
+                    Services.Log.Error(ex);
+                    throw new HttpResponseException(System.Net.HttpStatusCode.InternalServerError);
+                }
+
+            }
+        
 
             private Document GetDocument(string id)
             {
@@ -153,6 +236,14 @@ namespace Documents.MobileServices
                             .Where(d => d.Id == id)
                             .AsEnumerable()
                             .FirstOrDefault();
+            }
+            private void VerifyUpdatedKey(string id, TDocument data)
+            {
+                if (data == null || data.Id != id)
+                {
+                    HttpResponseMessage badKey = this.Request.CreateErrorResponse(HttpStatusCode.BadRequest, "The keys don't match");
+                    throw new HttpResponseException(badKey);
+                }
             }
 
             #region DocumentDBClient
@@ -229,6 +320,15 @@ namespace Documents.MobileServices
                 return db;
             }
             #endregion
+
+
+         
+
+            public Task<IEnumerable<TDocument>> QueryAsync(System.Web.Http.OData.Query.ODataQueryOptions query)
+            {
+                throw new NotImplementedException();
+            }
+         
 
         }
     
