@@ -10,14 +10,14 @@ using System.Web.Http;
 
 namespace Microsoft.Azure.Documents.MobileServices
 {
-    public abstract class DocumentController<TDocument> : ApiController where TDocument : Resource
+    public abstract class DocumentController<TDocument> : ApiController where TDocument : DocumentResource , new()
     {
         public ApiServices Services { get; set; }
 
-        private DocumentEntityDomainManager<TDocument> domainManager;
-        
+        private DocumentDBDomainManager<TDocument> domainManager;
 
-        protected DocumentEntityDomainManager<TDocument> DomainManager
+
+        protected DocumentDBDomainManager<TDocument> DomainManager
         {
             get
             {
@@ -120,13 +120,8 @@ namespace Microsoft.Azure.Documents.MobileServices
 
             try
             {
-                var flag = await this.DomainManager.ReplaceAsync(id, item);
-
-                if (!flag)
-                {
-                    throw new HttpResponseException(HttpStatusCode.NotFound);
-                }
-
+                await this.DomainManager.ReplaceAsync(id, item);
+                
                 result = item;
             }
             catch (HttpResponseException exception)

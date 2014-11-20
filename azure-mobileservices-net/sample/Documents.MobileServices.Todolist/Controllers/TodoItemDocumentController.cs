@@ -1,5 +1,4 @@
-﻿
-using Documents.MobileServices.Todolist.DataObjects;
+﻿using Documents.MobileServices.Todolist.DataObjects;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.MobileServices;
 using Microsoft.WindowsAzure.Mobile.Service;
