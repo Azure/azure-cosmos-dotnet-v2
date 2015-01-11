@@ -39,7 +39,7 @@ namespace Documents.MobileServices
                 _databaseId = databaseId;
             }
 
-            public DocumentEntityDomainManager(HttpRequestMessage request, ApiServices services)
+            public DocumentDBDomainManager(HttpRequestMessage request, ApiServices services)
             {
                 var attribute = typeof(TDocument).GetCustomAttributes(typeof(DocumentAttribute), true).FirstOrDefault() as DocumentAttribute;
                 if (attribute == null)
