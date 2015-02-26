@@ -1,16 +1,17 @@
-﻿namespace todo
+﻿
+namespace todo
 {
-    using Microsoft.Azure.Documents;
-    using Microsoft.Azure.Documents.Client;
-    using Microsoft.Azure.Documents.Linq;
     using System;
     using System.Collections.Generic;
     using System.Configuration;
     using System.Linq;
+    using System.Linq.Expressions;
     using System.Threading.Tasks;
-    using todo.Models;
+    using Microsoft.Azure.Documents;
+    using Microsoft.Azure.Documents.Client;
+    using Microsoft.Azure.Documents.Linq;
 
-    public static class DocumentDBRepository
+    public static class DocumentDBRepository<T>
     {       
         private static string databaseId;
         private static String DatabaseId
@@ -118,25 +119,24 @@
             return db;
         }
 
-        public static List<Item> GetIncompleteItems()
-        {
-             return Client.CreateDocumentQuery<Item>(Collection.DocumentsLink)
-                        .Where(d => !d.Completed)
-                        .AsEnumerable()
-                        .ToList<Item>();
-        }
-
-        public static async Task<Document> CreateItemAsync(Item item)
+        public static async Task<Document> CreateItemAsync(T item)
         {
             return await Client.CreateDocumentAsync(Collection.SelfLink, item);
         }
-        
-        public static Item GetItem(string id)
+
+        public static T GetItem(Expression<Func<T, bool>> predicate)
         {
-            return Client.CreateDocumentQuery<Item>(Collection.DocumentsLink)
-                        .Where(d => d.Id == id)
+            return Client.CreateDocumentQuery<T>(Collection.DocumentsLink)
+                        .Where(predicate)
                         .AsEnumerable()
                         .FirstOrDefault();
+        }
+
+        public static IEnumerable<T> GetItems(Expression<Func<T, bool>> predicate)
+        {
+            return Client.CreateDocumentQuery<T>(Collection.DocumentsLink)
+                        .Where(predicate)
+                        .AsEnumerable();
         }
 
         public static Document GetDocument(string id)
@@ -147,9 +147,9 @@
                                 .FirstOrDefault();
         }
 
-        public static async Task<Document> UpdateItemAsync(Item item)
+        public static async Task<Document> UpdateItemAsync(string id, T item)
         {
-            Document doc = GetDocument(item.Id);
+            Document doc = GetDocument(id);
             return await Client.ReplaceDocumentAsync(doc.SelfLink, item);
         }
 
