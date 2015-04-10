@@ -12,16 +12,16 @@
 namespace DocumentDB.GetStarted
 {
     using System;
-    using System.Collections.Generic;
     using System.Configuration;
     using System.Linq;
-    using System.Text;
     using System.Threading.Tasks;
 
     // Add DocumentDB references
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using Microsoft.Azure.Documents.Linq;
+
+    // Add Newtonsoft.Json references
     using Newtonsoft.Json;
 
     /// <summary>
@@ -222,6 +222,16 @@ namespace DocumentDB.GetStarted
             {
                 Console.WriteLine(item);
             }
+
+            // Query for parent Thomas : {"Method 'Any' is not supported."} ???
+            /*
+            items = client.CreateDocumentQuery<Family>(documentCollection.DocumentsLink)
+                    .Where(f => f.Parents != null && f.Parents.Any(p => p.FirstName == "Thomas"));
+            foreach (var item in items.ToList())
+            {
+                Console.WriteLine(item);
+            }
+            */
 
             // Clean up/delete the database and client
             await client.DeleteDatabaseAsync(database.SelfLink);
