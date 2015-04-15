@@ -1,0 +1,67 @@
+﻿@model searchabletodo.Models.ItemSearchResults
+
+@{
+    ViewBag.Title = "Search";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Search</h2>
+
+<div class="facets">
+    <p>Tags</p>
+    <ul>
+        @foreach (var tag in Model.TagCounts)
+        {
+            <li>@tag.Item1 (@tag.Item2)</li>
+        }
+    </ul>
+
+    <p>Due dates</p>
+    <ul>
+        @foreach (var date in Model.DateCounts)
+        {
+            <li>@date.Item1 (@date.Item2)</li>
+        }
+    </ul>
+</div>
+
+<table class="table results">
+    <tr>
+        <th>
+            Title
+        </th>
+        <th>
+            Description
+        </th>
+        <th>
+            Date Due
+        </th>
+        <th>
+            Is Complete ?
+        </th>
+        <th></th>
+    </tr>
+
+    @foreach (var item in Model.Items)
+    {
+        var c = (item.DueDate.Date < DateTime.Now.Date) ? "red-td" : "";
+        <tr>
+            <td class="@c">
+                @Html.DisplayFor(modelItem => item.Title)
+            </td>
+            <td class="@c">
+                @Html.DisplayFor(modelItem => item.Description)
+            </td>
+            <td class="@c">
+                @Html.DisplayFor(modelItem => item.DueDate)
+            </td>
+            <td class="@c">
+                @Html.DisplayFor(modelItem => item.Completed)
+            </td>
+            <td>
+                @Html.ActionLink("Edit", "Edit", new { id = item.Id }) |
+                @Html.ActionLink("Details", "Details", new { id = item.Id })
+            </td>
+        </tr>
+    }
+</table>

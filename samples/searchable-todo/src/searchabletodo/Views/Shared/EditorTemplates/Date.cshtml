@@ -1,0 +1,2 @@
+﻿@model DateTime?
+@Html.TextBox("", String.Format("{0:yyyy-MM-dd}", (Model!=null) ? Model : DateTime.Today), new { @class = "dp" })

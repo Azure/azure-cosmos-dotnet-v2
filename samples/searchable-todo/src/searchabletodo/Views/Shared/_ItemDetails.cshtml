@@ -1,0 +1,42 @@
+﻿@model searchabletodo.Models.Item
+
+<div>
+    <h4>Item</h4>
+    <hr />
+    <dl class="dl-horizontal">
+        @{var c = (Model.DueDate.Date < DateTime.Now.Date) ? "red-td" : "";}
+
+        <dt>
+            @Html.DisplayNameFor(model => model.Title)
+        </dt>
+
+        <dd class="@c">
+            @Html.DisplayFor(model => model.Title)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.Description)
+        </dt>
+
+        <dd class="@c">
+            @Html.DisplayFor(model => model.Description)
+        </dd>
+
+        <dt>
+            @Html.Label("Due Date")
+        </dt>
+
+        <dd class="@c">
+            @Html.DisplayFor(model => model.DueDate)
+        </dd>
+
+        <dt>
+            @Html.Label("Is Complete ?")
+        </dt>
+
+        <dd class="@c">
+            @Html.DisplayFor(model => model.Completed)
+        </dd>
+
+    </dl>
+</div>
