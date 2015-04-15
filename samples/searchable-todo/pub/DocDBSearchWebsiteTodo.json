@@ -40,13 +40,18 @@
             "type": "string"
         },
         "searchSku": {
-            "type": "string"
+            "type": "string",
+            "allowedValues": [
+                "free",
+                "standard"
+            ],
+            "defaultValue": "Free"
         }
     },
     "resources": [
         {
             "apiVersion": "2015-02-28",
-            "name": "[parameters('searchAccountname')]",
+            "name": "[parameters('searchAccountName')]",
             "type": "Microsoft.Search/searchServices",
             "location": "[parameters('siteLocation')]",
             "properties": {

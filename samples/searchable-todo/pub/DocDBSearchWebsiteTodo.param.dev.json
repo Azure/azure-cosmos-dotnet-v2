@@ -19,6 +19,9 @@
         },
         "searchAccountName": {
             "value": null
+        },
+        "searchSku": {
+            "value": null
         }
     }
 }
