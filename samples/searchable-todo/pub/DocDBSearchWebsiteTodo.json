@@ -45,7 +45,7 @@
                 "free",
                 "standard"
             ],
-            "defaultValue": "Free"
+            "defaultValue": "free"
         }
     },
     "resources": [
