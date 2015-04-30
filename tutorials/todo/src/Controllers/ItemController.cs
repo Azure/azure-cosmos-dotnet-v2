@@ -3,13 +3,13 @@
     using System.Net;
     using System.Threading.Tasks;
     using System.Web.Mvc;
-    using todo.Models;
+    using Models;
 
     public class ItemController : Controller
     {
         public ActionResult Index()
         {
-            var items = DocumentDBRepository.GetIncompleteItems();
+            var items = DocumentDBRepository<Item>.GetItems(d => !d.Completed);
             return View(items);
         }
         public ActionResult Create()
@@ -29,7 +29,7 @@
         {
             if (ModelState.IsValid)
             {
-                await DocumentDBRepository.CreateItemAsync(item);
+                await DocumentDBRepository<Item>.CreateItemAsync(item);
                 return RedirectToAction("Index");
             }
 
@@ -49,7 +49,7 @@
         {
             if (ModelState.IsValid)
             {
-                await DocumentDBRepository.UpdateItemAsync(item);
+                await DocumentDBRepository<Item>.UpdateItemAsync(item.Id, item);
                 return RedirectToAction("Index");
             }
 
@@ -63,7 +63,7 @@
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
 
-            Item item = (Item)DocumentDBRepository.GetItem(id);
+            Item item = DocumentDBRepository<Item>.GetItem(x => x.Id == id);
             if (item == null)
             {
                 return HttpNotFound();
@@ -79,7 +79,7 @@
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
 
-            Item item = (Item)DocumentDBRepository.GetItem(id);
+            Item item = DocumentDBRepository<Item>.GetItem(x => x.Id == id);
             if (item == null)
             {
                 return HttpNotFound();
@@ -97,13 +97,13 @@
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         public async Task<ActionResult> DeleteConfirmed([Bind(Include = "Id")] string id)
         {
-            await DocumentDBRepository.DeleteItemAsync(id);
+            await DocumentDBRepository<Item>.DeleteItemAsync(id);
             return RedirectToAction("Index");
         }
 
         public ActionResult Details (string id)
         {
-            Item item = DocumentDBRepository.GetItem(id);
+            Item item = DocumentDBRepository<Item>.GetItem(x => x.Id == id);
             return View(item);
         }
     }

@@ -12,16 +12,16 @@
 namespace DocumentDB.GetStarted
 {
     using System;
-    using System.Collections.Generic;
     using System.Configuration;
     using System.Linq;
-    using System.Text;
     using System.Threading.Tasks;
 
     // Add DocumentDB references
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using Microsoft.Azure.Documents.Linq;
+
+    // Add Newtonsoft.Json references
     using Newtonsoft.Json;
 
     /// <summary>
@@ -84,13 +84,12 @@ namespace DocumentDB.GetStarted
 
             if (documentCollection == null)
             {
-                // Create a document collection
+                // Create a document collection using the lowest performance tier available (currently, S1)
                 documentCollection = await client.CreateDocumentCollectionAsync(database.CollectionsLink,
-                    new DocumentCollection
-                    {
-                        Id = "FamilyCollection"
-                    });
+                    new DocumentCollection { Id = "FamilyCollection" },
+                    new RequestOptions { OfferType = "S1" });
             }
+            
             else { Warn("document collection"); }
 
             // Check to verify a document with the id=AndersenFamily does not exist

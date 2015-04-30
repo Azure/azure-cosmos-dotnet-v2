@@ -1,0 +1,15 @@
+﻿@model searchabletodo.Models.Item
+
+@{
+    ViewBag.Title = "Edit";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Edit</h2>
+<div>
+    @Html.Partial("~/Views/Shared/_ItemDetails.cshtml", Model)
+</div>
+
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryval")
+}

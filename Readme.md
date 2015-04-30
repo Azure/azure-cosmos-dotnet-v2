@@ -1,1 +1,1 @@
-The samples for the Azure DocumentDB .NET SDK will be published shortly.
+The source code for the DocumentDB .NET Client SDK will be published here. 
