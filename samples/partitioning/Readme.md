@@ -1,6 +1,6 @@
 
 ## DocumentDB Partitioning Samples
-This directory contains code samples for common partitioning scenarios with the .NET SDK. For more details, take a look at [How to partition data in DocumentDB with the .NET SDK](https://acom-sandbox.azurewebsites.net/documentation/articles/documentdb-sharding/). These samples show to register and use a HashPartitionResolver, a RangePartitionResolver as well as custom IPartitionResolver implementations.
+This directory contains code samples for common partitioning scenarios with the .NET SDK. For more details, take a look at [How to partition data in DocumentDB with the .NET SDK](https://acom-sandbox.azurewebsites.net/documentation/articles/documentdb-sharding/). These samples show how to register and use a HashPartitionResolver, a RangePartitionResolver as well as custom IPartitionResolver implementations.
 
 The following samples are included:
 * How to specify an arbitrary lambda expression for ExtractPartitionKey and use it to implement compound partitioning keys or to partition different types of objects differently.
