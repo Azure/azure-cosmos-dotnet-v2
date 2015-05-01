@@ -45,6 +45,7 @@ namespace DocumentDB.Samples.Sharding.Partitioners
         {
             this.Client = client;
             this.Database = database;
+            this.CollectionTemplate = collectionSpec;
             this.CollectionLinks = GetCollections(client, database, collectionIdPrefix, collectionSpec);
             this.CollectionIdPrefix = collectionIdPrefix;
             this.FillFactor = fillFactor;
