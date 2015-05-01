@@ -43,6 +43,7 @@ namespace DocumentDB.Samples.Sharding.Partitioners
         {
             this.CurrentResolver = current;
             this.NextResolver = next;
+            this.ReadMode = readMode;
         }
 
         /// <summary>
