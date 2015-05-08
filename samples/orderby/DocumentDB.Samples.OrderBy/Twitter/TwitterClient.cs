@@ -7,6 +7,7 @@
     using System.Net;
     using System.Net.Http;
     using System.Threading;
+    using System.Threading.Tasks;
     using Newtonsoft;
     using Newtonsoft.Json;
     
@@ -45,7 +46,7 @@
         /// </summary>
         /// <param name="query">Twitter query string</param>
         /// <returns>A list of status updates.</returns>
-        public IEnumerable<Status> GetStatuses(string query)
+        public IEnumerable<Status> GetStatuses(string query, long? sinceStatusId = null)
         {
             int numItemsRead = 0;
             int numItemsReadInBatch = 0;
@@ -54,6 +55,10 @@
             do
             {
                 string uri = string.Format(TwitterSearchApiUriFormat, query, TwitterApiPageSize);
+                if (sinceStatusId != null)
+                {
+                    uri = uri + "&since_id=" + sinceStatusId;
+                }
 
                 if (continuationStatusId != null)
                 {
@@ -91,9 +96,14 @@
 
                         isSuccessful = true;
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
-                        Console.WriteLine("Throttled; sleeping for {0}s", sleepTimeSeconds);
+                        if (!IsTwitterThrottlingException(e))
+                        {
+                            throw;
+                        }
+
+                        Console.WriteLine("Throttled through Twitter API; sleeping for {0}s", sleepTimeSeconds);
                         Thread.Sleep(sleepTimeSeconds * 1000);
                         sleepTimeSeconds *= 2;
                     }
@@ -107,7 +117,32 @@
                     yield return statusMessage;
                 }
             }
-            while (numItemsReadInBatch > 0);
+            while (numItemsReadInBatch < TwitterApiPageSize);
+        }
+
+        private bool IsTwitterThrottlingException(Exception e)
+        {
+            if (e is HttpRequestException)
+            {
+                HttpRequestException httpException = (HttpRequestException)e;
+                if (httpException.Message.Contains("429"))
+                {
+                    return true;
+                }
+            }
+            else if (e is AggregateException)
+            {
+                if (e.InnerException is HttpRequestException)
+                {
+                    HttpRequestException httpException = (HttpRequestException)e.InnerException;
+                    if (httpException.Message.Contains("429"))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -125,7 +160,10 @@
             statusMessage["created_at"] = this.GetEpochTime((string)statusMessage["created_at"]);
             statusMessage["user"]["created_at"] = this.GetEpochTime((string)statusMessage["user"]["created_at"]);
 
-            return (Status)statusMessage;
+            string json = JsonConvert.SerializeObject(statusMessage);
+            Status status = JsonConvert.DeserializeObject<Status>(json);
+
+            return status;
         }
 
         /// <summary>

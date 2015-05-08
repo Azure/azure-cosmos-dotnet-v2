@@ -16,36 +16,16 @@
     using Newtonsoft.Json.Linq;
 
     /// <summary>
-    /// This sample demonstrates basic CRUD operations on a Database resource for Azure DocumentDB.
+    /// This sample demonstrates ORDER BY using Azure DocumentDB.
     /// </summary>
     public class Program
     {
-        /// <summary>
-        /// The DocumentDB endpoint read from config. 
-        /// These values are available from the Azure Management Portal on the DocumentDB Account Blade under "Keys".
-        /// NB Keep these values in a safe and secure location. Together they provide Administrative access to your DocDB account.
-        /// </summary>
         private static readonly string EndpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
-
-        /// <summary>
-        /// The DocumentDB authorization key.
-        /// These values are available from the Azure Management Portal on the DocumentDB Account Blade under "Keys"
-        /// </summary>
         private static readonly string AuthorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
-
-        /// <summary>
-        /// Database Id used for these samples.
-        /// </summary>
         private static readonly string DatabaseId = ConfigurationManager.AppSettings["DatabaseId"];
-
-        /// <summary>
-        /// The ConnectionPolicy for these samples. Sets custom user-agent.
-        /// </summary>
         private static readonly ConnectionPolicy ConnectionPolicy = new ConnectionPolicy { UserAgentSuffix = " samples-net-orderby/1", ConnectionMode = ConnectionMode.Direct, ConnectionProtocol = Protocol.Tcp };
+        private static readonly string DataDirectory = @"..\..\Data";
 
-        /// <summary>
-        /// The DocumentDB client instance.
-        /// </summary>
         private DocumentClient client;
 
         /// <summary>
@@ -96,6 +76,8 @@
             Database database = await DocumentClientHelper.GetNewDatabaseAsync(this.client, DatabaseId);
 
             DocumentCollection collection = await this.CreateCollectionForOrderBy(database);
+
+            DownloadDataFromTwitter();
 
             await this.ImportData(collection);
 
@@ -163,10 +145,38 @@
             Console.WriteLine();
         }
 
+        private void DownloadDataFromTwitter()
+        {
+            TwitterClient twitterClient = new TwitterClient(
+                ConfigurationManager.AppSettings["TwitterConsumerKey"],
+                ConfigurationManager.AppSettings["TwitterConsumerSecret"],
+                ConfigurationManager.AppSettings["TwitterAccessToken"],
+                ConfigurationManager.AppSettings["TwitterAccessTokenSecret"]);
+
+            long? sinceStatusId = null;
+            foreach (string filePath in Directory.GetFiles(DataDirectory, "*.json"))
+            {
+                string fileName = Path.GetFileNameWithoutExtension(filePath);
+                long statusId = long.Parse(fileName);
+
+                if (sinceStatusId == null || sinceStatusId < statusId)
+                {
+                    sinceStatusId = statusId;
+                }
+            }
+
+            foreach (Status statusUpdate in twitterClient.GetStatuses("DocumentDB", sinceStatusId))
+            {
+                string filePath = Path.Combine(DataDirectory, string.Format("{0}.json", statusUpdate.StatusId));
+                string json = JsonConvert.SerializeObject(statusUpdate);
+                File.WriteAllText(filePath, json);
+            }
+        }
+
         private async Task ImportData(DocumentCollection collection)
         {
             Console.WriteLine("Importing data ...");
-            await DocumentClientHelper.RunBulkImport(this.client, collection, @"..\..\Data");
+            await DocumentClientHelper.RunBulkImport(this.client, collection, DataDirectory);
             Console.WriteLine();
         }
 
