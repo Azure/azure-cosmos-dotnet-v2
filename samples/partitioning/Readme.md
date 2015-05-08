@@ -12,4 +12,4 @@ The following samples are included:
 
 The samples are open source and we encourage you to submit pull requests with contributions that could benefit other DocumentDB developers. Please refer to the [Contribution guidelines](https://github.com/Azure/azure-documentdb-net/blob/master/Contributing.md) for guidance on how to contribute.  
 
-**Note:** Collection creates are rate-limited by DocumentDB, so some of the sample methods shown here might take a few minutes to complete.
+**Note:** Collection creates are rate-limited by DocumentDB, so some of the sample methods shown here might take a few minutes to complete...
