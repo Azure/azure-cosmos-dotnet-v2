@@ -3,8 +3,10 @@
     using System;
     using System.Collections.Generic;
     using System.Configuration;
+    using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
+    using DocumentDB.Samples.Twitter;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using Microsoft.Azure.Documents.Linq;
@@ -39,7 +41,7 @@
         /// <summary>
         /// The ConnectionPolicy for these samples. Sets custom user-agent.
         /// </summary>
-        private static readonly ConnectionPolicy ConnectionPolicy = new ConnectionPolicy { UserAgentSuffix = " samples-net-orderby/1" };
+        private static readonly ConnectionPolicy ConnectionPolicy = new ConnectionPolicy { UserAgentSuffix = " samples-net-orderby/1", ConnectionMode = ConnectionMode.Direct, ConnectionProtocol = Protocol.Tcp };
 
         /// <summary>
         /// The DocumentDB client instance.
@@ -91,6 +93,95 @@
         /// <returns>a Task object.</returns>
         private async Task RunAsync()
         {
+            Database database = await DocumentClientHelper.GetNewDatabaseAsync(this.client, DatabaseId);
+
+            DocumentCollection collection = await this.CreateCollectionForOrderBy(database);
+
+            await this.ImportData(collection);
+
+            this.RunOrderByQuery(collection);
+
+            this.RunOrderByQueryNestedProperty(collection);
+
+            this.RunOrderByQueryWithFilters(collection);
+
+            await this.RunOrderByQueryAsyncWithPaging(collection);
+        }
+
+        private void RunOrderByQuery(DocumentCollection collection)
+        {
+            Console.WriteLine("Fetching status messages ordered by the number of retweets.");
+            foreach (Status status in this.client.CreateDocumentQuery<Status>(
+                collection.SelfLink,
+                @"SELECT * FROM status ORDER BY status.retweet_count DESC"))
+            {
+                Console.WriteLine("Id: {0}, Text: {1}, Retweets: {2}", status.StatusId, status.Text, status.RetweetCount);
+            }
+
+            Console.WriteLine();
+        }
+
+        private void RunOrderByQueryNestedProperty(DocumentCollection collection)
+        {
+            Console.WriteLine("Fetching status messages ordered by the popularity of the user.");
+            foreach (Status status in this.client.CreateDocumentQuery<Status>(
+                collection.SelfLink,
+                @"SELECT * FROM status ORDER BY status.user.followers_count DESC"))
+            {
+                Console.WriteLine("Id: {0}, Text: {1}, User: {2}, Followers: {3}", status.StatusId, status.Text, status.User.ScreenName, status.User.FollowersCount);
+            }
+
+            Console.WriteLine();
+        }
+
+        private void RunOrderByQueryWithFilters(DocumentCollection collection)
+        {
+            Console.WriteLine("Fetching tweets retweeted or favorited over 10 times ordered by date.");
+            foreach (Status status in this.client.CreateDocumentQuery<Status>(
+                collection.SelfLink,
+                @"SELECT * FROM status WHERE status.retweet_count > 10 AND status.favorite_count > 10 ORDER BY status.created_at ASC"))
+            {
+                Console.WriteLine("Id: {0}, Text: {1}, Retweets: {2}, Favourites: {3}", status.StatusId, status.Text, status.RetweetCount, status.FavoriteCount);
+            }
+
+            Console.WriteLine();
+        }
+
+        private async Task RunOrderByQueryAsyncWithPaging(DocumentCollection collection)
+        {
+            Console.WriteLine("Fetching one page of 100 status messages by created date");
+            var query = this.client.CreateDocumentQuery<Status>(
+                collection.SelfLink,
+                @"SELECT * FROM status ORDER BY status.created_at ASC",
+                new FeedOptions { MaxItemCount = 100 }).AsDocumentQuery();
+
+            foreach (Status status in await query.ExecuteNextAsync<Status>())
+            {
+                Console.WriteLine("Id: {0}, Text: {1}, CreatedAt: {2}", status.StatusId, status.Text, status.CreatedAt);
+            }
+
+            Console.WriteLine();
+        }
+
+        private async Task ImportData(DocumentCollection collection)
+        {
+            Console.WriteLine("Importing data ...");
+            await DocumentClientHelper.RunBulkImport(this.client, collection, @"..\..\Data");
+            Console.WriteLine();
+        }
+
+        private async Task<DocumentCollection> CreateCollectionForOrderBy(Database database)
+        {
+            IndexingPolicy orderByPolicy = new IndexingPolicy();
+            orderByPolicy.IncludedPaths.Add(new IndexingPath { Path = "/", IndexType = IndexType.Range, NumericPrecision = -1 });
+
+            DocumentCollection collection = await DocumentClientHelper.CreateNewCollection(
+                this.client,
+                database,
+                "tweetsCollection",
+                new DocumentCollectionInfo { IndexingPolicy = orderByPolicy, OfferType = "S3" });
+
+            return collection;
         }
     }
 }

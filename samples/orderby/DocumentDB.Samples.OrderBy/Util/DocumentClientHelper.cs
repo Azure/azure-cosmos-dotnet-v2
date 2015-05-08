@@ -2,12 +2,15 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using Microsoft.Azure.Documents.Linq;
+    using Newtonsoft;
+    using Newtonsoft.Json;
 
     /// <summary>
     /// Providers common helper methods for working with DocumentClient.
@@ -218,6 +221,62 @@
         }
 
         /// <summary>
+        /// Bulk import using a stored procedure.
+        /// </summary>
+        /// <param name="client"></param>
+        /// <param name="collection"></param>
+        /// <param name="inputDirectory"></param>
+        /// <param name="inputFileMask"></param>
+        /// <returns></returns>
+        public static async Task RunBulkImport(
+            DocumentClient client,
+            DocumentCollection collection, 
+            string inputDirectory, 
+            string inputFileMask = "*.json")
+        {
+            int maxFiles = 2000;
+            int maxScriptSize = 50000;
+
+            // 1. Get the files. 
+            string[] fileNames = Directory.GetFiles(inputDirectory, inputFileMask);
+            DirectoryInfo di = new DirectoryInfo(inputDirectory);
+            FileInfo[] fileInfos = di.GetFiles(inputFileMask);
+
+            int currentCount = 0;
+            int fileCount = maxFiles != 0 ? Math.Min(maxFiles, fileNames.Length) : fileNames.Length;
+
+            string body = File.ReadAllText(@".\JS\BulkImport.js");
+            StoredProcedure sproc = new StoredProcedure
+            {
+                Id = "BulkImport",
+                Body = body
+            };
+
+            await TryDeleteStoredProcedure(client, collection, sproc.Id);
+            sproc = await ExecuteWithRetries<ResourceResponse<StoredProcedure>>(client, () => client.CreateStoredProcedureAsync(collection.SelfLink, sproc));
+
+            while (currentCount < fileCount)
+            {
+                string argsJson = CreateBulkInsertScriptArguments(fileNames, currentCount, fileCount, maxScriptSize);
+                var args = new dynamic[] { JsonConvert.DeserializeObject<dynamic>(argsJson) };
+
+                StoredProcedureResponse<int> scriptResult = await ExecuteWithRetries<StoredProcedureResponse<int>>(client, () => client.ExecuteStoredProcedureAsync<int>(sproc.SelfLink, args));
+
+                int currentlyInserted = scriptResult.Response;
+                currentCount += currentlyInserted;
+            }
+        }
+
+        public static async Task TryDeleteStoredProcedure(DocumentClient client, DocumentCollection collection, string sprocId)
+        {
+            StoredProcedure sproc = client.CreateStoredProcedureQuery(collection.SelfLink).Where(s => s.Id == sprocId).AsEnumerable().FirstOrDefault();
+            if (sproc != null)
+            {
+                await ExecuteWithRetries<ResourceResponse<StoredProcedure>>(client, () => client.DeleteStoredProcedureAsync(sproc.SelfLink));
+            }
+        } 
+
+        /// <summary>
         /// Execute the function with retries on throttle.
         /// </summary>
         /// <typeparam name="V">The type of return value from the execution.</typeparam>
@@ -261,6 +320,38 @@
 
                 await Task.Delay(sleepTime);
             }
+        }
+
+        /// <summary> 
+        /// Creates the script for insertion 
+        /// </summary> 
+        /// <param name="currentIndex">the current number of documents inserted. this marks the starting point for this script</param> 
+        /// <param name="maxScriptSize">the maximum number of characters that the script can have</param> 
+        /// <returns>Script as a string</returns> 
+        private static string CreateBulkInsertScriptArguments(string[] docFileNames, int currentIndex, int maxCount, int maxScriptSize)
+        {
+            var jsonDocumentArray = new StringBuilder();
+            jsonDocumentArray.Append("[");
+
+            if (currentIndex >= maxCount)
+            {
+                return string.Empty;
+            }
+
+            jsonDocumentArray.Append(File.ReadAllText(docFileNames[currentIndex]));
+
+            int scriptCapacityRemaining = maxScriptSize;
+            string separator = string.Empty;
+
+            int i = 1;
+            while (jsonDocumentArray.Length < scriptCapacityRemaining && (currentIndex + i) < maxCount)
+            {
+                jsonDocumentArray.Append(", " + File.ReadAllText(docFileNames[currentIndex + i]));
+                i++;
+            }
+
+            jsonDocumentArray.Append("]");
+            return jsonDocumentArray.ToString();
         }
     }
 }
