@@ -3,6 +3,7 @@ In this Github project, you'll find code samples in .NET on how to create and ru
 
 - How to Query with Order By
 - Configure Indexing Policy for Order By
+- Samples (here)
 - What's coming next?
 - FAQ
 
@@ -92,6 +93,11 @@ Here's how you can create a collection with indexing for Order By against just t
 Once created, the collection can be used for Order By! 
 
 We are working on some changes that will allow you to dynamically modify the indexing policy of a collection after creation. Please see the "What's coming next" section for more details. 
+
+##Samples
+This samples project shows how you can query against a dataset that is similar to Twitter's JSON API using Order By. You can either use the "Fake Data" that's included in the project, or supply your Twitter Developer credentials to download all "DocumentDB" related tweets from Twitter, and play around with queries against live data. The samples show how to create a collection using an IndexingPolicy for Order By queries, and queries using SQL query strings as well as LINQ.
+
+The samples are open source and we encourage you to submit pull requests with contributions that could benefit other DocumentDB developers. Please refer to the [Contribution guidelines](https://github.com/Azure/azure-documentdb-net/blob/master/Contributing.md) for guidance on how to contribute.  
 
 ##What's coming next?
 
