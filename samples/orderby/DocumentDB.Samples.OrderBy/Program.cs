@@ -100,9 +100,29 @@
         private void RunOrderByQuery(DocumentCollection collection)
         {
             Console.WriteLine("Fetching status messages ordered by the number of retweets.");
-            foreach (Status status in this.client.CreateDocumentQuery<Status>(
-                collection.SelfLink,
-                @"SELECT * FROM status ORDER BY status.retweet_count DESC"))
+
+            // Query as LINQ lambdas
+            var orderByQuery = this.client.CreateDocumentQuery<Status>(collection.SelfLink).OrderByDescending(s => s.RetweetCount);
+            foreach (Status status in orderByQuery)
+            {
+                Console.WriteLine("Id: {0}, Text: {1}, Retweets: {2}", status.StatusId, status.Text, status.RetweetCount);
+            }
+
+            // Query as LINQ query
+            orderByQuery = 
+                from s in this.client.CreateDocumentQuery<Status>(collection.SelfLink)
+                orderby s.RetweetCount descending
+                select s;
+
+            foreach (Status status in orderByQuery)
+            {
+                Console.WriteLine("Id: {0}, Text: {1}, Retweets: {2}", status.StatusId, status.Text, status.RetweetCount);
+            }
+            
+            // Query as SQL string
+            var orderBySqlQuery = this.client.CreateDocumentQuery<Status>(collection.SelfLink, @"SELECT * FROM status ORDER BY status.retweet_count DESC");
+
+            foreach (Status status in orderBySqlQuery)
             {
                 Console.WriteLine("Id: {0}, Text: {1}, Retweets: {2}", status.StatusId, status.Text, status.RetweetCount);
             }
@@ -113,6 +133,7 @@
         private void RunOrderByQueryNestedProperty(DocumentCollection collection)
         {
             Console.WriteLine("Fetching status messages ordered by the popularity of the user.");
+
             foreach (Status status in this.client.CreateDocumentQuery<Status>(
                 collection.SelfLink,
                 @"SELECT * FROM status ORDER BY status.user.followers_count DESC"))
