@@ -1,7 +1,5 @@
 #Order By Support in DocumentDB!
-We're pleased to announce the preview of Order By in DocumentDB queries. With this feature, you will be able to sort query results against any numeric property in your JSON documents. DocumentDB's Order By is designed to have a very low memory and storage footprint, and can be used to serve low latency queries against massive collections of documents.
-
-In this article, we look at how you can use Order By within your applications running on DocumentDB: 
+In this Github project, you'll find code samples in .NET on how to create and run Order by queries using Azure DocumentDB. We look at:
 
 - How to Query with Order By
 - Configure Indexing Policy for Order By
@@ -143,8 +141,7 @@ You cannot perform the following:
 - Order By with queries on databases, collections, users, permissions or attachments.
 
 ##References
-* DocumentDB OrderBy Query Samples
-* DocumentDB Query Reference
-* DocumentDB Indexing Policy Reference
-* DocumentDB .NET SDK Documentation
+* [DocumentDB Query Reference](http://azure.microsoft.com/documentation/articles/documentdb-sql-query/)
+* [DocumentDB Indexing Policy Reference](https://azure.microsoft.com/documentation/articles/documentdb-indexing-policies/)
+* [DocumentDB .NET SDK Documentation](https://msdn.microsoft.com/library/azure/dn948556.aspx)
 
