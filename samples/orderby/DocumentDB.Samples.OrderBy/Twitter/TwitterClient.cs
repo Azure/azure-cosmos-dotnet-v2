@@ -117,7 +117,7 @@
                     yield return statusMessage;
                 }
             }
-            while (numItemsReadInBatch < TwitterApiPageSize);
+            while (numItemsReadInBatch == TwitterApiPageSize);
         }
 
         private bool IsTwitterThrottlingException(Exception e)

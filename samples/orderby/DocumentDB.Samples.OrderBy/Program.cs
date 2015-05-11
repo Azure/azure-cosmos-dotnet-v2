@@ -25,6 +25,7 @@
         private static readonly string DatabaseId = ConfigurationManager.AppSettings["DatabaseId"];
         private static readonly ConnectionPolicy ConnectionPolicy = new ConnectionPolicy { UserAgentSuffix = " samples-net-orderby/1", ConnectionMode = ConnectionMode.Direct, ConnectionProtocol = Protocol.Tcp };
         private static readonly string DataDirectory = @"..\..\Data";
+        private static readonly string FakeDataDirectory = @"..\..\FakeData";
 
         private DocumentClient client;
 
@@ -77,9 +78,15 @@
 
             DocumentCollection collection = await this.CreateCollectionForOrderBy(database);
 
-            DownloadDataFromTwitter();
-
-            await this.ImportData(collection);
+            if (bool.Parse(ConfigurationManager.AppSettings["ShouldDownload"]))
+            {
+                DownloadDataFromTwitter();
+                await this.ImportData(collection, DataDirectory);
+            }
+            else
+            {
+                await this.ImportData(collection, FakeDataDirectory);
+            }
 
             this.RunOrderByQuery(collection);
 
@@ -169,14 +176,17 @@
             {
                 string filePath = Path.Combine(DataDirectory, string.Format("{0}.json", statusUpdate.StatusId));
                 string json = JsonConvert.SerializeObject(statusUpdate);
-                File.WriteAllText(filePath, json);
+                if (File.Exists(filePath))
+                {
+                    File.WriteAllText(filePath, json);
+                }
             }
         }
 
-        private async Task ImportData(DocumentCollection collection)
+        private async Task ImportData(DocumentCollection collection, string sourceDirectory)
         {
             Console.WriteLine("Importing data ...");
-            await DocumentClientHelper.RunBulkImport(this.client, collection, DataDirectory);
+            await DocumentClientHelper.RunBulkImport(this.client, collection, sourceDirectory);
             Console.WriteLine();
         }
 

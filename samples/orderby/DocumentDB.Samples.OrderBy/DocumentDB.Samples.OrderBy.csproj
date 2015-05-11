@@ -739,6 +739,7 @@
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
+    <Content Include="FakeData\Generator.js" />
     <Content Include="JS\BulkImport.js">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
