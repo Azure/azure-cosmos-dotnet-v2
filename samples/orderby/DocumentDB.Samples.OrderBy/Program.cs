@@ -263,7 +263,7 @@
                 .OrderBy(s => s.CreatedAt)
                 .AsDocumentQuery();
 
-            foreach (Status status in await query.ExecuteNextAsync<Status>())
+            foreach (var status in await query.ExecuteNextAsync<Status>())
             {
                 Console.WriteLine("Id: {0}, Text: {1}, CreatedAt: {2}", status.StatusId, status.Text, status.CreatedAt);
             }
@@ -286,18 +286,22 @@
                 ConfigurationManager.AppSettings["TwitterAccessTokenSecret"]);
 
             long? sinceStatusId = null;
-            foreach (string filePath in Directory.GetFiles(DataDirectory, "*.json"))
-            {
-                string fileName = Path.GetFileNameWithoutExtension(filePath);
-                long statusId = long.Parse(fileName);
 
-                if (sinceStatusId == null || sinceStatusId < statusId)
+            if (bool.Parse(ConfigurationManager.AppSettings["ShouldGetOnlyNewStatuses"]))
+            {
+                foreach (string filePath in Directory.GetFiles(DataDirectory, "*.json"))
                 {
-                    sinceStatusId = statusId;
+                    string fileName = Path.GetFileNameWithoutExtension(filePath);
+                    long statusId = long.Parse(fileName);
+
+                    if (sinceStatusId == null || sinceStatusId < statusId)
+                    {
+                        sinceStatusId = statusId;
+                    }
                 }
             }
 
-            foreach (Status statusUpdate in twitterClient.GetStatuses("DocumentDB", sinceStatusId))
+            foreach (Status statusUpdate in twitterClient.GetStatuses(ConfigurationManager.AppSettings["TwitterSearchText"], sinceStatusId))
             {
                 string filePath = Path.Combine(DataDirectory, string.Format("{0}.json", statusUpdate.StatusId));
                 string json = JsonConvert.SerializeObject(statusUpdate);
@@ -363,7 +367,7 @@
             DocumentCollection collection = await DocumentClientHelper.CreateNewCollection(
                 this.client,
                 database,
-                "tweetsCollection",
+                "tweetsCollectionSinglePath",
                 new DocumentCollectionInfo { IndexingPolicy = orderByPolicy, OfferType = "S1" });
 
             return collection;
