@@ -1,0 +1,30 @@
+﻿{
+    "id": "JSON3",
+    "OrderDate": 1391326140,
+    "SubTotal": 419.49,
+    "TotalDue": 419.49,
+    "Items": [
+        {
+            "OrderQty": 1,
+            "Product": {
+                "ProductCode": "ABC-123",
+                "ProductName": "Box",
+                "Price": { "Amount": 799, "Currency": { "CurrencySymbol": "$", "Code": "USD" } }
+            },
+            "Discount": 379.5411,
+            "UnitPrice": 419.4589,
+            "LineTotal": 419.4589
+        },
+        {
+            "OrderQty": 10,
+            "Product": {
+                "ProductCode": 1234,
+                "ProductType": "FMCG",
+                "ProductName": "Fresh Salmon Fillets",
+                "Price": { "Amount": 19.99, "Currency": { "CurrencySymbol": "$", "Code": "USD" }, "UoM": "lb" }
+            },
+            "UnitPrice": 19.99,
+            "LineTotal": 199.90
+        }
+    ]
+}

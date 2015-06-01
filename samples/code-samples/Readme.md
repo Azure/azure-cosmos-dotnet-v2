@@ -9,7 +9,8 @@ The solution has been configured to restore missing NuGet packages, so it should
 
 If the button is not there, then just manually search for the package (DocumentDB) and install it.
 
-Before you can run any of the samples you do need an active Azure DocumentDB account. So head over to [Azure](http://portal.azure.com) and sign-up for your account.
+Before you can run any of the samples you do need an active Azure DocumentDB account. 
+So head over to [Azure](http://portal.azure.com) and sign-up for your account.
 
 ##<a id="Description"></a>Description ##
 
@@ -17,26 +18,27 @@ Azure DocumentDB is a fully managed, scalable, queryable, schema free JSON docum
 
 These samples demonstrate how to use the Client SDKs to interact with the service.
 
-
+- **CollectionManagement** - CRUD operations on DocumentCollection resources
 
 - **DatabaseManagent** - CRUD operations on Database resources
 
-- **CollectionManagement** - CRUD operations on DocumentCollection resources
-
 - **DocumentManagement** - CRUD operations on Document resources
 
-- **UserManagement** - CRUD operations on User and Permission resources
-
 - **IndexManagement** - shows samples on how to custimize the Indexing Policy for a Collection should you need to.
+
+- **OrderBy** - Samples showing you how to create, and execute queries, with *OrderBy*
+
+- **Partitioning** - Samples for common partitioning scenarios using the .NET SDK 
 
 - **Queries** - Samples on how to query for Documents in DocumentDB showing LINQ and SQL
 
 - **ServerSideScripts** - Samples on how to create and execute Stored Procedures, Triggers and User Defined Functions.
- 
+
+- **UserManagement** - CRUD operations on User and Permission resources
 
 After walking through these samples you should have a good idea of how to get going and how to make user of the various Azure DocumentDB APIs. 
 
-There are tutorials and more documentation on the [DocumentDB domentation](http://azure.microsoft.com/en-us/documentation/services/documentdb/) page so head on over, sign-up, and learn about this cool new NoSQL document database.
+There are step-by-step tutorials and more documentation on the [DocumentDB domentation](http://azure.microsoft.com/en-us/documentation/services/documentdb/) page so head on over, sign-up, and learn about this cool new NoSQL document database.
 
  
 ##<a id="More"></a>More information ##

@@ -1,0 +1,22 @@
+﻿{
+    "id": "JSON2",
+    "PurchaseOrderNumber": "PO180094324320",
+    "OrderDate": 1376000940,
+    "SubTotal": 419.4589,
+    "Freight": 472.3108,
+    "TotalDue": 985.018,
+    "Items": [
+        {
+            "OrderQty": 1,
+            "ProductID": 760,
+            "UnitPrice": 419.4589,
+            "LineTotal": 419.4589
+        },
+        {
+            "OrderQty": 10,
+            "ProductID": 790,
+            "UnitPrice": 100.00,
+            "LineTotal": 1000.00
+        }
+    ]
+}
