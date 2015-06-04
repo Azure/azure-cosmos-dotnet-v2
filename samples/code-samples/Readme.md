@@ -30,8 +30,6 @@ These samples demonstrate how to use the Client SDKs to interact with the servic
 
 - **Queries** - Samples on how to query for Documents in DocumentDB showing LINQ and SQL
 
-- **Queries.OrderBy** - Samples showing you how to create, and execute queries, with *OrderBy*
-
 - **ServerSideScripts** - Samples on how to create and execute Stored Procedures, Triggers and User Defined Functions.
 
 - **UserManagement** - CRUD operations on User and Permission resources
