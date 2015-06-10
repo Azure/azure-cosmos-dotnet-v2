@@ -15,8 +15,6 @@
     public class Program
     {
         private static DocumentClient client;
-
-        //Assign a name for your database
         private static readonly string databaseId = ConfigurationManager.AppSettings["DatabaseId"];
 
         //Read the DocumentDB endpointUrl and authorisationKeys from config
@@ -28,7 +26,9 @@
         public static void Main(string[] args)
         {
             try
-            {                         
+            {   
+                //Connect to DocumentDB
+                //Setup a single instance of DocumentClient that is reused throughout the application
                 using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey))
                 {
                     RunAsync().Wait();
@@ -56,7 +56,8 @@
             //Try to get a database
             Database database = client.CreateDatabaseQuery().Where(db => db.Id == databaseId).AsEnumerable().FirstOrDefault();
             
-            //Check if a database was returned, If not then it was not found. Then create the database
+            //Create database
+            //First check if a database was returned, if not then create it
             if (database==null)
             {
                 database = await client.CreateDatabaseAsync(new Database { Id = databaseId });
@@ -69,7 +70,8 @@
             {
                 Console.WriteLine(db);    
             }
-
+            
+            //Delete a database
             //Cleanup using the SelfLink property of the Database which we either retrieved or created
             //If you do not have this SelfLink property accessible and populated you would need to get the Database using the id, 
             //then read the SelfLink property from that. This SelfLink value never changes for a Database once created;
