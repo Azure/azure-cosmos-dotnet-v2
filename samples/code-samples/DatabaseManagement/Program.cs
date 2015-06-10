@@ -53,7 +53,7 @@
 
         private static async Task RunAsync()
         {
-            //Try get a database
+            //Try to get a database
             Database database = client.CreateDatabaseQuery().Where(db => db.Id == databaseId).AsEnumerable().FirstOrDefault();
             
             //Check if a database was returned, If not then it was not found. Then create the database
