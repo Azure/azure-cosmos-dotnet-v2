@@ -178,7 +178,7 @@
 
                 if (collectionSpec.IndexingPolicy.IncludedPaths != null)
                 {
-                    foreach (IndexingPath path in collectionSpec.IndexingPolicy.IncludedPaths)
+                    foreach (IncludedPath path in collectionSpec.IndexingPolicy.IncludedPaths)
                     {
                         collectionDefinition.IndexingPolicy.IncludedPaths.Add(path);
                     }
@@ -186,7 +186,7 @@
 
                 if (collectionSpec.IndexingPolicy.ExcludedPaths != null)
                 {
-                    foreach (string path in collectionSpec.IndexingPolicy.ExcludedPaths)
+                    foreach (ExcludedPath path in collectionSpec.IndexingPolicy.ExcludedPaths)
                     {
                         collectionDefinition.IndexingPolicy.ExcludedPaths.Add(path);
                     }

@@ -4,6 +4,7 @@
     using Microsoft.Azure.Documents.Client;
     using Microsoft.Azure.Documents.Linq;
     using System;
+    using System.Collections.ObjectModel;
     using System.Configuration;
     using System.Linq;
     using System.Net;
@@ -63,7 +64,15 @@
         {
             //Get, or Create, the Database
             var database = await GetOrCreateDatabaseAsync(databaseId);
-            
+
+            var collection = new DocumentCollection { Id = ConfigurationManager.AppSettings["CollectionId"] };
+            collection.IndexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/*", Indexes = new Collection<Index> { 
+                new RangeIndex(DataType.String) { Precision = -1 }, 
+                new RangeIndex(DataType.Number) { Precision = -1 } } 
+            });
+            collection = await client.CreateDocumentCollectionAsync(database.SelfLink, collection);
+            return;
+
             //--------------------------------------------------------------------------------------------------------------------
             // The default behavior when creating a DocumentDollection is creating a Hash index for all string & numeric fields. 
             // Hash indexes are compact and offer efficient performance for equality queries.
@@ -199,19 +208,9 @@
                 Id =  ConfigurationManager.AppSettings["CollectionId"]
             };
 
-            collection.IndexingPolicy.IncludedPaths.Add(new IndexingPath
-            {
-                IndexType = IndexType.Hash,
-                Path = "/",
-            });
+            collection.IndexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/*" });
+            collection.IndexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/shippedTimestamp/?", Indexes = new Collection<Index> { new RangeIndex(DataType.Number) { Precision = -1 } } });
 
-            collection.IndexingPolicy.IncludedPaths.Add(new IndexingPath
-            {
-                IndexType = IndexType.Range,
-                Path = @"/""shippedTimestamp""/?",
-                NumericPrecision = 7
-            });
-                        
             collection = await client.CreateDocumentCollectionAsync(databaseLink, collection);
 
             await client.CreateDocumentAsync(collection.SelfLink, new 
@@ -280,10 +279,11 @@
             };
 
             //special manadatory path of "/" required to denote include entire tree
-            collection.IndexingPolicy.IncludedPaths.Add(new IndexingPath {Path = "/" });
+            collection.IndexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/*" });
 
-            collection.IndexingPolicy.ExcludedPaths.Add("/\"metaData\"/*");
-            collection.IndexingPolicy.ExcludedPaths.Add("/\"subDoc\"/\"subSubDoc\"/\"someProperty\"/*");
+            collection.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/metaData/*" });
+            collection.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/subDoc/subSubDoc/someProperty/*" });
+
             collection = await client.CreateDocumentCollectionAsync(databaseLink, collection);
 
             var created = await client.CreateDocumentAsync(collection.SelfLink, dyn);
@@ -331,9 +331,9 @@
             };
 
             //special manadatory path of "/" required to denote include entire tree
-            collection.IndexingPolicy.IncludedPaths.Add(new IndexingPath { Path = "/" });
+            collection.IndexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/*" });
+            collection.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/subDoc/*" });
 
-            collection.IndexingPolicy.ExcludedPaths.Add("/\"subDoc\"/*");
             collection = await client.CreateDocumentCollectionAsync(databaseLink, collection);
 
             //Query for /subDoc/searchable > fail because we have excluded the whole subDoc, and all its children.
@@ -364,8 +364,9 @@
                 Id = ConfigurationManager.AppSettings["CollectionId"]
             };
 
-            collection.IndexingPolicy.IncludedPaths.Add(new IndexingPath { Path = "/" });
-            collection.IndexingPolicy.ExcludedPaths.Add("/\"length\"/*");
+            collection.IndexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/" });
+            collection.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/length/*" });
+            
             collection = await client.CreateDocumentCollectionAsync(databaseLink, collection);
             
             var doc1 = await client.CreateDocumentAsync(collection.SelfLink, new { id = "dyn1", length = 10, width = 5, height = 15 });
