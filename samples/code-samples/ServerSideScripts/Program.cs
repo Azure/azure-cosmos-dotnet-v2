@@ -6,6 +6,7 @@
     using Newtonsoft.Json;
     using System;
     using System.Collections.Generic;
+    using System.Collections.ObjectModel;
     using System.Configuration;
     using System.Diagnostics;
     using System.Globalization;
@@ -517,7 +518,7 @@
         }
                 
         /// <summary>
-        /// Get a DocuemntCollection by id, or create a new one if one with the id provided doesn't exist.
+        /// Get a DocumentCollection by id, or create a new one if one with the id provided doesn't exist.
         /// </summary>
         /// <param name="id">The id of the DocumentCollection to search for, or create.</param>
         /// <returns>The matched, or created, DocumentCollection object</returns>
@@ -527,7 +528,15 @@
             if (collection == null)
             {
                 collection = new DocumentCollection { Id = id };
-                collection.IndexingPolicy.IncludedPaths.Add(new IndexingPath {IndexType=IndexType.Range, NumericPrecision=5, Path ="/" });
+                collection.IndexingPolicy.IncludedPaths.Add(new IncludedPath 
+                { 
+                    Path = "/*",
+                    Indexes = new Collection<Index>(new Index[]
+                    { 
+                        new RangeIndex(DataType.Number) { Precision = -1},
+                        new RangeIndex(DataType.String) { Precision = -1},
+                    }),
+                });
 
                 collection = await client.CreateDocumentCollectionAsync(dbLink, collection);
             }
