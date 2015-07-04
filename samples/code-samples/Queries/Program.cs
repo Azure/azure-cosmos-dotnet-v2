@@ -62,7 +62,7 @@
         private static async Task RunDemoAsync(string databaseId, string collectionId)
         {
             //Get, or Create, the Database
-            Database database = await GetOrCreateDatabaseAsync(databaseId);
+            Database database = await GetNewDatabaseAsync(databaseId);
 
             //Get, or Create, the Document Collection
             DocumentCollection collection = await GetOrCreateCollectionAsync(database.SelfLink, collectionId);
@@ -80,169 +80,123 @@
             // There are some occasions when one syntax has advantages over others, but it's your choice which to use when
             //--------------------------------------------------------------------------------------------------------
             
-            //Querying for all documents
+            // Querying for all documents
             QueryAllDocuments(collection.SelfLink);
 
-            //Querying for equality using ==
+            // Querying for equality using ==
             QueryWithEquality(collection.SelfLink);
 
-            //Querying for inequality using != and NOT
+            // Querying for inequality using != and NOT
             QueryWithInequality(collection.SelfLink);
             
-            //Querying using range operators like >, <, >=, <=
-            QueryWithRangeOperators(collection.SelfLink);
+            // Querying using range operators like >, <, >=, <=
+            QueryWithRangeOperatorsOnNumbers(collection.SelfLink);
 
-            //Work with subdocuments
+            // Querying using range operators against strings. Needs a different indexing policy or the EnableScanInQuery directive.
+            QueryWithRangeOperatorsOnStrings(collection.SelfLink);
+
+            // Querying with order by
+            QueryWithOrderBy(collection.SelfLink);
+
+            // Work with subdocuments
             QueryWithSubdocuments(collection.SelfLink);
 
-            //Query with Intradocument Joins
+            // Query with Intra-document Joins
             QueryWithJoins(collection.SelfLink);
 
-            //Query with SQlQuerySpec
+            // Query with parameterized SQL using SqlQuerySpec
             QueryWithSqlQuerySpec(collection.SelfLink);
             
-            //Query with explict Paging
+            // Query with explict Paging
             await QueryWithPagingAsync(collection.SelfLink);
 
             //Cleanup
              await client.DeleteDatabaseAsync(database.SelfLink);
         }
 
-        private static void QueryAllDocuments(string colSelfLink)
+        private static void QueryAllDocuments(string collectionLink)
         {
-            string message = "Expecting to see two families here because we didn't filter";
+            // LINQ Query
+            var families = 
+                from f in client.CreateDocumentQuery<Family>(collectionLink)
+                select f;
 
-            //LINQ Query
-            var families =  from f in client.CreateDocumentQuery<Family>(colSelfLink)
-                            select f;
+            Assert("Expected two families", families.ToList().Count == 2);
 
-            if (families.ToList().Count != 2) throw new ApplicationException(message);
-
-            //LINQ Lambda
-            families = client.CreateDocumentQuery<Family>(colSelfLink);
-
-            if (families.ToList().Count != 2) throw new ApplicationException(message);
+            // LINQ Lambda
+            families = client.CreateDocumentQuery<Family>(collectionLink);
+            Assert("Expected two families", families.ToList().Count == 2);
             
-            //SQL
-            families = client.CreateDocumentQuery<Family>(colSelfLink, "SELECT * FROM Families");
-
-            if (families.ToList().Count != 2) throw new ApplicationException(message);
+            // SQL
+            families = client.CreateDocumentQuery<Family>(collectionLink, "SELECT * FROM Families");
+            Assert("Expected two families", families.ToList().Count == 2);
         }
 
-        private static void QueryWithSqlQuerySpec(string colSelfLink)
+        private static void QueryWithSqlQuerySpec(string collectionLink)
         {
-            string message = "Expecting 1 family because we filtered out the Andersens";
-
-            //----------------------------------------------------------
-            //Simple query with a single property equality comparison
-            //in SQL with SQL parameterization instead of inlining the 
-            //parameter values in the query string
-            //LINQ Query -- Id == "value"
-            IQueryable<Family> query = client.CreateDocumentQuery<Family>(colSelfLink, new SqlQuerySpec()
+            // Simple query with a single property equality comparison
+            // in SQL with SQL parameterization instead of inlining the 
+            // parameter values in the query string
+            // LINQ Query -- Id == "value"
+            var query = client.CreateDocumentQuery<Family>(collectionLink, new SqlQuerySpec()
                 {
                     QueryText = "SELECT * FROM Families f WHERE (f.id = @id)",
-                    Parameters = new SqlParameterCollection() { 
+                    Parameters = new SqlParameterCollection() 
+                    { 
                         new SqlParameter("@id", "AndersenFamily")
                     }
                 });
 
-            if (query.AsEnumerable<Family>().ToList().Count != 1)
-                throw new ApplicationException(message);
+            Assert("Expected only 1 family", query.ToList().Count == 1);
 
-            //----------------------------------------------------------
-            //Query using two properties within each document
-            //WHERE Id == "" AND Address.City == ""
-            //notice here how we are doing an equality comparison on the string value of City
+            // Query using two properties within each document. WHERE Id == "" AND Address.City == ""
+            // notice here how we are doing an equality comparison on the string value of City
 
-            message = "Expecting 1 family because only the Andersens live in Seattle";
-
-            //SQL -- Id == "value" AND City == "value"
-            query = client.CreateDocumentQuery<Family>(colSelfLink, new SqlQuerySpec()
+            query = client.CreateDocumentQuery<Family>(
+                collectionLink, 
+                new SqlQuerySpec()
                 {
                     QueryText = "SELECT * FROM Families f WHERE f.id = @id AND f.Address.City = @city",
-                    Parameters = new SqlParameterCollection() {
+                    Parameters = new SqlParameterCollection() 
+                    {
                         new SqlParameter("@id", "AndersenFamily"), 
                         new SqlParameter("@city", "Seattle")
                     }
                 });
-            if (query.AsEnumerable<Family>().ToList().Count != 1)
-                throw new ApplicationException(message);
+
+            Assert("Expected only 1 family", query.ToList().Count == 1);
+
         }
 
-        private static void QueryWithEquality(string colSelfLink)
+        private static void QueryWithEquality(string collectionLink)
         {
-            string message = "Expecting 1 family because we filtered out the Andersens";
+            // Simple query with a single property equality comparison
+            QueryWithEqualsOnId(collectionLink);
 
-            //----------------------------------------------------------
-            //Simple query with a single property equality comparison
-            //LINQ Query -- Id == "value"
-            var families = from f in client.CreateDocumentQuery<Family>(colSelfLink)
-                           where f.Id == "AndersenFamily"
-                           select f;
+            // Query using two properties within each document (WHERE Id == "" AND Address.City == "")
+            // Notice here how we are doing an equality comparison on the string value of City
+            QueryWithAndFilter(collectionLink);
 
-            if (families.ToList().Count != 1) throw new ApplicationException(message);
-
-            //LINQ Lambda -- Id == "value"
-            families = client.CreateDocumentQuery<Family>(colSelfLink)
-                       .Where(f => f.Id == "AndersenFamily");
-
-            if (families.ToList().Count != 1) throw new ApplicationException(message);
-
-            //SQL -- Id == "value"
-            families = client.CreateDocumentQuery<Family>(colSelfLink, "SELECT * " + 
-                                                                       "FROM Families f " + 
-                                                                       "WHERE f.id='AndersenFamily'");
-
-            if (families.ToList().Count != 1) throw new ApplicationException(message);
-            
-
-            //----------------------------------------------------------
-            //Query using two properties within each document
-            //WHERE Id == "" AND Address.City == ""
-            //notice here how we are doing an equality comparison on the string value of City
-
-            message = "Expecting 1 family because only the Andersens live in Seattle";
-
-            //LINQ Query -- Id == "value" AND City == "value"
-            families = from f in client.CreateDocumentQuery<Family>(colSelfLink)
-                       where f.Id == "AndersenFamily" && f.Address.City == "Seattle"
-                       select f;
-
-            if (families.ToList().Count != 1) throw new ApplicationException(message);
-
-            //LINQ Lambda -- Id == "value" AND City == "value"
-            families = client.CreateDocumentQuery<Family>(colSelfLink)
-                       .Where(f => f.Id == "AndersenFamily" && f.Address.City == "Seattle");
-            
-            if (families.ToList().Count != 1) throw new ApplicationException(message);
-
-            //SQL -- Id == "value" AND City == "value"
-            families = client.CreateDocumentQuery<Family>(colSelfLink, "SELECT * " + 
-                                                                       "FROM Families f " + 
-                                                                       "WHERE f.id='AndersenFamily' AND f.Address.City='Seattle'");
-
-            if (families.ToList().Count != 1) throw new ApplicationException(message);
-
-            //-------------------------------------------------------------------------
             //Query using a filter on two properties and include a custom projection
             //in to a new anonymous type
+            QueryWithAndFilterAndProjection(collectionLink);
+        }
 
-            //LINQ Query -- Id == "value" OR City == "value"
-            var query = from f in client.CreateDocumentQuery<Family>(colSelfLink)
-                        where f.Id == "AndersenFamily" || f.Address.City == "NY"
-                        select new
-                        {
-                            Name = f.LastName,
-                            City = f.Address.City
-                        };
+        private static void QueryWithAndFilterAndProjection(string collectionLink)
+        {
+            // LINQ Query -- Id == "value" OR City == "value"
+            var query =
+                from f in client.CreateDocumentQuery<Family>(collectionLink)
+                where f.Id == "AndersenFamily" || f.Address.City == "NY"
+                select new { Name = f.LastName, City = f.Address.City };
 
             foreach (var item in query.ToList())
             {
                 Console.WriteLine("The {0} family live in {1}", item.Name, item.City);
             }
 
-            //LINQ Lambda -- Id == "value" OR City == "value"
-            query = client.CreateDocumentQuery<Family>(colSelfLink)
+            // LINQ Lambda -- Id == "value" OR City == "value"
+            query = client.CreateDocumentQuery<Family>(collectionLink)
                        .Where(f => f.Id == "AndersenFamily" || f.Address.City == "NY")
                        .Select(f => new { Name = f.LastName, City = f.Address.City });
 
@@ -251,10 +205,11 @@
                 Console.WriteLine("The {0} family live in {1}", item.Name, item.City);
             }
 
-            //SQL -- Id == "value" OR City == "value"
-            var q = client.CreateDocumentQuery(colSelfLink,"SELECT f.LastName AS Name, f.Address.City AS City " + 
-                                                            "FROM Families f " + 
-                                                            "WHERE f.id='AndersenFamily' OR f.Address.City='NY'");
+            // SQL -- Id == "value" OR City == "value"
+            var q = client.CreateDocumentQuery(collectionLink,
+                "SELECT f.LastName AS Name, f.Address.City AS City " +
+                "FROM Families f " +
+                "WHERE f.id='AndersenFamily' OR f.Address.City='NY'");
 
             foreach (var item in q.ToList())
             {
@@ -262,215 +217,319 @@
             }
         }
 
-        private static void QueryWithInequality(string colSelfLink)
+        private static void QueryWithAndFilter(string collectionLink)
         {
-            //----------------------------------------------------------
-            //Simple query with a single property inequality comparison
-            //LINQ Query
-            var families = from f in client.CreateDocumentQuery<Family>(colSelfLink)
+            // LINQ Query
+            var families = from f in client.CreateDocumentQuery<Family>(collectionLink)
+                       where f.Id == "AndersenFamily" && f.Address.City == "Seattle"
+                       select f;
+
+            Assert("Expected only 1 family", families.ToList().Count == 1);
+
+            // LINQ Lambda -- Id == "value" AND City == "value"
+            families = client.CreateDocumentQuery<Family>(collectionLink).Where(f => f.Id == "AndersenFamily" && f.Address.City == "Seattle");
+            Assert("Expected only 1 family", families.ToList().Count == 1);
+
+            // SQL -- Id == "value" AND City == "value"
+            families = client.CreateDocumentQuery<Family>(
+                collectionLink,
+                "SELECT * FROM Families f WHERE f.id='AndersenFamily' AND f.Address.City='Seattle'");
+
+            Assert("Expected only 1 family", families.ToList().Count == 1);
+        }
+
+        private static void QueryWithEqualsOnId(string collectionLink)
+        {
+            // LINQ Query -- Id == "value"
+            var families =
+                from f in client.CreateDocumentQuery<Family>(collectionLink)
+                where f.Id == "AndersenFamily"
+                select f;
+
+            Assert("Expected only 1 family", families.ToList().Count == 1);
+
+            // LINQ Lambda -- Id == "value"
+            families = client.CreateDocumentQuery<Family>(collectionLink).Where(f => f.Id == "AndersenFamily");
+            Assert("Expected only 1 family", families.ToList().Count == 1);
+
+            // SQL -- Id == "value"
+            families = client.CreateDocumentQuery<Family>(collectionLink, "SELECT * FROM Families f WHERE f.id='AndersenFamily'");
+            Assert("Expected only 1 family", families.ToList().Count == 1);
+        }
+
+        private static void QueryWithInequality(string collectionLink)
+        {
+            // Simple query with a single property inequality comparison
+            // LINQ Query
+            var families = from f in client.CreateDocumentQuery<Family>(collectionLink)
                            where f.Id != "AndersenFamily"
                            select f;
 
-            if (families.ToList().Count != 1) throw new ApplicationException("Only expecting the Wakefield family");
+            Assert("Expected only 1 family", families.ToList().Count == 1);
             
-            //LINQ Lambda
-            families = client.CreateDocumentQuery<Family>(colSelfLink)
+            // LINQ Lambda
+            families = client.CreateDocumentQuery<Family>(collectionLink)
                        .Where(f => f.Id != "AndersenFamily");
-
-            if (families.ToList().Count != 1) throw new ApplicationException("Only expecting the Wakefield family");
+            Assert("Expected only 1 family", families.ToList().Count == 1);
             
 
-            //SQL - in SQL you can use <> interchangably with != for "not equals"
-            families = client.CreateDocumentQuery<Family>(colSelfLink, "SELECT * FROM Families f WHERE f.id <> 'AndersenFamily'");
-
-            if (families.ToList().Count != 1) throw new ApplicationException("Only expecting the Wakefield family");
+            // SQL - in SQL you can use <> interchangably with != for "not equals"
+            families = client.CreateDocumentQuery<Family>(collectionLink, "SELECT * FROM Families f WHERE f.id <> 'AndersenFamily'");
+            Assert("Expected only 1 family", families.ToList().Count == 1);
             
             //combine equality and inequality
-            families = from f in client.CreateDocumentQuery<Family>(colSelfLink)
-                           where f.Id == "Wakefield" && f.Address.City != "NY"
-                           select f;
+            families = 
+                from f in client.CreateDocumentQuery<Family>(collectionLink)
+                where f.Id == "Wakefield" && f.Address.City != "NY"
+                select f;
+            Assert("Expected no results", families.ToList().Count == 0);
 
-            if (families.ToList().Count > 0) throw new ApplicationException("Not expecting any results");
-            
-            families = client.CreateDocumentQuery<Family>(colSelfLink, "SELECT * FROM Families f WHERE f.id = 'AndersenFamily' AND f.Address.City != 'NY'");
+            families = client.CreateDocumentQuery<Family>(
+                collectionLink, 
+                "SELECT * FROM Families f WHERE f.id = 'AndersenFamily' AND f.Address.City != 'NY'");
 
-            if (families.ToList().Count != 1) throw new ApplicationException("Only expecting the Andersen family");
+            Assert("Expected only 1 family", families.ToList().Count == 1);
+
         }
 
-        private static void QueryWithRangeOperators(string colSelfLink)
+        private static void QueryWithRangeOperatorsOnNumbers(string collectionLink)
         {
-            string message = "Expecting only Wakefield family because only they have Lisa in grade 8";
-
-            //----------------------------------------------------------------------
-            //Simple range query against a single property
-            //Give me all family records, where the first child is above grade 5
-            //
-            //NB: notice the use of the EnableScanInQuery directive being used here to enable a range query 
-            //    on a collection that only has hash indexes defined (default). This would not be the most performant
-            //    way of doing range queries as scans are expensive and we therefore do not recommend wide spread use
-            //    of this directive. Consider adding a Range index on paths where you will often perform Range queries
-            //    For more information, please refer to the DocumentDB.Samples.IndexManagement sample project
-            //    or the Index Management Documentation () 
-
-            //LINQ Query
-            var families = from f in client.CreateDocumentQuery<Family>(colSelfLink, new FeedOptions { EnableScanInQuery = true })
+            // LINQ Query
+            var families = from f in client.CreateDocumentQuery<Family>(collectionLink)
                            where f.Children[0].Grade > 5
                            select f;
 
-            if (families.ToList().Count != 1) throw new ApplicationException(message);
+            Assert("Expected only 1 family", families.ToList().Count == 1);
 
-            //LINQ Lambda
-            families = client.CreateDocumentQuery<Family>(colSelfLink, new FeedOptions { EnableScanInQuery = true })
+            // LINQ Lambda
+            families = client.CreateDocumentQuery<Family>(collectionLink)
                        .Where(f => f.Children[0].Grade > 5);
 
-            if (families.ToList().Count != 1) throw new ApplicationException(message);
+            Assert("Expected only 1 family", families.ToList().Count == 1);
 
-            //SQL
-            families = client.CreateDocumentQuery<Family>(colSelfLink, "SELECT * FROM Families f WHERE f.Children[0].Grade = 5", 
-                new FeedOptions { EnableScanInQuery = true });
-            
-            if (families.ToList().Count != 1) throw new ApplicationException(message);
+            // SQL
+            families = client.CreateDocumentQuery<Family>(collectionLink,
+                "SELECT * FROM Families f WHERE f.Children[0].Grade > 5");
+
+            Assert("Expected only 1 family", families.ToList().Count == 1);
         }
 
-        private static void QueryWithSubdocuments(string colSelfLink)
-        {
-            //----------------------------------------------------------------------
-            //DocumentDB supports the selection of sub-documents on the server, there
-            //is no need to send down the full family record if all you want to display
-            //is a single child
 
-            //SQL
-            var children = client.CreateDocumentQuery<Child>(colSelfLink,
+        private static void QueryWithOrderBy(string collectionLink)
+        {
+            // Order by with numbers. Works with default IndexingPolicy
+            QueryWithOrderByNumbers(collectionLink);
+
+            // Order by with strings. Needs custom indexing policy. See GetOrCreateCollectionAsync
+            QueryWithOrderByStrings(collectionLink);
+        }
+
+        private static void QueryWithRangeOperatorsOnStrings(string collectionLink)
+        {
+            // SQL Query (can't do this in LINQ)
+            var families = client.CreateDocumentQuery<Family>(
+                collectionLink, 
+                "SELECT * FROM Families f WHERE f.Address.State > 'NY'", 
+                new FeedOptions { EnableScanInQuery = true });
+            
+            Assert("Expected only 1 family", families.ToList().Count == 1);
+        }
+
+        private static void QueryWithOrderByNumbers(string collectionLink)
+        {
+            // LINQ Query
+            var familiesLinqQuery = from f in client.CreateDocumentQuery<Family>(collectionLink)
+                           orderby f.Children[0].Grade
+                           select f;
+
+            Assert("Expected 2 families", familiesLinqQuery.ToList().Count == 2);
+
+            // LINQ Lambda
+            familiesLinqQuery = client.CreateDocumentQuery<Family>(collectionLink)
+                       .OrderBy(f => f.Children[0].Grade);
+
+            Assert("Expected 2 families", familiesLinqQuery.ToList().Count == 2);
+
+            // SQL
+            var familiesSqlQuery = client.CreateDocumentQuery<Family>(collectionLink,
+                "SELECT * FROM Families f ORDER BY f.Children[0].Grade");
+
+            Assert("Expected 2 families", familiesSqlQuery.ToList().Count == 2);
+        }
+
+        private static void QueryWithOrderByStrings(string collectionLink)
+        {
+            // LINQ Query
+            var familiesLinqQuery = from f in client.CreateDocumentQuery<Family>(collectionLink)
+                           where f.LastName == "Andersen"
+                           orderby f.Address.State descending
+                           select f;
+
+            Assert("Expected only 1 family", familiesLinqQuery.ToList().Count == 1);
+
+            // LINQ Lambda
+            familiesLinqQuery = client.CreateDocumentQuery<Family>(collectionLink)
+                       .Where(f => f.LastName == "Andersen")
+                       .OrderByDescending(f => f.Children[0].Grade);
+
+            Assert("Expected only 1 family", familiesLinqQuery.ToList().Count == 1);
+
+            // SQL
+            var familiesSqlQuery = client.CreateDocumentQuery<Family>(collectionLink,
+                "SELECT * FROM Families f WHERE f.LastName = 'Andersen' ORDER BY f.Address.State DESC");
+
+            Assert("Expected only 1 family", familiesSqlQuery.ToList().Count == 1);
+        }
+
+        private static void QueryWithSubdocuments(string collectionLink)
+        {
+            // DocumentDB supports the selection of sub-documents on the server, there
+            // is no need to send down the full family record if all you want to display
+            // is a single child
+
+            // SQL
+            var childrenSqlQuery = client.CreateDocumentQuery<Child>(collectionLink,
                 "SELECT c " +
                 "FROM c IN f.Children").ToList();
 
-            foreach (var child in children)
+            foreach (var child in childrenSqlQuery)
             {
-                Console.WriteLine(child);
+                Console.WriteLine(JsonConvert.SerializeObject(child));
             }
 
-            //LINQ Query
-           var cc = client.CreateDocumentQuery<Family>(colSelfLink)
+            // LINQ Query
+           var childrenLinqQuery = client.CreateDocumentQuery<Family>(collectionLink)
                     .SelectMany(family => family.Children
                     .Select(c => c));
 
-            foreach (var item in cc.ToList())
-            {
-                Console.WriteLine(item);
-            }   
+           foreach (var child in childrenLinqQuery)
+           {
+               Console.WriteLine(JsonConvert.SerializeObject(child));
+           }
         }
 
-        private static void QueryWithJoins(string colSelfLink)
+        private static void QueryWithJoins(string collectionLink)
         {
-            //----------------------------------------------------------------------
-            //DocumentDB supports the notion of a Intradocument Join, or a self-join
-            //which will effectively flatten the hierarchy of a document, just like doing 
-            //a self JOIN on a SQL table
-
-            //Below are three queries involving JOIN, shown in SQL and in LINQ, each produces the exact same result set
-
-            //simple query with one join
-            //SQL
-            var aa = client.CreateDocumentQuery(colSelfLink,
-                "SELECT f.id " +
-                "FROM Families f " +
-                "JOIN c IN f.Children");
-
-            foreach (var item in aa.ToList())
-            {
-                Console.WriteLine(item);
-            }
-
-            //LINQ
-            var bb = client.CreateDocumentQuery<Family>(colSelfLink)
-                    .SelectMany(family => family.Children
-                    .Select(c => family.Id));
-
-            foreach (var item in bb.ToList())
-            {
-                Console.WriteLine(item);
-            }
+            // DocumentDB supports the notion of a Intradocument Join, or a self-join
+            // which will effectively flatten the hierarchy of a document, just like doing 
+            // a self JOIN on a SQL table
+            
+            // Below are three queries involving JOIN, shown in SQL and in LINQ, each produces the exact same result set
+            QueryWithSingleJoin(collectionLink);
 
             //now lets add a second level by joining the pets on to children which is joined to family
-            //SQL
-            var cc = client.CreateDocumentQuery<dynamic>(colSelfLink,
-                "SELECT f.id, c.FirstName AS child, p.GivenName AS pet " +
-                "FROM Families f " +
-                "JOIN c IN f.Children " +
-                "JOIN p IN c.Pets ");
+            QueryWithTwoJoins(collectionLink);
 
-            foreach (var item in cc.ToList())
-            {
-                Console.WriteLine(item);
-            }
+            // Now let's add a filter to our JOIN query
+            QueryWithTwoJoinsAndFilter(collectionLink);
+        }
 
-            //LINQ
-            var dd = client.CreateDocumentQuery<Family>(colSelfLink)
-                    .SelectMany(family => family.Children
-                    .SelectMany(children => children.Pets
-                    .Select(pets => new
-                        {
-                            family = family.Id,
-                            child = children.FirstName,
-                            pet = pets.GivenName
-                        })
-                    ));
-
-            foreach (var item in dd.ToList())
-            {
-                Console.WriteLine(item);
-            }
-
-            //now let's add a filter to our JOIN query
-            //SQL
-
-            var ee = client.CreateDocumentQuery<dynamic>(colSelfLink,
+        private static void QueryWithTwoJoinsAndFilter(string collectionLink)
+        {
+            var familiesChildrenAndPets = client.CreateDocumentQuery<dynamic>(collectionLink,
                     "SELECT f.id, c.FirstName AS child, p.GivenName AS pet " +
                     "FROM Families f " +
                     "JOIN c IN f.Children " +
                     "JOIN p IN c.Pets " +
                     "WHERE p.GivenName = 'Fluffy'");
-            
-            foreach (var item in ee.ToList())
+
+            foreach (var item in familiesChildrenAndPets)
             {
                 Console.WriteLine(item);
             }
 
-            //LINQ
-            var ff = client.CreateDocumentQuery<Family>(colSelfLink)
+            // LINQ
+            familiesChildrenAndPets = client.CreateDocumentQuery<Family>(collectionLink)
                     .SelectMany(family => family.Children
                     .SelectMany(children => children.Pets
                     .Where(pets => pets.GivenName == "Fluffy")
                     .Select(pets => new
-                        {
-                            family = family.Id,
-                            child = children.FirstName,
-                            pet = pets.GivenName
-                        }
+                    {
+                        family = family.Id,
+                        child = children.FirstName,
+                        pet = pets.GivenName
+                    }
                     )));
 
-            foreach (var item in ff.ToList())
+            foreach (var item in familiesChildrenAndPets)
             {
                 Console.WriteLine(item);
             }
         }
-        
-        private static async Task QueryWithPagingAsync(string colSelfLink)
+
+        private static void QueryWithTwoJoins(string collectionLink)
         {
-            //The .NET client automatically iterates through all the pages of query results 
-            //Developers can explicitly control paging by creating an IDocumentQueryable 
-            //using the IQueryable object, then by reading the ResponseContinuationToken values 
-            //and passing them back as RequestContinuationToken in FeedOptions.
+            // SQL
+            var familiesChildrenAndPets = client.CreateDocumentQuery<dynamic>(collectionLink,
+                "SELECT f.id, c.FirstName AS child, p.GivenName AS pet " +
+                "FROM Families f " +
+                "JOIN c IN f.Children " +
+                "JOIN p IN c.Pets ");
+
+            foreach (var item in familiesChildrenAndPets)
+            {
+                Console.WriteLine(item);
+            }
+
+            // LINQ
+            familiesChildrenAndPets = client.CreateDocumentQuery<Family>(collectionLink)
+                    .SelectMany(family => family.Children
+                    .SelectMany(children => children.Pets
+                    .Select(pets => new
+                    {
+                        family = family.Id,
+                        child = children.FirstName,
+                        pet = pets.GivenName
+                    })
+                    ));
+
+            foreach (var item in familiesChildrenAndPets)
+            {
+                Console.WriteLine(item);
+            }
+        }
+
+        private static void QueryWithSingleJoin(string collectionLink)
+        {
+
+            // SQL
+            var familiesAndChildren = client.CreateDocumentQuery(collectionLink,
+                "SELECT f.id " +
+                "FROM Families f " +
+                "JOIN c IN f.Children");
+
+            foreach (var item in familiesAndChildren)
+            {
+                Console.WriteLine(JsonConvert.SerializeObject(item));
+            }
+
+            // LINQ
+            familiesAndChildren = client.CreateDocumentQuery<Family>(collectionLink)
+                    .SelectMany(family => family.Children
+                    .Select(c => family.Id));
+
+            foreach (var item in familiesAndChildren)
+            {
+                Console.WriteLine(JsonConvert.SerializeObject(item));
+            }
+        }
+        
+        private static async Task QueryWithPagingAsync(string collectionLink)
+        {
+            // The .NET client automatically iterates through all the pages of query results 
+            // Developers can explicitly control paging by creating an IDocumentQueryable 
+            // using the IQueryable object, then by reading the ResponseContinuationToken values 
+            // and passing them back as RequestContinuationToken in FeedOptions.
             
             List<Family> families = new List<Family>();
 
-            //tell server we only want 1 record
+            // tell server we only want 1 record
             FeedOptions options = new FeedOptions { MaxItemCount = 1 };
 
-            //using AsDocumentQuery you get access to whether or not the query HasMoreResults
-            //If it does, just call ExecuteNextAsync until there are no more results
-            //No need to supply a continuation token here as the server keeps track of progress
-            var query = client.CreateDocumentQuery<Family>(colSelfLink, options).AsDocumentQuery();
+            // using AsDocumentQuery you get access to whether or not the query HasMoreResults
+            // If it does, just call ExecuteNextAsync until there are no more results
+            // No need to supply a continuation token here as the server keeps track of progress
+            var query = client.CreateDocumentQuery<Family>(collectionLink, options).AsDocumentQuery();
             while (query.HasMoreResults)
             {
                 foreach (Family family in await query.ExecuteNextAsync())
@@ -479,23 +538,26 @@
                 }
             }
 
-            //The above sample works fine whilst in a loop as above, but 
-            //what if you load a page of 1 record and then in a different 
-            //session at a later stage want to continue from where you were?
-            //well, now you need to capture the continuation token 
-            //and use it on subsequent queries
-            query = client.CreateDocumentQuery<Family>(colSelfLink, new FeedOptions { MaxItemCount = 1 }).AsDocumentQuery();
+            // The above sample works fine whilst in a loop as above, but 
+            // what if you load a page of 1 record and then in a different 
+            // Session at a later stage want to continue from where you were?
+            // well, now you need to capture the continuation token 
+            // and use it on subsequent queries
+
+            query = client.CreateDocumentQuery<Family>(collectionLink, new FeedOptions { MaxItemCount = 1 }).AsDocumentQuery();
             var feedResponse = await query.ExecuteNextAsync<Family>();
             string continuation = feedResponse.ResponseContinuation;
+
             foreach (var f in feedResponse.AsEnumerable().OrderBy(f => f.Id))
             {
                 if (f.Id != "AndersenFamily") throw new ApplicationException("Should only be the first family");   
             } 
 
-            //now the second time around use the contiuation token you got
-            //and start the process from that point
-            query = client.CreateDocumentQuery<Family>(colSelfLink, new FeedOptions { MaxItemCount = 1, RequestContinuation = continuation }).AsDocumentQuery();
+            // Now the second time around use the contiuation token you got
+            // and start the process from that point
+            query = client.CreateDocumentQuery<Family>(collectionLink, new FeedOptions { MaxItemCount = 1, RequestContinuation = continuation }).AsDocumentQuery();
             feedResponse = await query.ExecuteNextAsync<Family>();
+            
             foreach (var f in feedResponse.AsEnumerable().OrderBy(f => f.Id))
             {
                 if (f.Id != "WakefieldFamily") throw new ApplicationException("Should only be the second family");
@@ -505,9 +567,9 @@
         /// <summary>
         /// Creates the documents used in this Sample
         /// </summary>
-        /// <param name="colSelfLink">The selfLink property for the DocumentCollection where documents will be created.</param>
+        /// <param name="collectionLink">The selfLink property for the DocumentCollection where documents will be created.</param>
         /// <returns>None</returns>
-        private static async Task CreateDocuments(string colSelfLink)
+        private static async Task CreateDocuments(string collectionLink)
         {
             Family AndersonFamily = new Family
             {
@@ -532,7 +594,7 @@
                 IsRegistered = true
             };
 
-            await client.CreateDocumentAsync(colSelfLink, AndersonFamily);
+            await client.CreateDocumentAsync(collectionLink, AndersonFamily);
 
             Family WakefieldFamily = new Family
             {
@@ -566,7 +628,7 @@
                 IsRegistered = false
             };
 
-            await client.CreateDocumentAsync(colSelfLink, WakefieldFamily);
+            await client.CreateDocumentAsync(collectionLink, WakefieldFamily);
         }
 
         /// <summary>
@@ -577,28 +639,52 @@
         private static async Task<DocumentCollection> GetOrCreateCollectionAsync(string dbLink, string id)
         {
             DocumentCollection collection = client.CreateDocumentCollectionQuery(dbLink).Where(c => c.Id == id).ToArray().FirstOrDefault();
+
             if (collection == null)
             {
-                collection = await client.CreateDocumentCollectionAsync(dbLink, new DocumentCollection { Id = id });
+                IndexingPolicy optimalQueriesIndexingPolicy = new IndexingPolicy();
+                optimalQueriesIndexingPolicy.IncludedPaths.Add(new IncludedPath
+                {
+                    Path = "/*",
+                    Indexes = new System.Collections.ObjectModel.Collection<Index>()
+                    {
+                        new RangeIndex(DataType.Number) { Precision = -1 },
+                        new RangeIndex(DataType.String) { Precision = -1 }
+                    }
+                });
+
+                DocumentCollection collectionDefinition = new DocumentCollection { Id = id };
+                collectionDefinition.IndexingPolicy = optimalQueriesIndexingPolicy;
+
+                collection = await client.CreateDocumentCollectionAsync(dbLink, collectionDefinition);
             }
 
             return collection;
         }
-
+        
         /// <summary>
-        /// Get a Database by id, or create a new one if one with the id provided doesn't exist.
+        /// Get a Database for this id. Delete if it already exists.
         /// </summary>
-        /// <param name="id">The id of the Database to search for, or create.</param>
-        /// <returns>The matched, or created, Database object</returns>
-        private static async Task<Database> GetOrCreateDatabaseAsync(string id)
+        /// <param id="id">The id of the Database to create.</param>
+        /// <returns>The created Database object</returns>
+        private static async Task<Database> GetNewDatabaseAsync(string id)
         {
-            Database database = client.CreateDatabaseQuery().Where(db => db.Id == id).ToArray().FirstOrDefault();
-            if (database == null)
+            Database database = client.CreateDatabaseQuery().Where(c => c.Id == id).ToArray().FirstOrDefault();
+            if (database != null)
             {
-                database = await client.CreateDatabaseAsync(new Database { Id = id });
+                await client.DeleteDatabaseAsync(database.SelfLink);
             }
 
+            database = await client.CreateDatabaseAsync(new Database { Id = id });
             return database;
+        }
+
+        private static void Assert(string message, bool condition)
+        {
+            if (!condition)
+            {
+                throw new ApplicationException(message);
+            }
         }
 
         internal sealed class Parent
