@@ -147,19 +147,6 @@
             return collections.OrderBy(kvp => kvp.Key).Select(kvp => kvp.Value).ToList();
         }
 
-        /// <summary>
-        /// Create a collection if the list is empty, or if the latest one is getting full.
-        /// </summary>
-        //private void CreateCollectionIfRequired()
-        //{
-        //    if (this.ShouldCreateCollection())
-        //    {
-        //        string collectionId = string.Format("{0}{1}", this.CollectionIdPrefix, this.CollectionLinks.Count);
-        //        var createdCollection = DocumentClientHelper.GetCollectionAsync(this.Client, this.Database, collectionId, this.CollectionTemplate).Result;
-        //        this.CollectionLinks.Add(createdCollection.SelfLink);
-        //    }
-        //}
-
         private void CreateCollectionIfRequired()
         {
             if (this.ShouldCreateCollection())
