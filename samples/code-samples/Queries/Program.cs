@@ -427,7 +427,7 @@
         private static void QueryWithTwoJoinsAndFilter(string collectionLink)
         {
             var familiesChildrenAndPets = client.CreateDocumentQuery<dynamic>(collectionLink,
-                    "SELECT f.id, c.FirstName AS child, p.GivenName AS pet " +
+                    "SELECT f.id as family, c.FirstName AS child, p.GivenName AS pet " +
                     "FROM Families f " +
                     "JOIN c IN f.Children " +
                     "JOIN p IN c.Pets " +
@@ -441,13 +441,13 @@
             // LINQ
             familiesChildrenAndPets = client.CreateDocumentQuery<Family>(collectionLink)
                     .SelectMany(family => family.Children
-                    .SelectMany(children => children.Pets
-                    .Where(pets => pets.GivenName == "Fluffy")
-                    .Select(pets => new
+                    .SelectMany(child => child.Pets
+                    .Where(pet => pet.GivenName == "Fluffy")
+                    .Select(pet  => new
                     {
                         family = family.Id,
-                        child = children.FirstName,
-                        pet = pets.GivenName
+                        child = child.FirstName,
+                        pet = pet.GivenName
                     }
                     )));
 
@@ -461,7 +461,7 @@
         {
             // SQL
             var familiesChildrenAndPets = client.CreateDocumentQuery<dynamic>(collectionLink,
-                "SELECT f.id, c.FirstName AS child, p.GivenName AS pet " +
+                "SELECT f.id as family, c.FirstName AS child, p.GivenName AS pet " +
                 "FROM Families f " +
                 "JOIN c IN f.Children " +
                 "JOIN p IN c.Pets ");
@@ -474,14 +474,14 @@
             // LINQ
             familiesChildrenAndPets = client.CreateDocumentQuery<Family>(collectionLink)
                     .SelectMany(family => family.Children
-                    .SelectMany(children => children.Pets
-                    .Select(pets => new
+                    .SelectMany(child => child.Pets
+                    .Select(pet => new
                     {
                         family = family.Id,
-                        child = children.FirstName,
-                        pet = pets.GivenName
-                    })
-                    ));
+                        child = child.FirstName,
+                        pet = pet.GivenName
+                    }
+                    )));
 
             foreach (var item in familiesChildrenAndPets)
             {
