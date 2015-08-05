@@ -91,6 +91,9 @@
             // Force a range-based scan on a Hash index
             await RangeScanOnHashIndex(database);
 
+            // make changes to the indexing policy
+            await PerformIndexTransformations(database);
+
             // Cleanup
             await client.DeleteDatabaseAsync(database.SelfLink);
         }
@@ -337,7 +340,92 @@
             // using the EnableScanInQuery directive
             ShowQueryIsAllowed(collection, "SELECT * FROM root r WHERE r.length > 5", new FeedOptions { EnableScanInQuery = true });
 
+            //Cleanup
+            await client.DeleteDocumentCollectionAsync(collection.SelfLink);
+
             Console.WriteLine("Done with Query scan hints.");
+        }
+
+        private static async Task PerformIndexTransformations(Database database)
+        {
+            Console.WriteLine("Performing indexing transformations on an existing collection ...");
+
+            // Create a collection with default indexing policy
+            var collection = new DocumentCollection { Id = ConfigurationManager.AppSettings["CollectionId"] };
+            collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, database, collection);
+
+            // Insert some documents
+            var doc1 = await client.CreateDocumentAsync(collection.SelfLink, new { id = "dyn1", length = 10, width = 5, height = 15 });
+            var doc2 = await client.CreateDocumentAsync(collection.SelfLink, new { id = "dyn2", length = 7, width = 15 });
+            var doc3 = await client.CreateDocumentAsync(collection.SelfLink, new { id = "dyn3", length = 2 });
+            
+            // Switch to lazy indexing and wait till complete.
+            Console.WriteLine("Changing from Default to Lazy IndexingMode.");
+
+            collection.IndexingPolicy.IndexingMode = IndexingMode.Lazy;
+
+            await client.ReplaceDocumentCollectionAsync(collection);
+
+            // Check progress and wait for completion - should be instantaneous since we have only a few documents, but larger
+            // collections will take time.
+            await WaitForIndexTransformationToComplete(collection);
+
+            // Switch to use string range indexing with maximum precision.
+            Console.WriteLine("Changing to string range indexing with maximum precision for Order By.");
+
+            collection.IndexingPolicy.IndexingMode = IndexingMode.Consistent;
+            collection.IndexingPolicy.IncludedPaths = new Collection<IncludedPath>() {
+                new IncludedPath() 
+                {
+                    Path = "/*",
+                    Indexes = new Collection<Index>() {
+                        new RangeIndex(DataType.Number) { Precision = -1},
+                        new RangeIndex(DataType.String) { Precision = -1 }
+                    }
+                }
+            };
+
+            // Apply change
+            await client.ReplaceDocumentCollectionAsync(collection);
+
+            // Wait for completion. Once complete, you can run string range and order by queries.
+            await WaitForIndexTransformationToComplete(collection);
+
+            // Now exclude a path from indexing to save on storage space.
+            Console.WriteLine("Changing to exclude some paths from indexing.");
+
+            collection.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath()
+            {
+                Path = "/excluded/*"
+            });
+
+            // Apply change
+            await client.ReplaceDocumentCollectionAsync(collection);
+
+            // Wait for completion. Once complete, you can run string range and order by queries.
+            await WaitForIndexTransformationToComplete(collection);
+
+            Console.WriteLine("Done with indexing policy transformations.");
+        }
+
+        /// <summary>
+        /// Check the index transformation progress using a ReadDocumentCollectionAsync. 
+        /// The service returns a 0-100 value based on the progress.
+        /// </summary>
+        /// <param name="collection">the collection to monitor progress</param>
+        /// <returns>a Task for async completion of the wait operation.</returns>
+        private static async Task WaitForIndexTransformationToComplete(DocumentCollection collection)
+        {
+            long smallWaitTimeMilliseconds = 1000;
+            long progress = 0;
+
+            while (progress >= 0 && progress < 100)
+            {
+                ResourceResponse<DocumentCollection> collectionReadResponse = await client.ReadDocumentCollectionAsync(collection.SelfLink);
+                progress = collectionReadResponse.IndexTransformationProgress;
+
+                await Task.Delay(TimeSpan.FromMilliseconds(smallWaitTimeMilliseconds));
+            }
         }
 
         private static void ShowQueryReturnsResults(DocumentCollection collection, string query, FeedOptions options = null)
