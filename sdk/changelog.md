@@ -11,8 +11,6 @@
 ## Changes in 1.2.0 : ##
 - Dependency on Newtonsoft.Json v5.0.7 
 - Changes to support Order By
-  - Support for string range indexes
-    Allows you to do range operations on string fields. E.g. WHERE c.stringfield > "something"
   - LINQ provider support for OrderBy() or OrderByDescending()
 - **Breaking changes** 
   - IndexingPolicy to support Order By
