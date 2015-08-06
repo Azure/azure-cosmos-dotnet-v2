@@ -1,11 +1,11 @@
 ## Changes in 1.3.0 : ##
   - Support for modifying indexing policies
-    new ReplaceDocumentCollectionAsync method in DocumentClient
-    new IndexTransformationProgress property in ResourceResponse<T> for tracking percent progress of index policy changes
-    DocumentCollection.IndexingPolicy is now mutable
+  - new ReplaceDocumentCollectionAsync method in DocumentClient
+  - new IndexTransformationProgress property in ResourceResponse<T> for tracking percent progress of index policy changes
+  - DocumentCollection.IndexingPolicy is now mutable
   - Support for spatial indexing and query
-    new Microsoft.Azure.Documents.Spatial namespace for serializing/deserializing spatial types like Point and Polygon
-    new SpatialIndex class for indexing GeoJSON data stored in DocumentDB
+  - new Microsoft.Azure.Documents.Spatial namespace for serializing/deserializing spatial types like Point and Polygon
+  - new SpatialIndex class for indexing GeoJSON data stored in DocumentDB
   - Fixed : Incorrect SQL query generated from linq expression [#38](https://github.com/Azure/azure-documentdb-net/issues/38)
 
 ## Changes in 1.2.0 : ##
