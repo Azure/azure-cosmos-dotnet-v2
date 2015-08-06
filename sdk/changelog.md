@@ -1,3 +1,6 @@
+## Changes in 1.3.0 : ##
+  - Fixed : Incorrect SQL query generated from linq expression [#38](https://github.com/Azure/azure-documentdb-net/issues/38)
+
 ## Changes in 1.2.0 : ##
 - Dependency on Newtonsoft.Json v5.0.7 
 - Changes to support Order By
