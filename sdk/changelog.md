@@ -12,8 +12,8 @@
 - Dependency on Newtonsoft.Json v5.0.7 
 - Changes to support Order By
   - LINQ provider support for OrderBy() or OrderByDescending()
-- **Breaking changes** 
-  - IndexingPolicy to support Order By
+  - IndexingPolicy to support Order By (**NB: Possible breaking change**) 
+  
     If you have existing code that provisions collections with a custom indexing policy, then your existing code will need to be updated to support the new IndexingPolicy class. If you have no custom indexing policy, then this change does not affect you.
 
 ## Changes in 1.1.0 : ##
