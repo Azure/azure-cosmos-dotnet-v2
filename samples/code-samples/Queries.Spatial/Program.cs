@@ -178,28 +178,25 @@
             Console.WriteLine();
 
             Console.WriteLine("Checking if a point is valid ...");
-            dynamic result = client.CreateDocumentQuery(collection.SelfLink, 
+            QueryScalar(
+                collection.SelfLink,
                 new SqlQuerySpec 
                 {
                     QueryText = "SELECT ST_ISVALID(@point), ST_ISVALIDDETAILED(@point)", 
                     Parameters = new SqlParameterCollection(new [] { new SqlParameter { Name = "@point", Value = new Point(31.9, -132.8) } })
-                }).AsDocumentQuery().ExecuteNextAsync().Result.First();
-
-            Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.None));
+                });
 
             Console.WriteLine("Checking if a polygon is valid ...");
-            result = client.CreateDocumentQuery(collection.SelfLink, 
+            QueryScalar(
+                collection.SelfLink, 
                 new SqlQuerySpec 
                 {
-                    QueryText = "SELECT ST_ISVALID(@polygon), ST_ISVALIDDETAILED(@polygon)",
-                    Parameters = new SqlParameterCollection(new[] { new SqlParameter { 
+                     QueryText = "SELECT ST_ISVALID(@polygon), ST_ISVALIDDETAILED(@polygon)",
+                     Parameters = new SqlParameterCollection(new[] { new SqlParameter { 
                         Name = "@polygon", 
                         Value = new Polygon(new [] { new LinearRing(new [] { new Position(31.8, -5), new Position(32, -5), new Position(32, -4.7), new Position(31.8, -4.7) })}) 
                     }})
-                }).AsDocumentQuery().ExecuteNextAsync().Result.First();
-
-            Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.None));
-
+                 });
         }
 
         class Animal
@@ -287,6 +284,17 @@
             }
 
             return collection;
+        }
+
+        /// <summary>
+        /// Run a query that returns a single document, and display it
+        /// </summary>
+        /// <param name="collectionLink">The collection self-link</param>
+        /// <param name="query">The query to run</param>
+        private static void QueryScalar(string collectionLink, SqlQuerySpec query)
+        {
+            dynamic result = client.CreateDocumentQuery(collectionLink, query).AsDocumentQuery().ExecuteNextAsync().Result.First();
+            Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.None));
         }
     }
 }
