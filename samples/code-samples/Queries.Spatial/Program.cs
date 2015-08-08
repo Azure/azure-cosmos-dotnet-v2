@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Configuration;
+    using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
     using DocumentDB.Samples.Shared;
@@ -132,6 +133,9 @@
 
             // How to check for valid geospatial objects. Checks for valid latitude/longtiudes and if polygons are well-formed, etc.
             CheckIfPointOrPolygonIsValid(collection);
+
+            // How to add more geospatial functionality like ST_AREA for polygons, using JavaScript user defined functions.
+            await ExtendUsingUserDefinedFunctions(collection);
         }
 
         /// <summary>
@@ -155,9 +159,10 @@
         /// <param name="from">The position to measure distance from.</param>
         private static void RunDistanceQuery(DocumentCollection collection, Point from)
         {
-            Console.WriteLine("Performing a DISTANCE proximity query in SQL");
+            Console.WriteLine("Performing a ST_DISTANCE proximity query in SQL");
 
             // DocumentDB uses the WGS-84 coordinate reference system (CRS). In this reference system, distance is measured in meters. So 30km = 3000m.
+            // There are several built-in SQL functions that follow the OGC naming standards and start with the "ST_" prefix for "spatial type".
             foreach (Animal animal in client.CreateDocumentQuery<Animal>(
                 collection.SelfLink,
                 "SELECT * FROM everything e WHERE e.species ='Dragon' AND ST_DISTANCE(e.location, {'type': 'Point', 'coordinates':[31.9, -4.8]}) < 30000"))
@@ -168,7 +173,7 @@
             Console.WriteLine();
 
             // Geometry.Distance is a stub method in the DocumentDB SDK that can be used within LINQ expressions to build spatial queries.
-            Console.WriteLine("Performing a DISTANCE proximity query in LINQ");
+            Console.WriteLine("Performing a ST_DISTANCE proximity query in LINQ");
             foreach (Animal animal in client.CreateDocumentQuery<Animal>(collection.SelfLink).Where(a => a.Species == "Dragon" && a.Location.Distance(from) < 30000))
             {
                 Console.WriteLine("\t" + animal);
@@ -176,7 +181,7 @@
 
             Console.WriteLine();
 
-            Console.WriteLine("Performing a DISTANCE proximity query in parameterized SQL");
+            Console.WriteLine("Performing a ST_DISTANCE proximity query in parameterized SQL");
             foreach (Animal animal in client.CreateDocumentQuery<Animal>(
                 collection.SelfLink,
                 new SqlQuerySpec
@@ -197,7 +202,7 @@
         /// <param name="collection">The DocumentDB collection.</param>
         private static void RunWithinPolygonQuery(DocumentCollection collection)
         {
-            Console.WriteLine("Performing a WITHIN proximity query in SQL");
+            Console.WriteLine("Performing a ST_WITHIN proximity query in SQL");
 
             foreach (Animal animal in client.CreateDocumentQuery<Animal>(
                 collection.SelfLink,
@@ -207,7 +212,7 @@
             }
 
             Console.WriteLine();
-            Console.WriteLine("Performing a WITHIN proximity query in LINQ");
+            Console.WriteLine("Performing a ST_WITHIN proximity query in LINQ");
 
             foreach (Animal animal in client.CreateDocumentQuery<Animal>(collection.SelfLink)
                 .Where(a => a.Location.Within(new Polygon(new[] { new LinearRing(new[] { new Position(31.8, -5), new Position(32, -5), new Position(32, -4.7), new Position(31.8, -4.7), new Position(31.8, -5) }) }))))
@@ -342,6 +347,52 @@
         {
             dynamic result = client.CreateDocumentQuery(collectionLink, query).AsDocumentQuery().ExecuteNextAsync().Result.First();
             Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.None));
+        }
+
+        /// <summary>
+        /// Implement additional functionality using JavaScript user defined functions. This example shows a simple function to find the area of 
+        /// a polygon.
+        /// </summary>
+        /// <param name="collection">The DocumentDB collection.</param>
+        /// <returns>The Task for asynchronous execution.</returns>
+        private static async Task ExtendUsingUserDefinedFunctions(DocumentCollection collection)
+        {
+            await RegisterAreaUserDefinedFunction(collection);
+
+            Console.WriteLine("Performing a ST_AREA proximity query in SQL using a custom user defined function");
+
+            QueryScalar(collection.SelfLink, new SqlQuerySpec { QueryText = "SELECT VALUE udf.ST_AREA({'type':'Polygon', 'coordinates': [[[31.8, -5], [32, -5], [32, -4.7], [31.8, -4.7], [31.8, -5]]]})" });
+            Console.WriteLine();
+
+            Console.WriteLine();
+        }
+
+        /// <summary>
+        /// Register a user defined function to extend geospatial functionality, e.g. introduce ST_AREA for calculating the area of a polygon.
+        /// </summary>
+        /// <param name="collection">The DocumentDB collection.</param>
+        /// <returns>The Task for asynchronous execution.</returns>
+        private static async Task RegisterAreaUserDefinedFunction(DocumentCollection collection)
+        {
+            string areaJavaScriptBody = File.ReadAllText(@"STArea.js");
+         
+            UserDefinedFunction areaUserDefinedFunction = client.CreateUserDefinedFunctionQuery(collection.SelfLink).Where(u => u.Id == "ST_AREA").AsEnumerable().FirstOrDefault();
+
+            if (areaUserDefinedFunction == null)
+            {
+                await client.CreateUserDefinedFunctionAsync(
+                    collection.SelfLink,
+                    new UserDefinedFunction
+                    {
+                        Id = "ST_AREA",
+                        Body = areaJavaScriptBody
+                    });
+            }
+            else 
+            {
+                areaUserDefinedFunction.Body = areaJavaScriptBody;
+                await client.ReplaceUserDefinedFunctionAsync(areaUserDefinedFunction);
+            }
         }
 
         /// <summary>
