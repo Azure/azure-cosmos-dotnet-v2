@@ -60,17 +60,24 @@ A **polygon** is a boundary of connected points that forms a closed LineString. 
 
 **Polygons in DocumentDB**
 
+***No holes:***
+
     {
        "type":"Polygon",
        "coordinates":[
-           [ 31.8, -5 ],
-           [ 31.8, -4.7 ],
-           [ 32, -4.7 ],
-           [ 32, -5 ],
-           [ 31.8, -5 ]
+            [ [ 31.8, -5 ], [ 31.8, -4.7 ], [ 32, -4.7 ], [ 32, -5 ], [ 31.8, -5 ] ]
        ]
     }
+    
+***holes:***
 
+    {
+       "type":"Polygon",
+       "coordinates":[
+            [ [100.0, 0.0], [101.0, 0.0], [101.0, 1.0], [100.0, 1.0], [100.0, 0.0] ],
+            [ [100.2, 0.2], [100.8, 0.2], [100.8, 0.8], [100.2, 0.8], [100.2, 0.2] ]
+       ]
+    }
 >[AZURE.NOTE] The GeoJSON specification requires that for valid polygons, the last coordinate pair provided should be the same as the first, to create a closed shape. 
 
 In addition to Point, LineString and Polygon, GeoJSON also supports MultiPoint, MultiLineString, MultiPolygon, and GeometryCollection for grouping geospatial locations. GeoJSON also supports Feature and FeatureCollection that support arbitrary properties to be associated with locations. Since these types are valid JSON, they can all be stored and processed in DocumentDB.
