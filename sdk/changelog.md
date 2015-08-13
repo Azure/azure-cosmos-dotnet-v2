@@ -1,3 +1,14 @@
+## Changes in 1.4.0 : ##
+  - ID Based Routing
+    - New UriFactory helper to assist with constructing ID based resource links
+    - New overloads on DocumentClient to take in URI
+  - Added IsValid() and IsValidDetailed() in LINQ for geospatial
+  - LINQ Provider support enhanced
+    - **Math** - Abs, Acos, Asin, Atan, Ceiling, Cos, Exp, Floor, Log, Log10, Pow, Round, Sign, Sin, Sqrt, Tan, Truncate
+    - **String** - Concat, Contains, EndsWith, IndexOf, Count, ToLower, TrimStart, Replace, Reverse, TrimEnd, StartsWith, SubString, ToUpper
+    - **Array** - Concat, Contains, Count
+    - **IN** operator
+
 ## Changes in 1.3.0 : ##
   - Added support for modifying indexing policies
     - New ReplaceDocumentCollectionAsync method in DocumentClient
