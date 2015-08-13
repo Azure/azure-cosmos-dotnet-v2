@@ -1,5 +1,6 @@
 ﻿namespace DocumentDB.Samples.Queries
 {
+    using DocumentDB.Samples.Shared.Util;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using Microsoft.Azure.Documents.Linq;
@@ -65,7 +66,7 @@
             Database database = await GetNewDatabaseAsync(databaseId);
 
             //Get, or Create, the Document Collection
-            DocumentCollection collection = await GetOrCreateCollectionAsync(database.SelfLink, collectionId);
+            DocumentCollection collection = await GetOrCreateCollectionAsync(database, collectionId);
             
             //Create documents needed for query samples
             await CreateDocuments(collection.SelfLink);
@@ -636,9 +637,9 @@
         /// </summary>
         /// <param name="id">The id of the DocumentCollection to search for, or create.</param>
         /// <returns>The matched, or created, DocumentCollection object</returns>
-        private static async Task<DocumentCollection> GetOrCreateCollectionAsync(string dbLink, string id)
+        private static async Task<DocumentCollection> GetOrCreateCollectionAsync(Database db, string id)
         {
-            DocumentCollection collection = client.CreateDocumentCollectionQuery(dbLink).Where(c => c.Id == id).ToArray().FirstOrDefault();
+            DocumentCollection collection = client.CreateDocumentCollectionQuery(db.SelfLink).Where(c => c.Id == id).ToArray().FirstOrDefault();
 
             if (collection == null)
             {
@@ -656,7 +657,7 @@
                 DocumentCollection collectionDefinition = new DocumentCollection { Id = id };
                 collectionDefinition.IndexingPolicy = optimalQueriesIndexingPolicy;
 
-                collection = await client.CreateDocumentCollectionAsync(dbLink, collectionDefinition);
+                collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, db, collectionDefinition);
             }
 
             return collection;
