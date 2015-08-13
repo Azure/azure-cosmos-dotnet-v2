@@ -133,9 +133,6 @@
 
             // How to check for valid geospatial objects. Checks for valid latitude/longtiudes and if polygons are well-formed, etc.
             CheckIfPointOrPolygonIsValid(collection);
-
-            // How to add more geospatial functionality like ST_AREA for polygons, using JavaScript user defined functions.
-            await ExtendUsingUserDefinedFunctions(collection);
         }
 
         /// <summary>
@@ -347,24 +344,6 @@
         {
             dynamic result = client.CreateDocumentQuery(collectionLink, query).AsDocumentQuery().ExecuteNextAsync().Result.First();
             Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.None));
-        }
-
-        /// <summary>
-        /// Implement additional functionality using JavaScript user defined functions. This example shows a simple function to find the area of 
-        /// a polygon.
-        /// </summary>
-        /// <param name="collection">The DocumentDB collection.</param>
-        /// <returns>The Task for asynchronous execution.</returns>
-        private static async Task ExtendUsingUserDefinedFunctions(DocumentCollection collection)
-        {
-            await RegisterAreaUserDefinedFunction(collection);
-
-            Console.WriteLine("Performing a ST_AREA proximity query in SQL using a custom user defined function");
-
-            QueryScalar(collection.SelfLink, new SqlQuerySpec { QueryText = "SELECT VALUE udf.ST_AREA({'type':'Polygon', 'coordinates': [[[31.8, -5], [32, -5], [32, -4.7], [31.8, -4.7], [31.8, -5]]]})" });
-            Console.WriteLine();
-
-            Console.WriteLine();
         }
 
         /// <summary>
