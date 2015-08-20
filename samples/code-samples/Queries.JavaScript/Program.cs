@@ -1,4 +1,4 @@
-﻿namespace DocumentDB.Samples.Queries.Spatial
+﻿namespace DocumentDB.Samples.Queries.JavaScript
 {
     using System;
     using System.Collections.Generic;
@@ -15,10 +15,7 @@
     using Newtonsoft.Json.Serialization;
 
     /// <summary>
-    /// This sample demonstrates the use of geospatial indexing and querying with Azure DocumentDB. We 
-    /// look at how to store Points using the classes in the Microsoft.Azure.Documents.Spatial namespace,
-    /// how to enable a collection for geospatial indexing, and how to query for WITHIN and DISTANCE 
-    /// using SQL and LINQ.
+    /// This sample demonstrates the use of JavaScript language integrated queries with Azure DocumentDB.
     /// </summary>
     public class Program
     {
@@ -41,26 +38,6 @@
         /// Gets the DocumentDB authorization key to use for the demo.
         /// </summary>
         private static readonly string AuthorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
-
-        /// <summary>
-        /// Gets an indexing policy with spatial enabled. You can also configure just certain paths for spatial indexing, e.g. Path = "/location/?"
-        /// </summary>
-        private static readonly IndexingPolicy IndexingPolicyWithSpatialEnabled = new IndexingPolicy
-        {
-            IncludedPaths = new System.Collections.ObjectModel.Collection<IncludedPath>()
-            {
-                new IncludedPath 
-                {
-                    Path = "/*",
-                    Indexes = new System.Collections.ObjectModel.Collection<Index>()
-                    {
-                        new SpatialIndex(DataType.Point),
-                        new RangeIndex(DataType.Number) { Precision = -1 },
-                        new RangeIndex(DataType.String) { Precision = -1 }
-                    }
-                }
-            }
-        };
 
         /// <summary>
         /// Gets the client to use.
@@ -99,7 +76,7 @@
         }
 
         /// <summary>
-        /// Run the geospatial demo.
+        /// Run the JavaScript language integrated queries samples.
         /// </summary>
         /// <param name="databaseId">The database Id.</param>
         /// <param name="collectionId">The collection Id.</param>
@@ -130,7 +107,8 @@
             Console.WriteLine("Projection query returned: {0}", JsonConvert.SerializeObject(projectionQueryResult, Formatting.Indented));
 
             // Run a query using filter and map (using chaining)
-            object chainQueryResult = await QueryScalar(collection.SelfLink,
+            object chainQueryResult = await QueryScalar(
+                collection.SelfLink,
                 @"__.chain()
                     .filter(function(person) { return person.firstName === 'Andrew'; })
                     .map(function(person) { return { familyName: person.lastName, address: person.address }; })
@@ -139,7 +117,8 @@
             Console.WriteLine("Chain (filter & projection) query returned: {0}", JsonConvert.SerializeObject(chainQueryResult, Formatting.Indented));
 
             // Run a chained filter, map and sorting (using chaining)
-            object sortQueryResult = await QueryScalar(collection.SelfLink,
+            object sortQueryResult = await QueryScalar(
+                collection.SelfLink,
                 @"__.chain()
                     .filter(function(person) { return person.firstName === 'Andrew' || person.firstName === 'Ryan'; })
                     .sortBy(function(person) { return person.lastName; })
@@ -205,9 +184,13 @@
         /// Run a query that returns a single document, and display it
         /// </summary>
         /// <param name="collectionLink">The collection self-link</param>
-        /// <param name="query">The query to run</param>
+        /// <param name="javascriptQuery">The query to run</param>
+        /// <returns>The result of the query as an object.</returns>
         private static async Task<object> QueryScalar(string collectionLink, string javascriptQuery)
         {
+            // JavaScript integrated queries are supported using the server side SDK, so you'll be using
+            // them within stored procedures and triggers. Here we show them standalone just to demonstrate
+            // how to use the functional-Underscore.js style query API
             string javaScriptFunctionStub = string.Format("function() {{ {0}; }}", javascriptQuery);
             string singleQuerySprocName = "query";
 
@@ -240,7 +223,8 @@
         /// Create a document from JSON string
         /// </summary>
         /// <param name="collectionLink">The collection self-link</param>
-        /// <param name="query">The JSON to create</param>
+        /// <param name="json">The JSON to create</param>
+        /// <returns>The Task for asynchronous execution.</returns>
         private static async Task CreateDocumentAsync(string collectionLink, string json)
         {
             using (System.IO.MemoryStream ms = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json)))
