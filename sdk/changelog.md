@@ -1,3 +1,6 @@
+## Changes in 1.4.1 : ##
+ - Fixing localization issues when using non en culture info such as nl-NL etc. 
+ 
 ## Changes in 1.4.0 : ##
   - ID Based Routing
     - New UriFactory helper to assist with constructing ID based resource links
