@@ -260,7 +260,7 @@
                 TriggerType = TriggerType.Pre
             };
 
-            await TryDeleteStoredProcedure(colSelfLink, trigger.Id);
+            await TryDeleteTrigger(colSelfLink, trigger.Id);
             await client.CreateTriggerAsync(colSelfLink, trigger);
 
             // 2. Create a few documents with the trigger.
@@ -325,7 +325,7 @@
                 TriggerType = TriggerType.Post
             };
 
-            await TryDeleteStoredProcedure(colSelfLink, trigger.Id);
+            await TryDeleteTrigger(colSelfLink, trigger.Id);
             await client.CreateTriggerAsync(colSelfLink, trigger);
             
             // 2. Create the metadata document.
