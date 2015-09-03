@@ -105,6 +105,9 @@
             // Query with Intra-document Joins
             QueryWithJoins(collection.SelfLink);
 
+            // Query with string, math and array operators
+            QueryWithStringMathAndArrayOperators(collection.SelfLink);
+
             // Query with parameterized SQL using SqlQuerySpec
             QueryWithSqlQuerySpec(collection.SelfLink);
             
@@ -478,7 +481,7 @@
             }
 
             // LINQ
-            results = client.CreateDocumentQuery<Family>(collectionLink)
+            familiesChildrenAndPets = client.CreateDocumentQuery<Family>(collectionLink)
                     .SelectMany(family => family.Children
                     .SelectMany(child => child.Pets
                     .Select(pet => new
@@ -518,6 +521,33 @@
             {
                 Console.WriteLine(JsonConvert.SerializeObject(item));
             }
+        }
+
+        private static void QueryWithStringMathAndArrayOperators(string collectionLink)
+        {
+            // Find all families where the lastName starts with "An" -> should return the Andersens
+            IQueryable<Family> results = client.CreateDocumentQuery<Family>(collectionLink, "SELECT * FROM family WHERE STARTSWITH(family.LastName, 'An')");
+            Assert("Expected only 1 family", results.AsEnumerable().Count() == 1);
+
+            // Same query in LINQ. You can also use other operators like string.Contains(), string.EndsWith(), string.Trim(), etc.
+            results = client.CreateDocumentQuery<Family>(collectionLink).Where(family => family.LastName.StartsWith("An"));
+            Assert("Expected only 1 family", results.AsEnumerable().Count() == 1);
+
+            // Round down numbers using FLOOR
+            IQueryable<int> numericResults = client.CreateDocumentQuery<int>(collectionLink, "SELECT VALUE FLOOR(family.Children[0].Grade) FROM family");
+            Assert("Expected grades [5, 2]", numericResults.AsEnumerable().SequenceEqual(new [] { 5, 8 }));
+
+            // Same query in LINQ. You can also use other Math operators
+            numericResults = client.CreateDocumentQuery<Family>(collectionLink).Select(family => (int)Math.Round((double)family.Children[0].Grade));
+            Assert("Expected grades [5, 2]", numericResults.AsEnumerable().SequenceEqual(new[] { 5, 8 }));
+
+            // Get number of children using ARRAY_LENGTH
+            numericResults = client.CreateDocumentQuery<int>(collectionLink, "SELECT VALUE ARRAY_LENGTH(family.Children) FROM family");
+            Assert("Expected children count [1, 2]", numericResults.AsEnumerable().SequenceEqual(new[] { 1, 2 }));
+
+            // Same query in LINQ
+            numericResults = client.CreateDocumentQuery<Family>(collectionLink).Select(family => family.Children.Count());
+            Assert("Expected children count [1, 2]", numericResults.AsEnumerable().SequenceEqual(new[] { 1, 2 }));
         }
         
         private static async Task QueryWithPagingAsync(string collectionLink)
