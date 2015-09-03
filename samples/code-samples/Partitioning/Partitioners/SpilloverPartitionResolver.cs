@@ -78,6 +78,8 @@
         /// </summary>
         public DateTime LastCheckTimeUtc { get; private set; }
 
+        int NextCollectionNumber { get; set; }
+
         /// <summary>
         /// Returns the collections to read for a document. Here we return all collections.
         /// </summary>
@@ -118,7 +120,7 @@
         /// <param name="collectionIdPrefix">The prefix to use while creating collections.</param>
         /// <param name="spec">The specification/template to use to create collections.</param>
         /// <returns>The list of collection self links.</returns>
-        private static List<string> GetCollections(
+        private List<string> GetCollections(
             DocumentClient client,
             Database database,
             string collectionIdPrefix,
@@ -133,23 +135,36 @@
                     collections[collectionNumber] = collection.SelfLink;
                 }
             }
-
+            if (collections.Any())
+            {
+                NextCollectionNumber = collections.Keys.Max() + 1;
+            }
+            else
+            {
+                NextCollectionNumber = 0;
+            }
             // Return selflinks in ID order
             return collections.OrderBy(kvp => kvp.Key).Select(kvp => kvp.Value).ToList();
         }
 
-        /// <summary>
-        /// Create a collection if the list is empty, or if the latest one is getting full.
-        /// </summary>
         private void CreateCollectionIfRequired()
         {
             if (this.ShouldCreateCollection())
             {
-                string collectionId = string.Format("{0}{1}", this.CollectionIdPrefix, this.CollectionLinks.Count);
-                var createdCollection = DocumentClientHelper.GetCollectionAsync(this.Client, this.Database, collectionId, this.CollectionTemplate).Result;
-                this.CollectionLinks.Add(createdCollection.SelfLink);
+                try
+                {
+                    string collectionId = string.Format("{0}{1}", this.CollectionIdPrefix, NextCollectionNumber);
+                    var createdCollection = DocumentClientHelper.GetCollectionAsync(this.Client, this.Database, collectionId, this.CollectionTemplate).Result;
+                    this.CollectionLinks.Add(createdCollection.SelfLink);
+                }
+                catch
+                {
+                    this.CollectionLinks = GetCollections(this.Client, this.Database, this.CollectionIdPrefix,
+                        this.CollectionTemplate);
+                }
             }
         }
+
 
         /// <summary>
         /// Check if a spillover has to be scheduled.

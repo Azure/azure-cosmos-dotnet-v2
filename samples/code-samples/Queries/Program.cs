@@ -1,5 +1,6 @@
 ﻿namespace DocumentDB.Samples.Queries
 {
+    using DocumentDB.Samples.Shared.Util;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using Microsoft.Azure.Documents.Linq;
@@ -65,7 +66,7 @@
             Database database = await GetNewDatabaseAsync(databaseId);
 
             //Get, or Create, the Document Collection
-            DocumentCollection collection = await GetOrCreateCollectionAsync(database.SelfLink, collectionId);
+            DocumentCollection collection = await GetOrCreateCollectionAsync(database, collectionId);
             
             //Create documents needed for query samples
             await CreateDocuments(collection.SelfLink);
@@ -432,7 +433,7 @@
         private static void QueryWithTwoJoinsAndFilter(string collectionLink)
         {
             var familiesChildrenAndPets = client.CreateDocumentQuery<dynamic>(collectionLink,
-                    "SELECT f.id, c.FirstName AS child, p.GivenName AS pet " +
+                    "SELECT f.id as family, c.FirstName AS child, p.GivenName AS pet " +
                     "FROM Families f " +
                     "JOIN c IN f.Children " +
                     "JOIN p IN c.Pets " +
@@ -446,14 +447,15 @@
             // LINQ
             familiesChildrenAndPets = client.CreateDocumentQuery<Family>(collectionLink)
                     .SelectMany(family => family.Children
-                    .SelectMany(children => children.Pets
-                    .Where(pets => pets.GivenName == "Fluffy")
-                    .Select(pets => new
+                    .SelectMany(child => child.Pets
+                    .Where(pet => pet.GivenName == "Fluffy")
+                    .Select(pet  => new
                     {
                         family = family.Id,
-                        child = children.FirstName,
-                        pet = pets.GivenName
-                    })));
+                        child = child.FirstName,
+                        pet = pet.GivenName
+                    }
+                    )));
 
             foreach (var item in familiesChildrenAndPets)
             {
@@ -465,7 +467,7 @@
         {
             // SQL
             var familiesChildrenAndPets = client.CreateDocumentQuery<dynamic>(collectionLink,
-                "SELECT f.id, c.FirstName AS child, p.GivenName AS pet " +
+                "SELECT f.id as family, c.FirstName AS child, p.GivenName AS pet " +
                 "FROM Families f " +
                 "JOIN c IN f.Children " +
                 "JOIN p IN c.Pets ");
@@ -478,13 +480,14 @@
             // LINQ
             results = client.CreateDocumentQuery<Family>(collectionLink)
                     .SelectMany(family => family.Children
-                    .SelectMany(children => children.Pets
-                    .Select(pets => new
+                    .SelectMany(child => child.Pets
+                    .Select(pet => new
                     {
                         family = family.Id,
-                        child = children.FirstName,
-                        pet = pets.GivenName
-                    })));
+                        child = child.FirstName,
+                        pet = pet.GivenName
+                    }
+                    )));
 
             foreach (var item in familiesChildrenAndPets)
             {
@@ -639,9 +642,9 @@
         /// </summary>
         /// <param name="id">The id of the DocumentCollection to search for, or create.</param>
         /// <returns>The matched, or created, DocumentCollection object</returns>
-        private static async Task<DocumentCollection> GetOrCreateCollectionAsync(string dbLink, string id)
+        private static async Task<DocumentCollection> GetOrCreateCollectionAsync(Database db, string id)
         {
-            DocumentCollection collection = client.CreateDocumentCollectionQuery(dbLink).Where(c => c.Id == id).ToArray().FirstOrDefault();
+            DocumentCollection collection = client.CreateDocumentCollectionQuery(db.SelfLink).Where(c => c.Id == id).ToArray().FirstOrDefault();
 
             if (collection == null)
             {
@@ -659,7 +662,7 @@
                 DocumentCollection collectionDefinition = new DocumentCollection { Id = id };
                 collectionDefinition.IndexingPolicy = optimalQueriesIndexingPolicy;
 
-                collection = await client.CreateDocumentCollectionAsync(dbLink, collectionDefinition);
+                collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, db, collectionDefinition);
             }
 
             return collection;

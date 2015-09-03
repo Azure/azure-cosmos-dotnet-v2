@@ -5,5 +5,4 @@ This contains a variety of sample code snippets and applications built using Azu
 
 - **searchabletodo/** - a sample ASP.NET MVC web application that demonstrates how to
 	- build an ASP.NET MVC web application with DocumentDB
-	- link this application to Azure Search 
-
+	- link this application to Azure Search.
