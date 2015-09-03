@@ -190,6 +190,11 @@
                 where f.Id == "AndersenFamily" || f.Address.City == "NY"
                 select new { Name = f.LastName, City = f.Address.City };
 
+            var query2 = client.CreateDocumentQuery<Family>(collectionLink, new FeedOptions { MaxItemCount = 1 })
+                .Where(d => d.LastName == "Andersen")
+                .Select(f => new { Name = f.LastName })
+                .AsDocumentQuery();
+
             foreach (var item in query.ToList())
             {
                 Console.WriteLine("The {0} family live in {1}", item.Name, item.City);
@@ -448,8 +453,7 @@
                         family = family.Id,
                         child = children.FirstName,
                         pet = pets.GivenName
-                    }
-                    )));
+                    })));
 
             foreach (var item in familiesChildrenAndPets)
             {
@@ -472,7 +476,7 @@
             }
 
             // LINQ
-            familiesChildrenAndPets = client.CreateDocumentQuery<Family>(collectionLink)
+            results = client.CreateDocumentQuery<Family>(collectionLink)
                     .SelectMany(family => family.Children
                     .SelectMany(children => children.Pets
                     .Select(pets => new
@@ -480,8 +484,7 @@
                         family = family.Id,
                         child = children.FirstName,
                         pet = pets.GivenName
-                    })
-                    ));
+                    })));
 
             foreach (var item in familiesChildrenAndPets)
             {

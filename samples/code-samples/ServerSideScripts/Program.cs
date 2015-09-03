@@ -496,7 +496,7 @@
         private static async Task TryDeleteStoredProcedure(string colSelfLink, string sprocId)
         {
             StoredProcedure sproc = client.CreateStoredProcedureQuery(colSelfLink).Where(s => s.Id == sprocId).AsEnumerable().FirstOrDefault();
-            if (sproc != null )
+            if (sproc != null)
             {
                 await client.DeleteStoredProcedureAsync(sproc.SelfLink);
             }
