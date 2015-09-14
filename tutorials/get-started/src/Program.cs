@@ -20,8 +20,6 @@ namespace DocumentDB.GetStarted
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using Microsoft.Azure.Documents.Linq;
-
-    // Add Newtonsoft.Json references
     using Newtonsoft.Json;
 
     /// <summary>
@@ -61,44 +59,47 @@ namespace DocumentDB.GetStarted
 
         private static async Task GetStartedDemo()
         {
-            // Make sure to call client.Dispose() once you've finished all DocumentDB interactions
             // Create a new instance of the DocumentClient
             var client = new DocumentClient(new Uri(EndpointUrl), AuthorizationKey);
 
             // Check to verify a database with the id=FamilyRegistry does not exist
             Database database = client.CreateDatabaseQuery().Where(db => db.Id == "FamilyRegistry").AsEnumerable().FirstOrDefault();
 
+            // If the database does not exist, create a new database
             if (database == null)
             {
-                // Create a database
                 database = await client.CreateDatabaseAsync(
                     new Database
                     {
                         Id = "FamilyRegistry"
                     });
+
+                WriteMessage("Created dbs/FamilyRegistry");
             }
-            else { Warn("database"); }
 
             // Check to verify a document collection with the id=FamilyCollection does not exist
-            DocumentCollection documentCollection = client.CreateDocumentCollectionQuery(database.CollectionsLink).Where(c => c.Id == "FamilyCollection").AsEnumerable().FirstOrDefault();
+            DocumentCollection documentCollection = client.CreateDocumentCollectionQuery("dbs/" + database.Id).Where(c => c.Id == "FamilyCollection").AsEnumerable().FirstOrDefault();
 
+            // If the document collection does not exist, create a new collection
             if (documentCollection == null)
             {
-                // Create a document collection using the lowest performance tier available (currently, S1)
-                documentCollection = await client.CreateDocumentCollectionAsync(database.CollectionsLink,
-                    new DocumentCollection { Id = "FamilyCollection" },
-                    new RequestOptions { OfferType = "S1" });
+                documentCollection = await client.CreateDocumentCollectionAsync("dbs/" + database.Id,
+                    new DocumentCollection
+                    {
+                        Id = "FamilyCollection"
+                    });
+
+                WriteMessage("Created dbs/FamilyRegistry/colls/FamilyCollection");
             }
-            
-            else { Warn("document collection"); }
 
             // Check to verify a document with the id=AndersenFamily does not exist
-            Document document = client.CreateDocumentQuery(documentCollection.DocumentsLink).Where(d => d.Id == "AndersenFamily").AsEnumerable().FirstOrDefault();
+            Document document = client.CreateDocumentQuery("dbs/" + database.Id + "/colls/" + documentCollection.Id).Where(d => d.Id == "AndersenFamily").AsEnumerable().FirstOrDefault();
 
+            // If the document does not exist, create a new document
             if (document == null)
             {
                 // Create the Andersen Family document
-                Family AndersonFamily = new Family
+                Family andersonFamily = new Family
                 {
                     Id = "AndersenFamily",
                     LastName = "Andersen",
@@ -121,17 +122,18 @@ namespace DocumentDB.GetStarted
                     IsRegistered = true
                 };
 
-                await client.CreateDocumentAsync(documentCollection.DocumentsLink, AndersonFamily);
+                await client.CreateDocumentAsync("dbs/" + database.Id + "/colls/" + documentCollection.Id, andersonFamily);
+
+                WriteMessage("Created dbs/FamilyRegistry/colls/FamilyCollection/docs/AndersenFamily");
             }
-            else { Warn("document"); }
 
             // Check to verify a document with the id=AndersenFamily does not exist
-            document = client.CreateDocumentQuery(documentCollection.DocumentsLink).Where(d => d.Id == "WakefieldFamily").AsEnumerable().FirstOrDefault();
+            document = client.CreateDocumentQuery("dbs/" + database.Id + "/colls/" + documentCollection.Id).Where(d => d.Id == "WakefieldFamily").AsEnumerable().FirstOrDefault();
 
             if (document == null)
             {
                 // Create the WakeField document
-                Family WakefieldFamily = new Family
+                Family wakefieldFamily = new Family
                 {
                     Id = "WakefieldFamily",
                     Parents = new Parent[] {
@@ -160,13 +162,13 @@ namespace DocumentDB.GetStarted
                     IsRegistered = false
                 };
 
-                await client.CreateDocumentAsync(documentCollection.DocumentsLink, WakefieldFamily);
-            }
-            else { Warn("document"); }
+                await client.CreateDocumentAsync("dbs/" + database.Id + "/colls/" + documentCollection.Id, wakefieldFamily);
 
+                WriteMessage("Created dbs/FamilyRegistry/colls/FamilyCollection/docs/WakefieldFamily");
+            }
 
             // Query the documents using DocumentDB SQL for the Andersen family
-            var families = client.CreateDocumentQuery(documentCollection.DocumentsLink,
+            var families = client.CreateDocumentQuery("dbs/" + database.Id + "/colls/" + documentCollection.Id,
                 "SELECT * " +
                 "FROM Families f " +
                 "WHERE f.id = \"AndersenFamily\"");
@@ -178,17 +180,17 @@ namespace DocumentDB.GetStarted
 
             // Query the documents using LINQ for the Andersen family
             families =
-                from f in client.CreateDocumentQuery(documentCollection.DocumentsLink)
+                from f in client.CreateDocumentQuery("dbs/" + database.Id + "/colls/" + documentCollection.Id)
                 where f.Id == "AndersenFamily"
                 select f;
 
             foreach (var family in families)
             {
-                Console.WriteLine("\tRead {0} from LINQ", family);
+                Console.WriteLine("Read {0} from LINQ", family);
             }
 
             // Query the documents using LINQ lambdas for the Andersen family
-            families = client.CreateDocumentQuery(documentCollection.DocumentsLink)
+            families = client.CreateDocumentQuery("dbs/" + database.Id + "/colls/" + documentCollection.Id)
                 .Where(f => f.Id == "AndersenFamily")
                 .Select(f => f);
 
@@ -197,40 +199,15 @@ namespace DocumentDB.GetStarted
                 Console.WriteLine("\tRead {0} from LINQ query", family);
             }
 
-            // Query the documents using DocumentSQl with one join
-            var items = client.CreateDocumentQuery<dynamic>(documentCollection.DocumentsLink,
-                "SELECT f.id, c.FirstName AS child " +
-                "FROM Families f " +
-                "JOIN c IN f.Children");
-
-            foreach (var item in items.ToList())
-            {
-                Console.WriteLine(item);
-            }
-
-            // Query the documents using LINQ with one join
-            items = client.CreateDocumentQuery<Family>(documentCollection.DocumentsLink)
-                .SelectMany(family => family.Children
-                    .Select(children => new
-                    {
-                        family = family.Id,
-                        child = children.FirstName
-                    }));
-
-            foreach (var item in items.ToList())
-            {
-                Console.WriteLine(item);
-            }
-
             // Clean up/delete the database and client
-            await client.DeleteDatabaseAsync(database.SelfLink);
+            await client.DeleteDatabaseAsync("dbs/" + database.Id);
             client.Dispose();
         }
 
-        private static void Warn(string resource)
+        private static void WriteMessage(string msg)
         {
-            Console.WriteLine("Warning: A " + resource + " with the same id already exists");
-            Console.WriteLine("Continuing may modify the existing " + resource + ".\nPress any key to continue.");
+            Console.WriteLine(msg);
+            Console.WriteLine("Press any key to continue ...");
             Console.ReadKey();
             Console.Clear();
         }
