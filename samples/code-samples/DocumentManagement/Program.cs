@@ -305,7 +305,7 @@
                 await client.CreateAttachmentAsync(doc.AttachmentsLink, fileStream, new MediaOptions { ContentType = "text/plain", Slug = "text.txt" });
             }
 
-            //Query for document for attachment for attachments
+            //Query the documents for attachments
             Attachment attachment = client.CreateAttachmentQuery(doc.SelfLink).AsEnumerable().FirstOrDefault();
             
             //Use DocumentClient to read the Media content
