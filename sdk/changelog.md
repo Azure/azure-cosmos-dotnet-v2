@@ -1,3 +1,6 @@
+## Changes in 1.5.0 : ##
+ - Added Upsert
+ 
 ## Changes in 1.4.1 : ##
  - Fixing localization issues when using non en culture info such as nl-NL etc. 
  
