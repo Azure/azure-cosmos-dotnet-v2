@@ -1,5 +1,8 @@
 ## Changes in 1.5.0 : ##
- - Added Upsert
+ - Implemented Upsert, Added UpsertXXXAsync methods
+ - Performance improvements for all requests
+ - LINQ Provider support for conditional, coalesce and CompareTo methods for strings
+ - **[Obselete]** UriFactory.CreateCollection --> should now use UriFactory.CreateDocumentCollection
  
 ## Changes in 1.4.1 : ##
  - Fixing localization issues when using non en culture info such as nl-NL etc. 
