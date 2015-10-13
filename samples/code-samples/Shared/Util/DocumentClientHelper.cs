@@ -1,7 +1,8 @@
-﻿namespace DocumentDB.Samples.Shared.Util
+﻿using System.Collections.Generic;
+
+namespace DocumentDB.Samples.Shared.Util
 {
     using System;
-    using System.Collections.Generic;
     using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
@@ -24,7 +25,7 @@
         /// <returns>The matched, or created, Database object</returns>
         public static async Task<Database> GetDatabaseAsync(DocumentClient client, string id)
         {
-            Database database = client.CreateDatabaseQuery().Where(db => db.Id == id).ToArray().FirstOrDefault();
+            var database = client.CreateDatabaseQuery().Where(db => db.Id == id).ToArray().FirstOrDefault();
             if (database == null)
             {
                 database = await client.CreateDatabaseAsync(new Database { Id = id });
@@ -41,7 +42,7 @@
         /// <returns>The matched, or created, Database object</returns>
         public static async Task<Database> GetNewDatabaseAsync(DocumentClient client, string id)
         {
-            Database database = client.CreateDatabaseQuery().Where(db => db.Id == id).ToArray().FirstOrDefault();
+            var database = client.CreateDatabaseQuery().Where(db => db.Id == id).ToArray().FirstOrDefault();
             if (database != null)
             {
                 await client.DeleteDatabaseAsync(database.SelfLink);
@@ -60,7 +61,7 @@
         /// <returns>The matched, or created, DocumentCollection object</returns>
         public static async Task<DocumentCollection> GetCollectionAsync(DocumentClient client, Database database, string collectionId)
         {
-            DocumentCollection collection = client.CreateDocumentCollectionQuery(database.SelfLink)
+            var collection = client.CreateDocumentCollectionQuery(database.SelfLink)
                 .Where(c => c.Id == collectionId).ToArray().FirstOrDefault();
 
             if (collection == null)
@@ -85,7 +86,7 @@
             string collectionId,
             DocumentCollectionSpec collectionSpec)
         {
-            DocumentCollection collection = client.CreateDocumentCollectionQuery(database.SelfLink)
+            var collection = client.CreateDocumentCollectionQuery(database.SelfLink)
                 .Where(c => c.Id == collectionId).ToArray().FirstOrDefault();
 
             if (collection == null)
@@ -110,13 +111,13 @@
             string collectionId, 
             DocumentCollectionSpec collectionSpec)
         {
-            DocumentCollection collectionDefinition = new DocumentCollection { Id = collectionId };
+            var collectionDefinition = new DocumentCollection { Id = collectionId };
             if (collectionSpec != null)
             {
                 CopyIndexingPolicy(collectionSpec, collectionDefinition);
             }
 
-            DocumentCollection collection = await CreateDocumentCollectionWithRetriesAsync(
+            var collection = await CreateDocumentCollectionWithRetriesAsync(
                 client, 
                 database, 
                 collectionDefinition,
@@ -141,7 +142,7 @@
         {
             if (collectionSpec.StoredProcedures != null)
             {
-                foreach (StoredProcedure sproc in collectionSpec.StoredProcedures)
+                foreach (var sproc in collectionSpec.StoredProcedures)
                 {
                     await client.CreateStoredProcedureAsync(collection.SelfLink, sproc);
                 }
@@ -149,7 +150,7 @@
 
             if (collectionSpec.Triggers != null)
             {
-                foreach (Trigger trigger in collectionSpec.Triggers)
+                foreach (var trigger in collectionSpec.Triggers)
                 {
                     await client.CreateTriggerAsync(collection.SelfLink, trigger);
                 }
@@ -157,7 +158,7 @@
 
             if (collectionSpec.UserDefinedFunctions != null)
             {
-                foreach (UserDefinedFunction udf in collectionSpec.UserDefinedFunctions)
+                foreach (var udf in collectionSpec.UserDefinedFunctions)
                 {
                     await client.CreateUserDefinedFunctionAsync(collection.SelfLink, udf);
                 }
@@ -178,7 +179,7 @@
 
                 if (collectionSpec.IndexingPolicy.IncludedPaths != null)
                 {
-                    foreach (IncludedPath path in collectionSpec.IndexingPolicy.IncludedPaths)
+                    foreach (var path in collectionSpec.IndexingPolicy.IncludedPaths)
                     {
                         collectionDefinition.IndexingPolicy.IncludedPaths.Add(path);
                     }
@@ -186,7 +187,7 @@
 
                 if (collectionSpec.IndexingPolicy.ExcludedPaths != null)
                 {
-                    foreach (ExcludedPath path in collectionSpec.IndexingPolicy.ExcludedPaths)
+                    foreach (var path in collectionSpec.IndexingPolicy.ExcludedPaths)
                     {
                         collectionDefinition.IndexingPolicy.ExcludedPaths.Add(path);
                     }
@@ -222,23 +223,22 @@
         /// <summary>
         /// Execute the function with retries on throttle.
         /// </summary>
-        /// <typeparam name="V">The type of return value from the execution.</typeparam>
+        /// <typeparam name="TValue">The type of return value from the execution.</typeparam>
         /// <param name="client">The DocumentDB client instance.</param>
         /// <param name="function">The function to execute.</param>
         /// <returns>The response from the execution.</returns>
-        public static async Task<V> ExecuteWithRetries<V>(DocumentClient client, Func<Task<V>> function)
+        public static async Task<TValue> ExecuteWithRetries<TValue>(DocumentClient client, Func<Task<TValue>> function)
         {
-            TimeSpan sleepTime = TimeSpan.Zero;
-
             while (true)
             {
+                TimeSpan sleepTime;
                 try
                 {
                     return await function();
                 }
                 catch (DocumentClientException de)
                 {
-                    if ((int)de.StatusCode != 429)
+                    if (!de.StatusCode.HasValue || (int)de.StatusCode != 429)
                     {
                         throw;
                     }
@@ -252,8 +252,8 @@
                         throw;
                     }
 
-                    DocumentClientException de = (DocumentClientException)ae.InnerException;
-                    if ((int)de.StatusCode != 429)
+                    var de = (DocumentClientException)ae.InnerException;
+                    if (!de.StatusCode.HasValue || (int)de.StatusCode != 429)
                     {
                         throw;
                     }
@@ -279,55 +279,55 @@
             string inputDirectory,
             string inputFileMask = "*.json")
         {
-            int maxFiles = 2000;
-            int maxScriptSize = 50000;
+            var maxFiles = 2000;
+            var maxScriptSize = 50000;
 
             // 1. Get the files. 
-            string[] fileNames = Directory.GetFiles(inputDirectory, inputFileMask);
-            DirectoryInfo di = new DirectoryInfo(inputDirectory);
-            FileInfo[] fileInfos = di.GetFiles(inputFileMask);
+            var fileNames = Directory.GetFiles(inputDirectory, inputFileMask);
 
-            int currentCount = 0;
-            int fileCount = maxFiles != 0 ? Math.Min(maxFiles, fileNames.Length) : fileNames.Length;
+            var currentCount = 0;
+            var fileCount = maxFiles != 0 ? Math.Min(maxFiles, fileNames.Length) : fileNames.Length;
 
-            string body = File.ReadAllText(@".\JS\BulkImport.js");
-            StoredProcedure sproc = new StoredProcedure
+            var body = File.ReadAllText(@".\JS\BulkImport.js");
+            var sproc = new StoredProcedure
             {
                 Id = "BulkImport",
                 Body = body
             };
 
             await TryDeleteStoredProcedure(client, collection, sproc.Id);
-            sproc = await ExecuteWithRetries<ResourceResponse<StoredProcedure>>(client, () => client.CreateStoredProcedureAsync(collection.SelfLink, sproc));
+            StoredProcedure sp = await ExecuteWithRetries(client, () => client.CreateStoredProcedureAsync(collection.SelfLink, sproc));
 
             while (currentCount < fileCount)
             {
-                string argsJson = CreateBulkInsertScriptArguments(fileNames, currentCount, fileCount, maxScriptSize);
-                var args = new dynamic[] { JsonConvert.DeserializeObject<dynamic>(argsJson) };
+                var argsJson = CreateBulkInsertScriptArguments(fileNames, currentCount, fileCount, maxScriptSize);
+                var args = new [] { JsonConvert.DeserializeObject<dynamic>(argsJson) };
 
-                StoredProcedureResponse<int> scriptResult = await ExecuteWithRetries<StoredProcedureResponse<int>>(client, () => client.ExecuteStoredProcedureAsync<int>(sproc.SelfLink, args));
+                var scriptResult = await ExecuteWithRetries(client, () => client.ExecuteStoredProcedureAsync<int>(sp.SelfLink, args));
 
-                int currentlyInserted = scriptResult.Response;
+                var currentlyInserted = scriptResult.Response;
                 currentCount += currentlyInserted;
             }
         }
 
         public static async Task TryDeleteStoredProcedure(DocumentClient client, DocumentCollection collection, string sprocId)
         {
-            StoredProcedure sproc = client.CreateStoredProcedureQuery(collection.SelfLink).Where(s => s.Id == sprocId).AsEnumerable().FirstOrDefault();
+            var sproc = client.CreateStoredProcedureQuery(collection.SelfLink).Where(s => s.Id == sprocId).AsEnumerable().FirstOrDefault();
             if (sproc != null)
             {
-                await ExecuteWithRetries<ResourceResponse<StoredProcedure>>(client, () => client.DeleteStoredProcedureAsync(sproc.SelfLink));
+                await ExecuteWithRetries(client, () => client.DeleteStoredProcedureAsync(sproc.SelfLink));
             }
         }
 
         /// <summary> 
         /// Creates the script for insertion 
-        /// </summary> 
-        /// <param name="currentIndex">the current number of documents inserted. this marks the starting point for this script</param> 
+        /// </summary>
+        /// <param name="docFileNames">the document files to be insterted</param>
+        /// <param name="currentIndex">the current number of documents inserted. this marks the starting point for this script</param>
+        /// <param name="maxCount">the maximum units to be inserted.</param>
         /// <param name="maxScriptSize">the maximum number of characters that the script can have</param> 
         /// <returns>Script as a string</returns> 
-        private static string CreateBulkInsertScriptArguments(string[] docFileNames, int currentIndex, int maxCount, int maxScriptSize)
+        private static string CreateBulkInsertScriptArguments(IReadOnlyList<string> docFileNames, int currentIndex, int maxCount, int maxScriptSize)
         {
             var jsonDocumentArray = new StringBuilder();
             jsonDocumentArray.Append("[");
@@ -339,10 +339,9 @@
 
             jsonDocumentArray.Append(File.ReadAllText(docFileNames[currentIndex]));
 
-            int scriptCapacityRemaining = maxScriptSize;
-            string separator = string.Empty;
+            var scriptCapacityRemaining = maxScriptSize;
 
-            int i = 1;
+            var i = 1;
             while (jsonDocumentArray.Length < scriptCapacityRemaining && (currentIndex + i) < maxCount)
             {
                 jsonDocumentArray.Append(", " + File.ReadAllText(docFileNames[currentIndex + i]));

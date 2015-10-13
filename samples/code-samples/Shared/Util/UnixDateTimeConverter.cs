@@ -1,12 +1,7 @@
 ﻿namespace DocumentDB.Samples.Shared.Util
 {
     using System;
-    using System.Collections.Generic;
     using System.Globalization;
-    using System.Linq;
-    using System.Resources;
-    using System.Text;
-    using System.Threading.Tasks;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Converters;
 
@@ -18,7 +13,7 @@
         {
             if (value is DateTime)
             {
-                long totalSeconds = (long)((DateTime)value - UnixStartTime).TotalSeconds;
+                var totalSeconds = (long)((DateTime)value - UnixStartTime).TotalSeconds;
                 writer.WriteValue(totalSeconds);
             }
             else
@@ -29,12 +24,12 @@
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            if (reader.TokenType != Newtonsoft.Json.JsonToken.Integer)
+            if (reader.TokenType != JsonToken.Integer)
             {
                 throw new Exception("Invalid token. Expected integer");
             }
 
-            double totalSeconds = 0;
+            double totalSeconds;
 
             try
             {
