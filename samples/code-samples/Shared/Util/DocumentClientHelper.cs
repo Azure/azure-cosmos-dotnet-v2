@@ -6,7 +6,6 @@
     using System.Threading.Tasks;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
-    using System.Collections.Generic;
     using Microsoft.Azure.Documents.Linq;
     using System.IO;
     using Newtonsoft.Json;
@@ -321,12 +320,12 @@
         /// <summary> 
         /// Creates the script for insertion 
         /// </summary>
-        /// <param name="docFileNames">the document files to be insterted</param>
+        /// <param name="docFileNames">the document files to be inserted</param>
         /// <param name="currentIndex">the current number of documents inserted. this marks the starting point for this script</param>
         /// <param name="maxCount">the maximum units to be inserted.</param>
         /// <param name="maxScriptSize">the maximum number of characters that the script can have</param> 
         /// <returns>Script as a string</returns> 
-        private static string CreateBulkInsertScriptArguments(IReadOnlyList<string> docFileNames, int currentIndex, int maxCount, int maxScriptSize)
+        private static string CreateBulkInsertScriptArguments(string[] docFileNames, int currentIndex, int maxCount, int maxScriptSize)
         {
             var jsonDocumentArray = new StringBuilder();
             jsonDocumentArray.Append("[");
