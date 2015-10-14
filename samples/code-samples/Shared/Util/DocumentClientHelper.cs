@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace DocumentDB.Samples.Shared.Util
+﻿namespace DocumentDB.Samples.Shared.Util
 {
     using System;
     using System.Linq;
@@ -8,6 +6,7 @@ namespace DocumentDB.Samples.Shared.Util
     using System.Threading.Tasks;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
+    using System.Collections.Generic;
     using Microsoft.Azure.Documents.Linq;
     using System.IO;
     using Newtonsoft.Json;
