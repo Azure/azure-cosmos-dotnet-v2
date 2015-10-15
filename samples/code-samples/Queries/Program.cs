@@ -14,20 +14,21 @@
 
     //------------------------------------------------------------------------------------------------
     // This sample demonstrates the use of LINQ and SQL Query Grammar to query DocumentDB Service
-    // For additional examples using the SQL query grammer refer to the SQL Query Tutorial - 
+    // For additional examples using the SQL query grammer refer to the SQL Query Tutorial available 
+    // at https://azure.microsoft.com/documentation/articles/documentdb-sql-query/.
     // There is also an interactive Query Demo web application where you can try out different 
-    // SQL queries - 
+    // SQL queries available at https://www.documentdb.com/sql/demo.  
     //------------------------------------------------------------------------------------------------
 
     public class Program
     {
         private static DocumentClient client;
 
-        //Assign a id for your database & collection 
+        //Assign an id for your database & collection 
         private static readonly string databaseId = ConfigurationManager.AppSettings["DatabaseId"];
         private static readonly string collectionId = ConfigurationManager.AppSettings["CollectionId"];
 
-        //Read the DocumentDB endpointUrl and authorisationKeys from config
+        //Read the DocumentDB endpointUrl and authorizationKeys from config
         //These values are available from the Azure Management Portal on the DocumentDB Account Blade under "Keys"
         //NB > Keep these values in a safe & secure location. Together they provide Administrative access to your DocDB account
         private static readonly string endpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
