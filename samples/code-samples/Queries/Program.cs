@@ -14,9 +14,10 @@
 
     //------------------------------------------------------------------------------------------------
     // This sample demonstrates the use of LINQ and SQL Query Grammar to query DocumentDB Service
-    // For additional examples using the SQL query grammer refer to the SQL Query Tutorial - 
+    // For additional examples using the SQL query grammer refer to the SQL Query Tutorial available 
+    // at https://azure.microsoft.com/documentation/articles/documentdb-sql-query/.
     // There is also an interactive Query Demo web application where you can try out different 
-    // SQL queries - 
+    // SQL queries available at https://www.documentdb.com/sql/demo.  
     //------------------------------------------------------------------------------------------------
 
     public class Program
