@@ -24,7 +24,7 @@
     {
         private static DocumentClient client;
 
-        //Assign a id for your database & collection 
+        //Assign an id for your database & collection 
         private static readonly string databaseId = ConfigurationManager.AppSettings["DatabaseId"];
         private static readonly string collectionId = ConfigurationManager.AppSettings["CollectionId"];
 
