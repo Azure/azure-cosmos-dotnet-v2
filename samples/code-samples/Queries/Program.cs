@@ -379,7 +379,7 @@
             // LINQ Lambda
             familiesLinqQuery = client.CreateDocumentQuery<Family>(collectionLink)
                        .Where(f => f.LastName == "Andersen")
-                       .OrderByDescending(f => f.Children[0].Grade);
+                       .OrderByDescending(f => f.Address.State);
 
             Assert("Expected only 1 family", familiesLinqQuery.ToList().Count == 1);
 

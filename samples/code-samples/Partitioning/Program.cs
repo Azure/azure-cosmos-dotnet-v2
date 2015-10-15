@@ -265,7 +265,7 @@
             UserProfile johnProfile = (UserProfile)(dynamic)latestJohnDocument;
             johnProfile.Status = UserStatus.Busy;
 
-            await this.client.ReplaceDocumentAsync(latestJohnDocument);
+            await this.client.ReplaceDocumentAsync(latestJohnDocument.SelfLink, johnProfile);
 
             // Query for John's document by ID. We can use the PartitionResolver to restrict the query to just the partition containing @John
             // Again the query uses the database self link, and relies on the hash resolver to route the appropriate collection.
@@ -273,11 +273,11 @@
                 .Where(u => u.UserName == "@John");
             johnProfile = query.AsEnumerable().FirstOrDefault();
 
-            // Query for all Available users. Here since there is no partition key, the query is serially executed across each partition/collection. 
-            query = this.client.CreateDocumentQuery<UserProfile>(database.SelfLink).Where(u => u.Status == UserStatus.Available);
-            foreach (UserProfile activeUser in query)
+            // Query for all Busy users. Here since there is no partition key, the query is serially executed across each partition/collection. 
+            query = this.client.CreateDocumentQuery<UserProfile>(database.SelfLink).Where(u => u.Status == UserStatus.Busy);
+            foreach (UserProfile busyUser in query)
             {
-                Console.WriteLine(activeUser);
+                Console.WriteLine(busyUser);
             }
              
             // Find the collections where a document exists in. It's uncommon to do this, but can be useful if for example to execute a 
@@ -295,7 +295,6 @@
         /// <summary>
         /// Illustrate how to load and save the serializer state. Uses HashPartitionResolver as example.
         /// </summary>
-        /// <param name="hashResolver">The HashResolver instance.</param>
         private void RunSerializeDeserializeSample(HashPartitionResolver hashResolver)
         {
             // Store the partition resolver's configuration as JSON.
@@ -315,7 +314,7 @@
         /// Show how to repartition a hash resolver by adding/removing collections.
         /// </summary>
         /// <param name="database">The database to run the samples on.</param>
-        /// <returns>The created HashPartitionResolver.</returns>
+        /// <returns>The Task for the asynchronous execution.</returns>
         private async Task RepartitionDataSample(Database database)
         {
             var manager = new DocumentClientHashPartitioningManager(u => ((UserProfile)(dynamic)u).UserId, this.client, database, 3);

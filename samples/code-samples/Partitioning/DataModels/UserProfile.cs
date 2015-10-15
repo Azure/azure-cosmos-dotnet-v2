@@ -44,7 +44,6 @@
         /// <summary>
         /// Gets or sets the primary region for the user.
         /// </summary>
-        [JsonConverter(typeof(StringEnumConverter))]
         public Region PrimaryRegion { get; set; }
 
         /// <summary>
@@ -55,7 +54,6 @@
         /// <summary>
         /// Gets or sets the status of the user.
         /// </summary>
-        [JsonConverter(typeof(StringEnumConverter))]
         public UserStatus Status { get; set; }
 
         /// <summary>
