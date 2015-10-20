@@ -3,7 +3,7 @@
  - Performance improvements for all requests
  - LINQ Provider support for conditional, coalesce and CompareTo methods for strings
  - **[Fixed]** LINQ provider --> Contains method on a List. (now generates the same SQL as on IEnumerable and Array)
- - **[Obselete]** UriFactory.CreateCollection --> should now use UriFactory.CreateDocumentCollection
+ - **[Obsolete]** UriFactory.CreateCollection --> should now use UriFactory.CreateDocumentCollection
  
 ## Changes in 1.4.1 : ##
  - Fixing localization issues when using non en culture info such as nl-NL etc. 
