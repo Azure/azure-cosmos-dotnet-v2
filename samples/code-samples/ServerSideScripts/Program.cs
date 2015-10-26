@@ -260,7 +260,7 @@
                 TriggerType = TriggerType.Pre
             };
 
-            await TryDeleteStoredProcedure(colSelfLink, trigger.Id);
+            await TryDeleteTrigger(colSelfLink, trigger.Id);
             await client.CreateTriggerAsync(colSelfLink, trigger);
 
             // 2. Create a few documents with the trigger.
@@ -325,7 +325,7 @@
                 TriggerType = TriggerType.Post
             };
 
-            await TryDeleteStoredProcedure(colSelfLink, trigger.Id);
+            await TryDeleteTrigger(colSelfLink, trigger.Id);
             await client.CreateTriggerAsync(colSelfLink, trigger);
             
             // 2. Create the metadata document.
@@ -496,7 +496,7 @@
         private static async Task TryDeleteStoredProcedure(string colSelfLink, string sprocId)
         {
             StoredProcedure sproc = client.CreateStoredProcedureQuery(colSelfLink).Where(s => s.Id == sprocId).AsEnumerable().FirstOrDefault();
-            if (sproc != null )
+            if (sproc != null)
             {
                 await client.DeleteStoredProcedureAsync(sproc.SelfLink);
             }

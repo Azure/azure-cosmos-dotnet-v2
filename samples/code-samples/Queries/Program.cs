@@ -1,5 +1,6 @@
 ﻿namespace DocumentDB.Samples.Queries
 {
+    using DocumentDB.Samples.Shared.Util;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using Microsoft.Azure.Documents.Linq;
@@ -13,20 +14,21 @@
 
     //------------------------------------------------------------------------------------------------
     // This sample demonstrates the use of LINQ and SQL Query Grammar to query DocumentDB Service
-    // For additional examples using the SQL query grammer refer to the SQL Query Tutorial - 
+    // For additional examples using the SQL query grammer refer to the SQL Query Tutorial available 
+    // at https://azure.microsoft.com/documentation/articles/documentdb-sql-query/.
     // There is also an interactive Query Demo web application where you can try out different 
-    // SQL queries - 
+    // SQL queries available at https://www.documentdb.com/sql/demo.  
     //------------------------------------------------------------------------------------------------
 
     public class Program
     {
         private static DocumentClient client;
 
-        //Assign a id for your database & collection 
+        //Assign an id for your database & collection 
         private static readonly string databaseId = ConfigurationManager.AppSettings["DatabaseId"];
         private static readonly string collectionId = ConfigurationManager.AppSettings["CollectionId"];
 
-        //Read the DocumentDB endpointUrl and authorisationKeys from config
+        //Read the DocumentDB endpointUrl and authorizationKeys from config
         //These values are available from the Azure Management Portal on the DocumentDB Account Blade under "Keys"
         //NB > Keep these values in a safe & secure location. Together they provide Administrative access to your DocDB account
         private static readonly string endpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
@@ -65,7 +67,7 @@
             Database database = await GetNewDatabaseAsync(databaseId);
 
             //Get, or Create, the Document Collection
-            DocumentCollection collection = await GetOrCreateCollectionAsync(database.SelfLink, collectionId);
+            DocumentCollection collection = await GetOrCreateCollectionAsync(database, collectionId);
             
             //Create documents needed for query samples
             await CreateDocuments(collection.SelfLink);
@@ -103,6 +105,9 @@
 
             // Query with Intra-document Joins
             QueryWithJoins(collection.SelfLink);
+
+            // Query with string, math and array operators
+            QueryWithStringMathAndArrayOperators(collection.SelfLink);
 
             // Query with parameterized SQL using SqlQuerySpec
             QueryWithSqlQuerySpec(collection.SelfLink);
@@ -189,6 +194,11 @@
                 from f in client.CreateDocumentQuery<Family>(collectionLink)
                 where f.Id == "AndersenFamily" || f.Address.City == "NY"
                 select new { Name = f.LastName, City = f.Address.City };
+
+            var query2 = client.CreateDocumentQuery<Family>(collectionLink, new FeedOptions { MaxItemCount = 1 })
+                .Where(d => d.LastName == "Andersen")
+                .Select(f => new { Name = f.LastName })
+                .AsDocumentQuery();
 
             foreach (var item in query.ToList())
             {
@@ -370,7 +380,7 @@
             // LINQ Lambda
             familiesLinqQuery = client.CreateDocumentQuery<Family>(collectionLink)
                        .Where(f => f.LastName == "Andersen")
-                       .OrderByDescending(f => f.Children[0].Grade);
+                       .OrderByDescending(f => f.Address.State);
 
             Assert("Expected only 1 family", familiesLinqQuery.ToList().Count == 1);
 
@@ -427,7 +437,7 @@
         private static void QueryWithTwoJoinsAndFilter(string collectionLink)
         {
             var familiesChildrenAndPets = client.CreateDocumentQuery<dynamic>(collectionLink,
-                    "SELECT f.id, c.FirstName AS child, p.GivenName AS pet " +
+                    "SELECT f.id as family, c.FirstName AS child, p.GivenName AS pet " +
                     "FROM Families f " +
                     "JOIN c IN f.Children " +
                     "JOIN p IN c.Pets " +
@@ -441,13 +451,13 @@
             // LINQ
             familiesChildrenAndPets = client.CreateDocumentQuery<Family>(collectionLink)
                     .SelectMany(family => family.Children
-                    .SelectMany(children => children.Pets
-                    .Where(pets => pets.GivenName == "Fluffy")
-                    .Select(pets => new
+                    .SelectMany(child => child.Pets
+                    .Where(pet => pet.GivenName == "Fluffy")
+                    .Select(pet  => new
                     {
                         family = family.Id,
-                        child = children.FirstName,
-                        pet = pets.GivenName
+                        child = child.FirstName,
+                        pet = pet.GivenName
                     }
                     )));
 
@@ -461,7 +471,7 @@
         {
             // SQL
             var familiesChildrenAndPets = client.CreateDocumentQuery<dynamic>(collectionLink,
-                "SELECT f.id, c.FirstName AS child, p.GivenName AS pet " +
+                "SELECT f.id as family, c.FirstName AS child, p.GivenName AS pet " +
                 "FROM Families f " +
                 "JOIN c IN f.Children " +
                 "JOIN p IN c.Pets ");
@@ -474,14 +484,14 @@
             // LINQ
             familiesChildrenAndPets = client.CreateDocumentQuery<Family>(collectionLink)
                     .SelectMany(family => family.Children
-                    .SelectMany(children => children.Pets
-                    .Select(pets => new
+                    .SelectMany(child => child.Pets
+                    .Select(pet => new
                     {
                         family = family.Id,
-                        child = children.FirstName,
-                        pet = pets.GivenName
-                    })
-                    ));
+                        child = child.FirstName,
+                        pet = pet.GivenName
+                    }
+                    )));
 
             foreach (var item in familiesChildrenAndPets)
             {
@@ -512,6 +522,33 @@
             {
                 Console.WriteLine(JsonConvert.SerializeObject(item));
             }
+        }
+
+        private static void QueryWithStringMathAndArrayOperators(string collectionLink)
+        {
+            // Find all families where the lastName starts with "An" -> should return the Andersens
+            IQueryable<Family> results = client.CreateDocumentQuery<Family>(collectionLink, "SELECT * FROM family WHERE STARTSWITH(family.LastName, 'An')");
+            Assert("Expected only 1 family", results.AsEnumerable().Count() == 1);
+
+            // Same query in LINQ. You can also use other operators like string.Contains(), string.EndsWith(), string.Trim(), etc.
+            results = client.CreateDocumentQuery<Family>(collectionLink).Where(family => family.LastName.StartsWith("An"));
+            Assert("Expected only 1 family", results.AsEnumerable().Count() == 1);
+
+            // Round down numbers using FLOOR
+            IQueryable<int> numericResults = client.CreateDocumentQuery<int>(collectionLink, "SELECT VALUE FLOOR(family.Children[0].Grade) FROM family");
+            Assert("Expected grades [5, 2]", numericResults.AsEnumerable().SequenceEqual(new [] { 5, 8 }));
+
+            // Same query in LINQ. You can also use other Math operators
+            numericResults = client.CreateDocumentQuery<Family>(collectionLink).Select(family => (int)Math.Round((double)family.Children[0].Grade));
+            Assert("Expected grades [5, 2]", numericResults.AsEnumerable().SequenceEqual(new[] { 5, 8 }));
+
+            // Get number of children using ARRAY_LENGTH
+            numericResults = client.CreateDocumentQuery<int>(collectionLink, "SELECT VALUE ARRAY_LENGTH(family.Children) FROM family");
+            Assert("Expected children count [1, 2]", numericResults.AsEnumerable().SequenceEqual(new[] { 1, 2 }));
+
+            // Same query in LINQ
+            numericResults = client.CreateDocumentQuery<Family>(collectionLink).Select(family => family.Children.Count());
+            Assert("Expected children count [1, 2]", numericResults.AsEnumerable().SequenceEqual(new[] { 1, 2 }));
         }
         
         private static async Task QueryWithPagingAsync(string collectionLink)
@@ -636,9 +673,9 @@
         /// </summary>
         /// <param name="id">The id of the DocumentCollection to search for, or create.</param>
         /// <returns>The matched, or created, DocumentCollection object</returns>
-        private static async Task<DocumentCollection> GetOrCreateCollectionAsync(string dbLink, string id)
+        private static async Task<DocumentCollection> GetOrCreateCollectionAsync(Database db, string id)
         {
-            DocumentCollection collection = client.CreateDocumentCollectionQuery(dbLink).Where(c => c.Id == id).ToArray().FirstOrDefault();
+            DocumentCollection collection = client.CreateDocumentCollectionQuery(db.SelfLink).Where(c => c.Id == id).ToArray().FirstOrDefault();
 
             if (collection == null)
             {
@@ -656,7 +693,7 @@
                 DocumentCollection collectionDefinition = new DocumentCollection { Id = id };
                 collectionDefinition.IndexingPolicy = optimalQueriesIndexingPolicy;
 
-                collection = await client.CreateDocumentCollectionAsync(dbLink, collectionDefinition);
+                collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, db, collectionDefinition);
             }
 
             return collection;
