@@ -1,3 +1,6 @@
+## Changes in 1.5.1 : ##
+- **[Fixed]** If Select is not the last expression the LINQ Provider assumed no projection and produced SELECT * incorrectly.  [#58](https://github.com/Azure/azure-documentdb-dotnet/issues/58) 
+
 ## Changes in 1.5.0 : ##
  - Implemented Upsert, Added UpsertXXXAsync methods
  - Performance improvements for all requests
