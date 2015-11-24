@@ -49,7 +49,7 @@
                 //Setup a single instance of DocumentClient that is reused throughout the application
                 using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey))
                 {
-                    DatabaseManagementAsync().Wait();
+                    RunDatabaseDemo().Wait();
                 }
             }
             catch (DocumentClientException de)
@@ -69,7 +69,7 @@
             }
         }
 
-        private static async Task DatabaseManagementAsync()
+        private static async Task RunDatabaseDemo()
         {
             //********************************************************************************************************
             // 1 -  Query for a Database
