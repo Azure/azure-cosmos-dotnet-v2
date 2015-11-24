@@ -54,7 +54,7 @@
         private static readonly string authorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
         private static readonly string databaseId = ConfigurationManager.AppSettings["DatabaseId"];
         private static readonly string collectionId = ConfigurationManager.AppSettings["CollectionId"];
-        private static readonly ConnectionPolicy connectionPolicy = new ConnectionPolicy { UserAgentSuffix = " samples-net/2" };
+        private static readonly ConnectionPolicy connectionPolicy = new ConnectionPolicy { UserAgentSuffix = " samples-net/3" };
 
         //Reusable instance of DocumentClient which represents the connection to a DocumentDB endpoint
         private static DocumentClient client;
