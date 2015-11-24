@@ -172,7 +172,7 @@
             //   NB! Deleting a collection will delete everything linked to the collection.
             //       This includes ALL documents, stored procedures, triggers, udfs
             //*******************************************************************************
-            await client.DeleteDocumentCollectionAsync(c1.SelfLink);
+            await client.DeleteDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(databaseId, collectionId));
             
             Console.WriteLine("\n6. Deleted Collection {0}\n", c1.Id);
             
