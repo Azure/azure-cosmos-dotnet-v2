@@ -160,10 +160,10 @@
         }
 
         /// <summary>
-        /// Initialize a HashPartitionResolver.
+        /// Initialize a RangePartitionResolver.
         /// </summary>
         /// <param name="database">The database to run the samples on.</param>
-        /// <returns>The created HashPartitionResolver.</returns>
+        /// <returns>The created RangePartitionResolver.</returns>
         private async Task<RangePartitionResolver<string>> InitializeRangeResolver(Database database)
         {
             // Create some collections to partition data.
