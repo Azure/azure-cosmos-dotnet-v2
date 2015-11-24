@@ -1,6 +1,5 @@
 ﻿namespace DocumentDB.Samples.Shared.Util
 {
-    using System;
     using System.Collections.Generic;
     using Microsoft.Azure.Documents;
 
