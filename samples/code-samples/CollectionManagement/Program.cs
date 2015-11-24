@@ -149,9 +149,9 @@
             
             Console.WriteLine("3. Found Offer \n{0}\nusing collection's ResourceId {1}.\n", offer, c1.ResourceId);
 
-            //********************************************************
-            //4. List all DocumentCollection resources in a Database
-            //********************************************************
+            //*************************************************
+            //4. Get a DocumentCollection by its Id property
+            //*************************************************
             DocumentCollection collection = await client.ReadDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(databaseId, collectionId));
 
             Console.WriteLine("\n4. Found Collection \n{0}\n", collection);
