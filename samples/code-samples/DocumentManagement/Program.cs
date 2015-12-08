@@ -13,36 +13,68 @@
     using System.Text;
     using System.Threading.Tasks;
 
-    //-----------------------------------------------------------------------------------------------------------
-    // This sample demonstrates the basic CRUD operations on a Document resource for Azure DocumentDB
+    // ----------------------------------------------------------------------------------------------------------
+    // Prerequistes - 
+    // 
+    // 1. An Azure DocumentDB account - 
+    //    https://azure.microsoft.com/en-us/documentation/articles/documentdb-create-account/
     //
-    // For advanced concepts please consult the relevant Sample project(s);
-    // Querying Documents - DocumentDB.Samples.QueryingDocuments
-    // Pagination Documents - DocumentDB.Samples.ServerSideScripts
+    // 2. Microsoft.Azure.DocumentDB NuGet package - 
+    //    http://www.nuget.org/packages/Microsoft.Azure.DocumentDB/ 
+    // ----------------------------------------------------------------------------------------------------------
+    // Sample - demonstrates the basicCRUD operations on a Document resource for Azure DocumentDB
+    //
+    // 1. Basic CRUD operations on a document using regular POCOs
+    // 1.1 - Create a document
+    // 1.2 - Read a document by its Id
+    // 1.3 - Read all documents in a Collection
+    // 1.4 - Query for documents by a property other than Id
+    // 1.5 - Replace a document
+    // 1.6 - Upsert a document
+    // 1.7 - Delete a document
+    //
+    // 2. Work with dynamic objects
     //-----------------------------------------------------------------------------------------------------------
+    // See Also - 
+    //
+    // DocumentDB.Samples.QueryingDocuments - We only included a VERY basic query here for completeness,
+    //                                        For a detailed exploration of how to query for Documents, 
+    //                                        inlcuding how to paginate results of queries.
+    //
+    // DocumentDB.Samples.ServerSideScripts - In these examples we do simple loops to create small numbers
+    //                                        of documents. For insert operations where you are creating many
+    //                                        documents we recommend using a Stored Procedure and pass batches
+    //                                        of new documents to this sproc. Consult this sample for an example
+    //                                        of a BulkInsert stored procedure. 
+    // ----------------------------------------------------------------------------------------------------------
     
     public class Program
     {
-        private static DocumentClient client;
-
-        //Assign a name for your database & collection 
-        private static readonly string databaseId = ConfigurationManager.AppSettings["DatabaseId"];
-        private static readonly string collectionId = ConfigurationManager.AppSettings["CollectionId"];
-
-        //Read the DocumentDB endpointUrl and authorisationKeys from config
-        //These values are available from the Azure Management Portal on the DocumentDB Account Blade under "Keys"
-        //NB > Keep these values in a safe & secure location. Together they provide Administrative access to your DocDB account
+        //Read config
         private static readonly string endpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
         private static readonly string authorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
-        
+        private static readonly string databaseId = ConfigurationManager.AppSettings["DatabaseId"];
+        private static readonly string collectionId = ConfigurationManager.AppSettings["CollectionId"];
+        private static readonly ConnectionPolicy connectionPolicy = new ConnectionPolicy { UserAgentSuffix = " samples-net/3" };
+
+        //Reusable instance of DocumentClient which represents the connection to a DocumentDB endpoint
+        private static DocumentClient client;
+
         public static void Main(string[] args)
         {
             try
             {
-                //Get a Document client
+                //Get a single instance of Document client and reuse this for all the samples
+                //This is the recommended approach for DocumentClient as opposed to new'ing up new instances each time
                 using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey))
                 {
-                    RunDemoAsync(databaseId, collectionId).Wait();
+                    //ensure the database & collection exist before running samples
+                    Init();
+
+                    RunDocumentsDemo().Wait();
+
+                    //Clean-up environment
+                    Cleanup();
                 }
             }
             catch (DocumentClientException de)
@@ -57,62 +89,57 @@
             }
             finally
             {
-                Console.WriteLine("End of demo, press any key to exit.");
+                Console.WriteLine("\nEnd of demo, press any key to exit.");
                 Console.ReadKey();
             }
         }
 
-        private static async Task RunDemoAsync(string databaseId, string collectionId)
+        private static async Task RunDocumentsDemo()
         {
-            //Get, or Create, the Database
-            var database = await GetOrCreateDatabaseAsync(databaseId);
+            await BasicCRUDAsync();
 
-            //Get, or Create, the Document Collection
-            var collection = await GetOrCreateCollectionAsync(database.SelfLink, collectionId);
-
-            //--------------------------------------------------------------------------------------------------------
-            // NB:
-            // To insert large batches of documents, it is recommended to use a stored procedure to do the insert
-            // and control the execution of the stored procedure from your client application.
-            // For an example of this please refer to the DocumentDB.Samples.ServerSideScripts project
-            // 
-            // For the purposes of this sample we're iterating over a small number of documents to illustrate a concept
-            //--------------------------------------------------------------------------------------------------------
-
-            //One approach to access to DocumentDB documents in .NET is through “POCOs” or plain-old-clr-objects
-            //which will use JSON.NET serialization and deserialization under the covers to transmit the data over the wire
-            await UsePOCOs(collection.SelfLink);
-
-            //It is also possible to work with documents entirely as dynamic documents without any schema
-            await UseDynamics(collection.SelfLink);
-
-            //For high performance applications that want to avoid the serialization overhead, 
-            //the SDK supports reading from streams. 
-            await UseStreams(collection.SelfLink);
-            
-            //Lastly, you can extend from Microsoft.Azure.Documents.Document
-            //This allows access to standard DocumentDB resource properties like Id, Name, Timestamp and ETag.
-            await UseDocumentExtensions(collection.SelfLink);
-
-            //Create a single document with an attachment and insert in to collection 
-            await UseAttachments(collection.SelfLink);
-            
-            //Clean-up environment
-            await DeleteDatabaseAsync(database.SelfLink);
+            await UseDynamics();
         }
-
-        private static async Task UsePOCOs(string colSelfLink)
+        
+        /// <summary>
+        /// 1. Basic CRUD operations on a document
+        /// 1.1 - Create a document
+        /// 1.2 - Read a document by its Id
+        /// 1.3 - Read all documents in a Collection
+        /// 1.4 - Query for documents by a property other than Id
+        /// 1.5 - Replace a document
+        /// 1.6 - Upsert a document
+        /// 1.7 - Delete a document
+        /// </summary>
+        private static async Task BasicCRUDAsync()
         {
-            //Create a list of POCO objects, and insert in to the collection
-            //Inspect listOfOrders and you will notice each document within has 
-            //a different schemas, SalesOrder and SalesOrder2 to demonstrate how applications change over time
-            //And even though the two documents are from different schemas we're going to 
-            //create them inside the same collection and work with them seamlessly together
             var orders = new List<object>();
 
-            //DocumentDB requires an "id" for all documents. You can either supply your own unique value for id, or
-            //let DocumentDB provide it for you. Here we are supplying an id so DocumentDB will just ensure uniqueness of our values
-            //We could also use JsonProperty to alter any unique property on our objects and make it "id" over the wire and in DocumentDB.
+            //Note we now can use a resource's Id property to reference resources.
+            //we no longer need to use SelfLink anywhere. 
+            var collectionLink = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);
+
+            //DocumentDB requires an "id" for all documents. 
+            //You can either supply your own unique value for id, or
+            //let DocumentDB provide it for you. 
+            //In these examples we are supplying an id so DocumentDB will just ensure uniqueness of our values
+
+            //******************************************************************************************************************
+            // 1.1 - Create a document
+            //
+            // Create a list of POCO objects, and insert in to a single collection
+            // Inspect listOfOrders and you will notice each document within has 
+            // a different schemas, SalesOrder and SalesOrder2 to demonstrate how applications change over time
+            // And even though the two documents are from different schemas we're going to 
+            // create them inside the same collection and work with them seamlessly together
+            //
+            // You could also create a SalesOrder, a Customer, and any other kind of document in a single collection,
+            // as collections are entirely schema free. If you do this, maybe add a "Type" property to each POCO
+            // Which would make it easier to retrieve all documents of a specific type. 
+            //******************************************************************************************************************
+
+            Console.WriteLine("\n1.1 - Creating documents");
+
             orders.Add(new SalesOrder
             {
                 Id = "POCO1",
@@ -124,15 +151,15 @@
                 Freight = 472.3108m,
                 TotalDue = 985.018m,
                 Items = new[]
-                {
-                    new SalesOrderDetail
                     {
-                        OrderQty = 1,
-                        ProductId = 760,
-                        UnitPrice = 419.4589m,
-                        LineTotal = 419.4589m
-                    }
-                },
+                        new SalesOrderDetail
+                        {
+                            OrderQty = 1,
+                            ProductId = 760,
+                            UnitPrice = 419.4589m,
+                            LineTotal = 419.4589m
+                        }
+                    },
             });
 
             orders.Add(new SalesOrder2
@@ -159,54 +186,158 @@
                         CurrencyCode = "USD",       // this is a typical refactor that happens in the course of an application
                         UnitPrice = 17.1m,          // that would have previously required schema changes and data migrations etc. 
                         LineTotal = 5.7m
-                    },
-                    new SalesOrderDetail2
-                    {
-                        OrderQty = 1,
-                        ProductCode = "B-432",
-                        ProductName = "Product 2",
-                        CurrencySymbol = "$",
-                        CurrencyCode = "NZD",
-                        UnitPrice = 2039.994m,
-                        LineTotal = 2039.994m
-                    },
-                    new SalesOrderDetail2
-                    {
-                        OrderQty = 1,
-                        ProductCode = "C-2312S",
-                        ProductName = "Product 3",
-                        CurrencySymbol = "R",
-                        CurrencyCode = "ZAR",
-                        UnitPrice = 2024.994m,
-                        LineTotal = 2024.994m
-                    },
+                    }
                 }
             });
 
+            //Remember, to do bulk insert of documents it is recommended to use a Stored Procedure
+            //and pass a batch of documents to the Stored Prcoedure. This will cut down on the number
+            //of roundtrips required. 
             foreach (var order in orders)
             {
-                Document created = await client.CreateDocumentAsync(colSelfLink, order);
-                Console.WriteLine("Created SalesOrder: " + created);
+                Document created = await client.CreateDocumentAsync(collectionLink, order);
+
+                Console.WriteLine(created);
+            }
+            
+            //******************************************************************************************************************
+            // 1.2 - Read a document by its Id
+            // If you wish to retrieve a document by its Id, this is the preferred way as opposed to query WHERE id = 'foo'
+            // It'll cost you less RUs than a query.
+            //
+            // NOTE: You don't need to use SelfLinks anymore anywhere, just using the Id itself is good enough
+            //******************************************************************************************************************                        
+            Console.WriteLine("\n1.2 - Reading Document by Id");
+            var response = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseId, collectionId, "POCO1"));
+
+            Console.WriteLine("Document read by Id {0}", response.Resource);
+            Console.WriteLine("RU Charge for reading a Document by Id {0}", response.RequestCharge);
+
+            SalesOrder readOrder = (SalesOrder)(dynamic)response.Resource;
+
+            //******************************************************************************************************************
+            // 1.3 - Read ALL documents in a Collection
+            //
+            // NOTE: Use MaxItemCount on FeedOptions to control how many documents come back per trip to the server
+            //       Important to handle throttles whenever you are doing operations such as this that might
+            //       result in a 429 (throttled request)
+            //******************************************************************************************************************
+            Console.WriteLine("\n1.3 - Reading all documents in a collection");
+
+            var docs = await client.ReadDocumentFeedAsync(collectionLink, new FeedOptions { MaxItemCount = 10 });
+            foreach (var d in docs)
+            {
+                Console.WriteLine(d);
             }
 
-            //Read a Document from the database as a dynamic, then cast it down to your POCO object
-            //If SalesOrder inherited from Document then we wouldn't need the dynamic object
-            //The only reason we do this is to first get the doc.SelfLink which we need later when we replace the document.
-            //If you don't need to update the document you could just do client.CreateDocumentQuery<SalesOrder>
-            //which will do implicit deserialization in to the object type specified. 
-            dynamic doc = client.CreateDocumentQuery<Document>(colSelfLink).Where(d => d.Id == "POCO1").AsEnumerable().FirstOrDefault();
-            SalesOrder createdOrder = doc;
+            //******************************************************************************************************************
+            // 1.4 - Query for documents by a property other than Id
+            //
+            // NOTE: Operations like AsEnumberable(), ToList(), ToArray() will make as many trips to the database
+            //       as required to fetch the entire result-set. Even if you set MaxItemCount to a smaller number. 
+            //       MaxItemCount just controls how many results to fetch each trip. 
+            //       If you don't want to fetch the full set of results, then use CreateDocumentQuery().AsDocumentQuery()
+            //       For more on this please refer to the Queries project.
+            //
+            // NOTE: If you want to get the RU charge for a query you also need to use CreateDocumentQuery().AsDocumentQuery()
+            //       and check the RequestCharge property of this IQueryable response
+            //       Once again, refer to the Queries project for more information and examples of this
+            //******************************************************************************************************************
+            Console.WriteLine("\n1.4 - Querying for a document using its AccountNumber property");
 
-            //Now update a property on the POCO
-            createdOrder.ShippedDate = DateTime.UtcNow;
+            SalesOrder querySalesOrder = client.CreateDocumentQuery<SalesOrder>(collectionLink)
+                                            .Where(so => so.AccountNumber == "10-4020-000510")
+                                            .AsEnumerable()
+                                            .FirstOrDefault();
 
-            //And persist the change to DocumentDB
-            Document updatedOrder = await client.ReplaceDocumentAsync(doc.SelfLink, createdOrder);
+            Console.WriteLine(querySalesOrder.AccountNumber);
+
+            //******************************************************************************************************************
+            // 1.5 - Replace a document
+            //
+            // Just update a property on an existing document and issue a Replace command
+            //******************************************************************************************************************
+            Console.WriteLine("\n1.5 - Replacing a document using its Id");
+
+            querySalesOrder.ShippedDate = DateTime.UtcNow;
+            response = await client.ReplaceDocumentAsync(UriFactory.CreateDocumentUri(databaseId, collectionId, querySalesOrder.Id), querySalesOrder);
+
+            var updated = response.Resource;
+            Console.WriteLine("Request charge of replace operation: {0}", response.RequestCharge);
+            Console.WriteLine("Shipped date of updated document: {0}", updated.GetPropertyValue<DateTime>("ShippedDate"));
+
+            //******************************************************************************************************************
+            // 1.6 - Upsert a document
+            // 
+            // First upsert on a new object. Result is a document is created.
+            // Then update a property on the same document, keeping the Id the same
+            // Now upsert again on this document and the result is a Replace second time around
+            //******************************************************************************************************************
+            Console.WriteLine("\n1.6 - Upserting a document");
+
+            var upsertOrder = new SalesOrder
+                                {
+                                    Id = "POCO3",
+                                    PurchaseOrderNumber = "PO18009423320",
+                                    OrderDate = new DateTime(2005, 7, 1),
+                                    AccountNumber = "10-4020-000510",
+                                    SubTotal = 419.4589m,
+                                    TaxAmt = 12.5838m,
+                                    Freight = 472.3108m,
+                                    TotalDue = 985.018m,
+                                    Items = new[]
+                                        {
+                                            new SalesOrderDetail
+                                            {
+                                                OrderQty = 1,
+                                                ProductId = 760,
+                                                UnitPrice = 419.4589m,
+                                                LineTotal = 419.4589m
+                                            }
+                                        },
+                                };
+
+            response = await client.UpsertDocumentAsync(collectionLink, upsertOrder);
+            var upserted = response.Resource;
+            
+            Console.WriteLine("Request charge of upsert operation: {0}", response.RequestCharge);
+            Console.WriteLine("StatusCode of this operation: {0}", response.StatusCode);
+            Console.WriteLine("Id of upserted document: {0}", upserted.Id);
+            Console.WriteLine("AccountNumber of upserted document: {0}", upserted.GetPropertyValue<string>("AccountNumber"));
+
+            upserted.SetPropertyValue("AccountNumber", "updated account number");
+            response = await client.UpsertDocumentAsync(collectionLink, upserted);
+            upserted = response.Resource;
+
+            Console.WriteLine("Request charge of upsert operation: {0}", response.RequestCharge);
+            Console.WriteLine("StatusCode of this operation: {0}", response.StatusCode);
+            Console.WriteLine("Id of upserted document: {0}", upserted.Id);
+            Console.WriteLine("AccountNumber of upserted document: {0}", upserted.GetPropertyValue<string>("AccountNumber"));
+
+            //******************************************************************************************************************
+            // 1.7 - Delete a document
+            //******************************************************************************************************************
+            Console.WriteLine("\n1.7 - Upserting a document");
+
+            response = await client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(databaseId, collectionId, "POCO3"));
+
+            Console.WriteLine("Request charge of upsert operation: {0}", response.RequestCharge);
+            Console.WriteLine("StatusCode of operation: {0}", response.StatusCode);
         }
 
-        private static async Task UseDynamics(string colSelfLink)
+        /// <summary>
+        /// 2. Basic CRUD operations using dynamics instead of POCOs
+        /// </summary>
+        private static async Task UseDynamics()
         {
+            Console.WriteLine("\n2. Use Dynamics");
+
+            var collectionLink = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);
+
             //Create a dynamic object,
+            //Notice the case here. The properties will be created in the database
+            //with whatever case you give the property
+            //If you read this back in to a Document object id will get mapped to Id
             dynamic dynamicOrder = new
             {
                 id = "DYN01",
@@ -215,145 +346,79 @@
                 total = 5.95,
             };
 
-            Document createdDocument = await client.CreateDocumentAsync(colSelfLink, dynamicOrder);
+            Console.WriteLine("\nCreating document");
 
-            //get a dynamic object
-            dynamic readDynOrder = (await client.ReadDocumentAsync(createdDocument.SelfLink)).Resource;
+            ResourceResponse<Document> response = await client.CreateDocumentAsync(collectionLink, dynamicOrder);
+            var createdDocument = response.Resource;
 
-            //update a dynamic object
-            readDynOrder.ShippedDate = DateTime.UtcNow;
-            await client.ReplaceDocumentAsync(readDynOrder);
+            Console.WriteLine("Document with id {0} created", createdDocument.Id);
+            Console.WriteLine("Request charge of operation: {0}", response.RequestCharge);
+
+            response = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseId, collectionId, "DYN01"));
+            var readDocument = response.Resource;
+
+            //update a dynamic object by just creating a new Property on the fly
+            //Document is itself a dynamic object, so you can just use this directly too if you prefer
+            readDocument.SetPropertyValue("shippedDate",DateTime.UtcNow);
+
+            //if you wish to work with a dynamic object so you don't need to use SetPropertyValue() or GetPropertyValue<T>()
+            //then you can cast to a dynamic
+            dynamicOrder = (dynamic)readDocument;
+            dynamicOrder.foo = "bar";
+
+            //now do a replace using this dynamic document
+            //notice here you don't have to set collectionLink, or documentSelfLink, 
+            //everything that is needed is contained in the readDynOrder object 
+            //it has a .self Property
+            Console.WriteLine("\nReplacing document");
+
+            response = await client.ReplaceDocumentAsync(dynamicOrder);
+            var replaced = response.Resource;
+
+            Console.WriteLine("Request charge of operation: {0}", response.RequestCharge);
+            Console.WriteLine("shippedDate: {0} and foo: {1} of replaced document", replaced.GetPropertyValue<DateTime>("shippedDate"), replaced.GetPropertyValue<string>("foo"));
         }
 
-        private static async Task UseStreams(string colSelfLink)
+        private static void Cleanup()
         {
-            var dir = new DirectoryInfo(@".\Data");
-            var files = dir.EnumerateFiles("*.json");
-            foreach (var file in files)
-            {
-                using (var fileStream = new FileStream(file.FullName, FileMode.Open, FileAccess.Read))
-                {
-                    Document doc = await client.CreateDocumentAsync(colSelfLink, Resource.LoadFrom<Document>(fileStream));
-                    Console.WriteLine("Created Document: ", doc);
-                }
-            }
-
-            //Read one the documents created above directly in to a Json string
-            Document readDoc = client.CreateDocumentQuery(colSelfLink).Where(d => d.Id == "JSON1").AsEnumerable().First();
-            string content = JsonConvert.SerializeObject(readDoc);
-
-            //Update a document with some Json text, 
-            //Here we're replacing a previously created document with some new text and even introudcing a new Property, Status=Cancelled
-            using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes("{\"id\": \"JSON1\",\"PurchaseOrderNumber\": \"PO18009186470\",\"Status\": \"Cancelled\"}")))
-            {
-                await client.ReplaceDocumentAsync(readDoc.SelfLink, Resource.LoadFrom<Document>(memoryStream));
-            }
+            client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId)).Wait();
         }
 
-        private static async Task UseDocumentExtensions(string colSelfLink)
+        private static void Init()
         {
-            //Create an object that extends Document
-            var salesOrderDocument = new SalesOrderDocument
-            {
-                Id = "DOCO1",
-                PurchaseOrderNumber = "PO180091783420",
-                OrderDate = new DateTime(2013, 7, 17),
-                AccountNumber = "10-4020-000510",
-                SubTotal = 419.4589m,
-                TaxAmt = 12.5838m,
-                Freight = 472.3108m,
-                TotalDue = 985.018m,
-                Items = new[]
-                {
-                    new SalesOrderDetail
-                    {
-                        OrderQty = 1,
-                        ProductId = 760,
-                        UnitPrice = 419.4589m,
-                        LineTotal = 419.4589m
-                    }
-                }
-            };
-
-            Document created = await client.CreateDocumentAsync(colSelfLink, salesOrderDocument);
-
-            //Read document
-            SalesOrderDocument readSalesOrderDocument = (SalesOrderDocument)(dynamic)(await client.ReadDocumentAsync(created.SelfLink)).Resource;
-            
-            //Update a property on the SalesOrderDocument
-            readSalesOrderDocument.ShipDate = DateTime.UtcNow;
-
-            //Persist the change to DocumentDB
-            await client.ReplaceDocumentAsync(readSalesOrderDocument.SelfLink, readSalesOrderDocument);
+            GetOrCreateDatabaseAsync(databaseId).Wait();
+            GetOrCreateCollectionAsync(databaseId, collectionId).Wait();
         }
-        
-        private static async Task UseAttachments(string colSelfLink)
+
+        private static async Task<DocumentCollection> GetOrCreateCollectionAsync(string databaseId, string collectionId)
         {
-            dynamic documentWithAttachment = new 
-            {
-                id = "PO1800243243470",
-                CustomerId = 1092,
-                TotalDue = 985.018m,
-            };
+            var databaseUri = UriFactory.CreateDatabaseUri(databaseId);
 
-            Document doc = await client.CreateDocumentAsync(colSelfLink, documentWithAttachment);
+            DocumentCollection collection = client.CreateDocumentCollectionQuery(databaseUri)
+                .Where(c => c.Id == collectionId)
+                .AsEnumerable()
+                .FirstOrDefault();
 
-            //This attachment could be any binary you want to attach. Like images, videos, word documents, pdfs etc. it doesn't matter
-            using (FileStream fileStream = new FileStream(@".\Attachments\text.txt", FileMode.Open))
-            {
-                //Create the attachment
-                await client.CreateAttachmentAsync(doc.AttachmentsLink, fileStream, new MediaOptions { ContentType = "text/plain", Slug = "text.txt" });
-            }
-
-            //Query the documents for attachments
-            Attachment attachment = client.CreateAttachmentQuery(doc.SelfLink).AsEnumerable().FirstOrDefault();
-            
-            //Use DocumentClient to read the Media content
-            MediaResponse content = await client.ReadMediaAsync(attachment.MediaLink);
-
-            byte[] bytes = new byte[content.ContentLength];
-            await content.Media.ReadAsync(bytes, 0, (int)content.ContentLength);
-            string result = Encoding.UTF8.GetString(bytes);
-        }
-        
-        /// <summary>
-        /// Deletes a Database resource
-        /// </summary>
-        /// <param name="databaseLink">The SelfLink of the Database resource to be deleted</param>
-        /// <returns></returns>
-        private static async Task DeleteDatabaseAsync(string databaseLink)
-        {
-            await client.DeleteDatabaseAsync(databaseLink);
-        }
-        
-        /// <summary>
-        /// Get a DocumentCollection by id, or create a new one if one with the id provided doesn't exist.
-        /// </summary>
-        /// <param name="dbLink">The Database SelfLink property where this DocumentCollection exists / will be created</param>
-        /// <param name="id">The id of the DocumentCollection to search for, or create.</param>
-        /// <returns>The matched, or created, DocumentCollection object</returns>
-        private static async Task<DocumentCollection> GetOrCreateCollectionAsync(string dbLink, string id)
-        {
-            DocumentCollection collection = client.CreateDocumentCollectionQuery(dbLink).Where(c => c.Id == id).ToArray().FirstOrDefault();
             if (collection == null)
             {
-                collection = await client.CreateDocumentCollectionAsync(dbLink, new DocumentCollection { Id = id });
+                collection = await client.CreateDocumentCollectionAsync(databaseUri, new DocumentCollection { Id = collectionId });
             }
 
             return collection;
         }
-        
-        /// <summary>
-        /// Get a Database by id, or create a new one if one with the id provided doesn't exist.
-        /// </summary>
-        /// <param name="id">The id of the Database to search for, or create.</param>
-        /// <returns>The matched, or created, Database object</returns>
-        private static async Task<Database> GetOrCreateDatabaseAsync(string id)
+
+        private static async Task<Database> GetOrCreateDatabaseAsync(string databaseId)
         {
-            Database database = client.CreateDatabaseQuery().Where(db => db.Id == id).ToArray().FirstOrDefault();
+            var databaseUri = UriFactory.CreateDatabaseUri(databaseId);
+
+            Database database = client.CreateDatabaseQuery()
+                .Where(db => db.Id == databaseId)
+                .ToArray()
+                .FirstOrDefault();
+
             if (database == null)
             {
-                database = await client.CreateDatabaseAsync(new Database { Id = id });
+                database = await client.CreateDatabaseAsync(new Database { Id = databaseId });
             }
 
             return database;
