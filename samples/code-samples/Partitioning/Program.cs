@@ -149,8 +149,8 @@
         private async Task<HashPartitionResolver> InitializeHashResolver(Database database)
         {
             // Create some collections to partition data.
-            DocumentCollection collection1 = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.HashBucket0");
-            DocumentCollection collection2 = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.HashBucket1");
+            DocumentCollection collection1 = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.HashBucket0");
+            DocumentCollection collection2 = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.HashBucket1");
 
             // Initialize a partition resolver that users hashing, and register with DocumentClient. 
             HashPartitionResolver hashResolver = new HashPartitionResolver("UserId", new[] { collection1.SelfLink, collection2.SelfLink });
@@ -167,8 +167,8 @@
         private async Task<RangePartitionResolver<string>> InitializeRangeResolver(Database database)
         {
             // Create some collections to partition data.
-            DocumentCollection collection1 = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.A-M");
-            DocumentCollection collection2 = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.N-Z");
+            DocumentCollection collection1 = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.A-M");
+            DocumentCollection collection2 = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.N-Z");
 
             // Initialize a partition resolver that assigns users (A-M) -> collection1, and (N-Z) -> collection2
             // and register with DocumentClient. 
@@ -192,8 +192,8 @@
         /// <returns>The created HashPartitionResolver.</returns>
         private async Task<HashPartitionResolver> InitializeCustomHashResolver(Database database)
         {
-            DocumentCollection collection1 = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.HashBucket0");
-            DocumentCollection collection2 = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.HashBucket1");
+            DocumentCollection collection1 = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.HashBucket0");
+            DocumentCollection collection2 = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.HashBucket1");
 
             var hashResolver = new HashPartitionResolver(
                 u => ((UserProfile)u).UserId,
@@ -210,9 +210,9 @@
         /// <returns>The created HashPartitionResolver.</returns>
         private async Task<LookupPartitionResolver<string>> InitializeLookupPartitionResolver(Database database)
         {
-            DocumentCollection collectionUS = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.US");
-            DocumentCollection collectionEU = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.Europe");
-            DocumentCollection collectionOther = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.Other");
+            DocumentCollection collectionUS = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.US");
+            DocumentCollection collectionEU = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.Europe");
+            DocumentCollection collectionOther = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.Other");
 
             // This implementation takes strings as input. If you'd like to implement a strongly typed LookupPartitionResolver, 
             // take a look at EnumLookupPartitionResolver for an example.

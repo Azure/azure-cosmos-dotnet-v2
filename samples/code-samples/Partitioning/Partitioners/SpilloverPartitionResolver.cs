@@ -154,7 +154,7 @@
                 try
                 {
                     string collectionId = string.Format("{0}{1}", this.CollectionIdPrefix, NextCollectionNumber);
-                    var createdCollection = DocumentClientHelper.GetCollectionAsync(this.Client, this.Database, collectionId, this.CollectionTemplate).Result;
+                    var createdCollection = DocumentClientHelper.GetOrCreateCollectionAsync(this.Client, this.Database.Id, collectionId, this.CollectionTemplate).Result;
                     this.CollectionLinks.Add(createdCollection.SelfLink);
                 }
                 catch

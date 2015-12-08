@@ -67,7 +67,7 @@
             Database database = await GetNewDatabaseAsync(databaseId);
 
             //Get, or Create, the Document Collection
-            DocumentCollection collection = await GetOrCreateCollectionAsync(database, collectionId);
+            DocumentCollection collection = await GetOrCreateCollectionAsync(databaseId, collectionId);
             
             //Create documents needed for query samples
             await CreateDocuments(collection.SelfLink);
@@ -673,9 +673,12 @@
         /// </summary>
         /// <param name="id">The id of the DocumentCollection to search for, or create.</param>
         /// <returns>The matched, or created, DocumentCollection object</returns>
-        private static async Task<DocumentCollection> GetOrCreateCollectionAsync(Database db, string id)
+        private static async Task<DocumentCollection> GetOrCreateCollectionAsync(string databaseId, string collectionId)
         {
-            DocumentCollection collection = client.CreateDocumentCollectionQuery(db.SelfLink).Where(c => c.Id == id).ToArray().FirstOrDefault();
+            DocumentCollection collection = client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(databaseId))
+                                                .Where(c => c.Id == collectionId)
+                                                .ToArray()
+                                                .SingleOrDefault();
 
             if (collection == null)
             {
@@ -690,10 +693,10 @@
                     }
                 });
 
-                DocumentCollection collectionDefinition = new DocumentCollection { Id = id };
+                DocumentCollection collectionDefinition = new DocumentCollection { Id = collectionId };
                 collectionDefinition.IndexingPolicy = optimalQueriesIndexingPolicy;
 
-                collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, db, collectionDefinition);
+                collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, databaseId, collectionDefinition);
             }
 
             return collection;
