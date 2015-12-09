@@ -191,7 +191,7 @@
         }
 
         /// <summary>
-        /// Create a DocumentCollection, and retry when throttled.
+        /// Create a DocumentCollection, and retries if throttled.
         /// </summary>
         /// <param name="client">The DocumentDB client instance.</param>
         /// <param name="database">The database to use.</param>
