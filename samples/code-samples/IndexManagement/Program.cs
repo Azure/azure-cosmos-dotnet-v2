@@ -66,7 +66,7 @@
                 //Get a Document client
                 using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey))
                 {
-                    RunIndexDemoAsync().Wait();
+                    RunIndexDemo().Wait();
                 }
             }
             catch (DocumentClientException de)
@@ -86,7 +86,7 @@
             }
         }
 
-        private static async Task RunIndexDemoAsync()
+        private static async Task RunIndexDemo()
         {
             // Init
             var database = await GetNewDatabaseAsync(databaseId);
