@@ -91,7 +91,7 @@
             // Init
             var database = await GetNewDatabaseAsync(databaseId);
 
-            // 1. Exclude a document completely from the Index
+            // 1. Exclude a document from the index
             await ExplicitlyExcludeFromIndex();
 
             // 2. Use manual (instead of automatic) indexing
@@ -100,7 +100,7 @@
             // 3. Use lazy (instead of consistent) indexing
             await UseLazyIndexing();
 
-            // 4. Exclude specified paths from document index
+            // 4. Exclude specified document paths from the index
             await ExcludePathsFromIndex();
 
             // 5. Force a range scan operation on a hash indexed path
@@ -109,7 +109,7 @@
             // 6. Use range indexes on strings
             await UseRangeIndexesOnStrings();
 
-            // 7. Perform index transform
+            // 7. Perform an index transform
             await PerformIndexTransformations();          
 
             // Cleanup
