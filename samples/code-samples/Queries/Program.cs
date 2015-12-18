@@ -1,5 +1,6 @@
 ﻿namespace DocumentDB.Samples.Queries
 {
+    using DocumentDB.Samples.Shared.Twitter;
     using DocumentDB.Samples.Shared.Util;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
@@ -114,6 +115,9 @@
             
             // Query with explict Paging
             await QueryWithPagingAsync(collection.SelfLink);
+
+            // Query with Order By
+            await QueryWithOrderByAsync(collection.SelfLink);
 
             //Cleanup
              await client.DeleteDatabaseAsync(database.SelfLink);
@@ -599,6 +603,73 @@
             {
                 if (f.Id != "WakefieldFamily") throw new ApplicationException("Should only be the second family");
             }
+        }
+        
+        private static async Task QueryWithOrderByAsync(string p)
+        {
+            //In order to use Order By on the server you need to be using a collection with a specific IndexPolicy set.
+            //So, create a collection with a customer index policy (see IndexManagement project for more on managing indexes)
+            IndexingPolicy orderByPolicy = new IndexingPolicy();
+            orderByPolicy.IncludedPaths.Add(new IncludedPath
+            {
+                Path = "/*",
+                Indexes = new System.Collections.ObjectModel.Collection<Index>()
+                {
+                    new RangeIndex(DataType.String) { Precision = -1 },
+                    new RangeIndex(DataType.Number) { Precision = -1 }
+                }
+            });
+
+            DocumentCollection collection = await client.CreateDocumentCollectionAsync(UriFactory.CreateDatabaseUri(databaseId), 
+                new DocumentCollection { 
+                    Id = "orderBy", 
+                    IndexingPolicy = orderByPolicy 
+                });
+            
+            // Import some documents in to this new collection
+            await ImportData(collection, @"..\..\..\Shared\FakeData\");
+
+            // Query as LINQ lambdas
+            var orderByQuery = client.CreateDocumentQuery<Status>(collection.SelfLink)
+                .Where(s => s.RetweetCount > 10 && s.FavoriteCount > 10)
+                .OrderByDescending(s => s.RetweetCount);
+
+            foreach (Status status in orderByQuery)
+            {
+                Console.WriteLine("Id: {0}, Retweets: {1}", status.StatusId, status.RetweetCount);
+            }
+
+            // Query as LINQ query
+            orderByQuery =
+                from s in client.CreateDocumentQuery<Status>(collection.SelfLink)
+                where s.RetweetCount > 10 && s.FavoriteCount > 10
+                orderby s.RetweetCount descending
+                select s;
+
+            foreach (Status status in orderByQuery)
+            {
+                Console.WriteLine("Id: {0}, Retweets: {1}", status.StatusId, status.RetweetCount);
+            }
+
+            // Query as SQL string (you can also use SqlQuerySpec for parameterized SQL).
+            var orderBySqlQuery = client.CreateDocumentQuery<Status>(collection.SelfLink,
+                @"SELECT * FROM status WHERE status.retweet_count > 10 AND status.favorite_count > 10 ORDER BY status.retweet_count DESC");
+
+            foreach (Status status in orderBySqlQuery)
+            {
+                Console.WriteLine("Id: {0}, Retweets: {1}", status.StatusId, status.RetweetCount);
+            }
+        }
+
+        /// <summary>
+        /// Import data into a DocumentDB collection using a "Bulk Import" stored procedure.
+        /// </summary>
+        /// <param name="collection">The collection to run queries against.</param>
+        /// <param name="sourceDirectory">The source directory to read files from.</param>
+        /// <returns></returns>
+        private static async Task ImportData(DocumentCollection collection, string sourceDirectory)
+        {
+            await DocumentClientHelper.RunBulkImport(client, collection, sourceDirectory);
         }
 
         /// <summary>
