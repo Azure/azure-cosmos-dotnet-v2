@@ -26,6 +26,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DatabaseManagement", "Datab
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Queries", "Queries\Queries.csproj", "{6B5021ED-8B3A-4E38-92DB-612C4ECDC580}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Geospatial", "Geospatial\Geospatial.csproj", "{B0A55C76-4470-482E-BD16-5AA96068FE61}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -68,11 +70,16 @@ Global
 		{6B5021ED-8B3A-4E38-92DB-612C4ECDC580}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6B5021ED-8B3A-4E38-92DB-612C4ECDC580}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6B5021ED-8B3A-4E38-92DB-612C4ECDC580}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0A55C76-4470-482E-BD16-5AA96068FE61}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0A55C76-4470-482E-BD16-5AA96068FE61}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0A55C76-4470-482E-BD16-5AA96068FE61}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0A55C76-4470-482E-BD16-5AA96068FE61}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{16C11979-9B7C-4F35-BCD1-CAC434D79467} = {2DF914B1-91A8-4C78-989B-64D1ABEF6A17}
+		{B0A55C76-4470-482E-BD16-5AA96068FE61} = {2DF914B1-91A8-4C78-989B-64D1ABEF6A17}
 	EndGlobalSection
 EndGlobal
