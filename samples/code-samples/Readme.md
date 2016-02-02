@@ -33,7 +33,7 @@ These samples demonstrate how to use the Client SDKs to interact with the servic
 - **ServerSideScripts** - Samples on how to create and execute Stored Procedures, Triggers and User Defined Functions.
 
 - **UserManagement** - CRUD operations on User and Permission resources
-- 
+
 - **Spatial** - How to work with GeoJSON and DocumentDB geospatial capabilities
 
 After walking through these samples you should have a good idea of how to get going and how to make user of the various Azure DocumentDB APIs. 
