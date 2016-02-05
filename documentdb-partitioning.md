@@ -109,7 +109,7 @@ Here's how you can create a collection with the preview SDK. Please create a new
 
     // Query using partition key
     client.CreateDocumentQuery<DeviceReading>(UriFactory.CreateDocumentCollectionUri("db", "coll"))
-        .Where(m => m.MetricType == "Temperature" && m.DeviceId = "XMS-0001");
+        .Where(m => m.MetricType == "Temperature" && m.DeviceId == "XMS-0001");
   
     // Query across partition keys
     client.CreateDocumentQuery<DeviceReading>(UriFactory.CreateDocumentCollectionUri("db", "coll"), 
