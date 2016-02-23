@@ -10,6 +10,7 @@
     using System.Configuration;
     using System.IO;
     using System.Linq;
+    using System.Net;
     using System.Text;
     using System.Threading.Tasks;
 
@@ -32,9 +33,12 @@
     // 1.5 - Replace a document
     // 1.6 - Upsert a document
     // 1.7 - Delete a document
-    // 1.8 - Use Optimistic concurrency when doing a replace
     //
     // 2. Work with dynamic objects
+    //
+    // 3. Using ETags to control execution
+    // 3.1 - Use ETag with ReplaceDocument for optimistic concurrency
+    // 3.2 - Use ETag with ReadDocument to only return a result if the ETag of the request does not match
     //-----------------------------------------------------------------------------------------------------------
     // See Also - 
     //
@@ -100,6 +104,8 @@
             await BasicCRUDAsync();
 
             await UseDynamics();
+
+            await UseETags();
         }
         
         /// <summary>
@@ -318,7 +324,7 @@
             //******************************************************************************************************************
             // 1.7 - Delete a document
             //******************************************************************************************************************
-            Console.WriteLine("\n1.7 - Upserting a document");
+            Console.WriteLine("\n1.7 - Deleting a document");
 
             response = await client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(databaseId, collectionId, "POCO3"));
 
@@ -380,6 +386,89 @@
             Console.WriteLine("shippedDate: {0} and foo: {1} of replaced document", replaced.GetPropertyValue<DateTime>("shippedDate"), replaced.GetPropertyValue<string>("foo"));
         }
 
+        /// <summary>
+        /// 3. Using ETags to control execution of operations
+        /// 3.1 - Use ETag to control if a ReplaceDocument operation should check if ETag of request matches Document
+        /// 3.2 - Use ETag to control if ReadDocument should only return a result if the ETag of the request does not match the Document
+        /// </summary>
+        /// <returns></returns>
+        private static async Task UseETags()
+        {
+
+            //******************************************************************************************************************
+            // 3.1 - Use ETag to control if a replace should succeed, or not, based on whether the ETag on the requst matches
+            //       the current ETag value of the persisted Document
+            //
+            // All documents in DocumentDB have an _etag field. This gets set on the server every time a document is updated.
+            // 
+            // When doing a replace of a document you can opt-in to having the server only apply the Replace if the ETag 
+            // on the request matches the ETag of the document on the server.
+            // If someone did an update to the same document since you read it, then the ETag on the server will not match
+            // and the Replace operation can be rejected. 
+            //******************************************************************************************************************
+            Console.WriteLine("\n3.1 - Using optimistic concurrency when doing a ReplaceDocumentAsync");
+
+            //read a document
+            Document readDoc = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseId, collectionId, "POCO1"));
+            Console.WriteLine("ETag of read document - {0}", readDoc.ETag);
+
+            //take advantage of the dynamic nature of Document and set a new property on the document we just read
+            readDoc.SetPropertyValue("foo", "bar");
+
+            //persist the change back to the server
+            Document updatedDoc = await client.ReplaceDocumentAsync(readDoc);
+            Console.WriteLine("ETag of document now that is has been updated - {0}", updatedDoc.ETag);
+
+            //now, using the originally retrieved document do another update 
+            //but set the AccessCondition class with the ETag of the originally read document and also set the AccessConditionType
+            //this tells the service to only do this operation if ETag on the request matches the current ETag on the document
+            //in our case it won't, because we updated the document and therefore gave it a new ETag
+            try
+            {
+                var ac = new AccessCondition { Condition = readDoc.ETag, Type = AccessConditionType.IfMatch };
+                readDoc.SetPropertyValue("foo", "the updated value of foo");
+                updatedDoc = await client.ReplaceDocumentAsync(readDoc, new RequestOptions { AccessCondition = ac });
+            }
+            catch (DocumentClientException dce)
+            {
+                //   now notice the failure when attempting the update 
+                //   this is because the ETag on the server no longer matches the ETag of doc (b/c it was changed in step 2)
+                if (dce.StatusCode == HttpStatusCode.PreconditionFailed)
+                {
+                    Console.WriteLine("As expected, we have a pre-condition failure exception\n");
+                }
+            }
+
+            //*******************************************************************************************************************
+            // 3.2 - ETag on a ReadDcoumentAsync request can be used to tell the server whether it should return a result, or not
+            //
+            // By setting the ETag on a ReadDocumentRequest along with an AccessCondition of IfNoneMatch instructs the server
+            // to only return a result if the ETag of the request does not match that of the persisted Document
+            //*******************************************************************************************************************
+            Console.WriteLine("\n3.2 - Using ETag to do a conditional ReadDocumentAsync");
+
+            //get a document
+            var response = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseId, collectionId, "POCO2"));
+            readDoc = response.Resource;
+            Console.WriteLine("Read doc with StatusCode of {0}", response.StatusCode);
+            
+            //get the document again with conditional access set, no document should be returned
+            var accessCondition = new AccessCondition
+            {
+                Condition = readDoc.ETag,
+                Type = AccessConditionType.IfNoneMatch
+            };
+
+            response = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseId, collectionId, "POCO2"), new RequestOptions { AccessCondition = accessCondition });
+            Console.WriteLine("Read doc with StatusCode of {0}", response.StatusCode);
+
+            //now change something on the document, then do another get and this time we should get the document back
+            readDoc.SetPropertyValue("foo", "updated");
+            response = await client.ReplaceDocumentAsync(readDoc);
+
+            response = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseId, collectionId, "POCO2"), new RequestOptions { AccessCondition = accessCondition });
+            Console.WriteLine("Read doc with StatusCode of {0}", response.StatusCode);
+        }
         private static void Cleanup()
         {
             client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId)).Wait();
