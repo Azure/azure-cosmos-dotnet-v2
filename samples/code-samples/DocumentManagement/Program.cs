@@ -32,6 +32,7 @@
     // 1.5 - Replace a document
     // 1.6 - Upsert a document
     // 1.7 - Delete a document
+    // 1.8 - Use Optimistic concurrency when doing a replace
     //
     // 2. Work with dynamic objects
     //-----------------------------------------------------------------------------------------------------------
