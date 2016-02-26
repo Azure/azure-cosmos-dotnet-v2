@@ -123,19 +123,24 @@
         private static void QueryAllDocuments(string collectionLink)
         {
             // LINQ Query
-            var families = 
+            var query = 
                 from f in client.CreateDocumentQuery<Family>(collectionLink)
                 select f;
 
-            Assert("Expected two families", families.ToList().Count == 2);
+            var families = query.ToList();
+            Assert("Expected two families", families.Count == 2);
 
             // LINQ Lambda
-            families = client.CreateDocumentQuery<Family>(collectionLink);
-            Assert("Expected two families", families.ToList().Count == 2);
+            query = client.CreateDocumentQuery<Family>(collectionLink);            
+            families = query.ToList();
+
+            Assert("Expected two families", families.Count == 2);
             
             // SQL
-            families = client.CreateDocumentQuery<Family>(collectionLink, "SELECT * FROM Families");
-            Assert("Expected two families", families.ToList().Count == 2);
+            query = client.CreateDocumentQuery<Family>(collectionLink, "SELECT * FROM Families");
+            families = query.ToList();
+
+            Assert("Expected two families", families.Count == 2);
         }
 
         private static void QueryWithSqlQuerySpec(string collectionLink)
@@ -153,7 +158,8 @@
                     }
                 });
 
-            Assert("Expected only 1 family", query.ToList().Count == 1);
+            var families = query.ToList();
+            Assert("Expected only 1 family", families.Count == 1);
 
             // Query using two properties within each document. WHERE Id == "" AND Address.City == ""
             // notice here how we are doing an equality comparison on the string value of City
@@ -170,8 +176,8 @@
                     }
                 });
 
-            Assert("Expected only 1 family", query.ToList().Count == 1);
-
+            families = query.ToList();
+            Assert("Expected only 1 family", families.Count == 1);
         }
 
         private static void QueryWithEquality(string collectionLink)
@@ -196,12 +202,8 @@
                 where f.Id == "AndersenFamily" || f.Address.City == "NY"
                 select new { Name = f.LastName, City = f.Address.City };
 
-            var query2 = client.CreateDocumentQuery<Family>(collectionLink, new FeedOptions { MaxItemCount = 1 })
-                .Where(d => d.LastName == "Andersen")
-                .Select(f => new { Name = f.LastName })
-                .AsDocumentQuery();
-
-            foreach (var item in query.ToList())
+            var items = query.ToList();
+            foreach (var item in items)
             {
                 Console.WriteLine("The {0} family live in {1}", item.Name, item.City);
             }
@@ -211,7 +213,8 @@
                        .Where(f => f.Id == "AndersenFamily" || f.Address.City == "NY")
                        .Select(f => new { Name = f.LastName, City = f.Address.City });
 
-            foreach (var item in query.ToList())
+            items = query.ToList();
+            foreach (var item in items)
             {
                 Console.WriteLine("The {0} family live in {1}", item.Name, item.City);
             }
@@ -221,7 +224,7 @@
                 "SELECT f.LastName AS Name, f.Address.City AS City " +
                 "FROM Families f " +
                 "WHERE f.id='AndersenFamily' OR f.Address.City='NY'");
-
+            
             foreach (var item in q.ToList())
             {
                 Console.WriteLine("The {0} family live in {1}", item.Name, item.City);
@@ -231,40 +234,45 @@
         private static void QueryWithAndFilter(string collectionLink)
         {
             // LINQ Query
-            var families = from f in client.CreateDocumentQuery<Family>(collectionLink)
+            var query = from f in client.CreateDocumentQuery<Family>(collectionLink)
                        where f.Id == "AndersenFamily" && f.Address.City == "Seattle"
                        select f;
 
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            var families = query.ToList();
+            Assert("Expected only 1 family", families.Count == 1);
 
             // LINQ Lambda -- Id == "value" AND City == "value"
-            families = client.CreateDocumentQuery<Family>(collectionLink).Where(f => f.Id == "AndersenFamily" && f.Address.City == "Seattle");
+            query = client.CreateDocumentQuery<Family>(collectionLink).Where(f => f.Id == "AndersenFamily" && f.Address.City == "Seattle");
+            families = query.ToList();
             Assert("Expected only 1 family", families.ToList().Count == 1);
 
             // SQL -- Id == "value" AND City == "value"
-            families = client.CreateDocumentQuery<Family>(
+            query = client.CreateDocumentQuery<Family>(
                 collectionLink,
                 "SELECT * FROM Families f WHERE f.id='AndersenFamily' AND f.Address.City='Seattle'");
-
+            families = query.ToList();
             Assert("Expected only 1 family", families.ToList().Count == 1);
         }
 
         private static void QueryWithEqualsOnId(string collectionLink)
         {
             // LINQ Query -- Id == "value"
-            var families =
+            var query =
                 from f in client.CreateDocumentQuery<Family>(collectionLink)
                 where f.Id == "AndersenFamily"
                 select f;
 
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            var families = query.ToList();
+            Assert("Expected only 1 family", families.Count == 1);
 
             // LINQ Lambda -- Id == "value"
-            families = client.CreateDocumentQuery<Family>(collectionLink).Where(f => f.Id == "AndersenFamily");
+            query = client.CreateDocumentQuery<Family>(collectionLink).Where(f => f.Id == "AndersenFamily");
+            families = query.ToList();
             Assert("Expected only 1 family", families.ToList().Count == 1);
 
             // SQL -- Id == "value"
-            families = client.CreateDocumentQuery<Family>(collectionLink, "SELECT * FROM Families f WHERE f.id='AndersenFamily'");
+            query = client.CreateDocumentQuery<Family>(collectionLink, "SELECT * FROM Families f WHERE f.id='AndersenFamily'");
+            families = query.ToList();
             Assert("Expected only 1 family", families.ToList().Count == 1);
         }
 
@@ -272,57 +280,66 @@
         {
             // Simple query with a single property inequality comparison
             // LINQ Query
-            var families = from f in client.CreateDocumentQuery<Family>(collectionLink)
+            var query = from f in client.CreateDocumentQuery<Family>(collectionLink)
                            where f.Id != "AndersenFamily"
                            select f;
 
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            var families = query.ToList();
+            Assert("Expected only 1 family", families.Count == 1);
             
             // LINQ Lambda
-            families = client.CreateDocumentQuery<Family>(collectionLink)
+            query = client.CreateDocumentQuery<Family>(collectionLink)
                        .Where(f => f.Id != "AndersenFamily");
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+
+            families = query.ToList();
+            Assert("Expected only 1 family", families.Count == 1);
             
 
             // SQL - in SQL you can use <> interchangably with != for "not equals"
-            families = client.CreateDocumentQuery<Family>(collectionLink, "SELECT * FROM Families f WHERE f.id <> 'AndersenFamily'");
+            query = client.CreateDocumentQuery<Family>(collectionLink, "SELECT * FROM Families f WHERE f.id <> 'AndersenFamily'");
+            families = query.ToList();
             Assert("Expected only 1 family", families.ToList().Count == 1);
             
             //combine equality and inequality
-            families = 
+            query = 
                 from f in client.CreateDocumentQuery<Family>(collectionLink)
                 where f.Id == "Wakefield" && f.Address.City != "NY"
                 select f;
-            Assert("Expected no results", families.ToList().Count == 0);
 
-            families = client.CreateDocumentQuery<Family>(
+            families = query.ToList();
+            Assert("Expected no results", families.Count == 0);
+
+            query = client.CreateDocumentQuery<Family>(
                 collectionLink, 
                 "SELECT * FROM Families f WHERE f.id = 'AndersenFamily' AND f.Address.City != 'NY'");
 
-            Assert("Expected only 1 family", families.ToList().Count == 1);
-
+            families = query.ToList();
+            Assert("Expected only 1 family", families.Count == 1);
         }
 
         private static void QueryWithRangeOperatorsOnNumbers(string collectionLink)
         {
             // LINQ Query
-            var families = from f in client.CreateDocumentQuery<Family>(collectionLink)
+            var query = from f in client.CreateDocumentQuery<Family>(collectionLink)
                            where f.Children[0].Grade > 5
                            select f;
 
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            var families = query.ToList();
+            Assert("Expected only 1 family", families.Count == 1);
 
             // LINQ Lambda
-            families = client.CreateDocumentQuery<Family>(collectionLink)
+            query = client.CreateDocumentQuery<Family>(collectionLink)
                        .Where(f => f.Children[0].Grade > 5);
 
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            families = query.ToList();
+            Assert("Expected only 1 family", families.Count == 1);
 
             // SQL
-            families = client.CreateDocumentQuery<Family>(collectionLink,
+            query = client.CreateDocumentQuery<Family>(collectionLink,
                 "SELECT * FROM Families f WHERE f.Children[0].Grade > 5");
 
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            families = query.ToList();
+            Assert("Expected only 1 family", families.Count == 1);
         }
 
 
@@ -338,58 +355,65 @@
         private static void QueryWithRangeOperatorsOnStrings(string collectionLink)
         {
             // SQL Query (can't do this in LINQ)
-            var families = client.CreateDocumentQuery<Family>(
+            var query = client.CreateDocumentQuery<Family>(
                 collectionLink, 
                 "SELECT * FROM Families f WHERE f.Address.State > 'NY'", 
                 new FeedOptions { EnableScanInQuery = true });
-            
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+
+            var families = query.ToList();
+            Assert("Expected only 1 family", families.Count == 1);
         }
 
         private static void QueryWithOrderByNumbers(string collectionLink)
         {
             // LINQ Query
-            var familiesLinqQuery = from f in client.CreateDocumentQuery<Family>(collectionLink)
+            var query = from f in client.CreateDocumentQuery<Family>(collectionLink)
                            orderby f.Children[0].Grade
                            select f;
 
-            Assert("Expected 2 families", familiesLinqQuery.ToList().Count == 2);
+            var families = query.ToList();
+            Assert("Expected 2 families", families.Count == 2);
 
             // LINQ Lambda
-            familiesLinqQuery = client.CreateDocumentQuery<Family>(collectionLink)
+            query = client.CreateDocumentQuery<Family>(collectionLink)
                        .OrderBy(f => f.Children[0].Grade);
 
-            Assert("Expected 2 families", familiesLinqQuery.ToList().Count == 2);
+            families = query.ToList();
+            Assert("Expected 2 families", families.Count == 2);
 
             // SQL
-            var familiesSqlQuery = client.CreateDocumentQuery<Family>(collectionLink,
+            var q = client.CreateDocumentQuery<Family>(collectionLink,
                 "SELECT * FROM Families f ORDER BY f.Children[0].Grade");
 
-            Assert("Expected 2 families", familiesSqlQuery.ToList().Count == 2);
+            families = q.ToList();
+            Assert("Expected 2 families", families.Count == 2);
         }
 
         private static void QueryWithOrderByStrings(string collectionLink)
         {
             // LINQ Query
-            var familiesLinqQuery = from f in client.CreateDocumentQuery<Family>(collectionLink)
+            var query = from f in client.CreateDocumentQuery<Family>(collectionLink)
                            where f.LastName == "Andersen"
                            orderby f.Address.State descending
                            select f;
 
-            Assert("Expected only 1 family", familiesLinqQuery.ToList().Count == 1);
+            var families = query.ToList();
+            Assert("Expected only 1 family", families.Count == 1);
 
             // LINQ Lambda
-            familiesLinqQuery = client.CreateDocumentQuery<Family>(collectionLink)
+            query = client.CreateDocumentQuery<Family>(collectionLink)
                        .Where(f => f.LastName == "Andersen")
                        .OrderByDescending(f => f.Address.State);
 
-            Assert("Expected only 1 family", familiesLinqQuery.ToList().Count == 1);
+            families = query.ToList();
+            Assert("Expected only 1 family", families.Count == 1);
 
             // SQL
-            var familiesSqlQuery = client.CreateDocumentQuery<Family>(collectionLink,
+            var q = client.CreateDocumentQuery<Family>(collectionLink,
                 "SELECT * FROM Families f WHERE f.LastName = 'Andersen' ORDER BY f.Address.State DESC");
 
-            Assert("Expected only 1 family", familiesSqlQuery.ToList().Count == 1);
+            families = q.ToList();
+            Assert("Expected only 1 family", families.Count == 1);
         }
 
         private static void QueryWithSubdocuments(string collectionLink)
@@ -399,21 +423,23 @@
             // is a single child
 
             // SQL
-            var childrenSqlQuery = client.CreateDocumentQuery<Child>(collectionLink,
+            var query = client.CreateDocumentQuery<Child>(collectionLink,
                 "SELECT c " +
-                "FROM c IN f.Children").ToList();
+                "FROM c IN f.Children");
 
-            foreach (var child in childrenSqlQuery)
+            var children = query.ToList();
+            foreach (var child in children)
             {
                 Console.WriteLine(JsonConvert.SerializeObject(child));
             }
 
             // LINQ Query
-           var childrenLinqQuery = client.CreateDocumentQuery<Family>(collectionLink)
+           query = client.CreateDocumentQuery<Family>(collectionLink)
                     .SelectMany(family => family.Children
                     .Select(c => c));
 
-           foreach (var child in childrenLinqQuery)
+           children = query.ToList();
+           foreach (var child in children)
            {
                Console.WriteLine(JsonConvert.SerializeObject(child));
            }
@@ -437,20 +463,21 @@
 
         private static void QueryWithTwoJoinsAndFilter(string collectionLink)
         {
-            var familiesChildrenAndPets = client.CreateDocumentQuery<dynamic>(collectionLink,
+            var query = client.CreateDocumentQuery<dynamic>(collectionLink,
                     "SELECT f.id as family, c.FirstName AS child, p.GivenName AS pet " +
                     "FROM Families f " +
                     "JOIN c IN f.Children " +
                     "JOIN p IN c.Pets " +
                     "WHERE p.GivenName = 'Fluffy'");
 
-            foreach (var item in familiesChildrenAndPets)
+            var items = query.ToList();
+            foreach (var item in items)
             {
                 Console.WriteLine(item);
             }
 
             // LINQ
-            familiesChildrenAndPets = client.CreateDocumentQuery<Family>(collectionLink)
+            query = client.CreateDocumentQuery<Family>(collectionLink)
                     .SelectMany(family => family.Children
                     .SelectMany(child => child.Pets
                     .Where(pet => pet.GivenName == "Fluffy")
@@ -462,7 +489,8 @@
                     }
                     )));
 
-            foreach (var item in familiesChildrenAndPets)
+            items = query.ToList();
+            foreach (var item in items)
             {
                 Console.WriteLine(item);
             }
@@ -471,19 +499,20 @@
         private static void QueryWithTwoJoins(string collectionLink)
         {
             // SQL
-            var familiesChildrenAndPets = client.CreateDocumentQuery<dynamic>(collectionLink,
+            var query = client.CreateDocumentQuery<dynamic>(collectionLink,
                 "SELECT f.id as family, c.FirstName AS child, p.GivenName AS pet " +
                 "FROM Families f " +
                 "JOIN c IN f.Children " +
                 "JOIN p IN c.Pets ");
 
-            foreach (var item in familiesChildrenAndPets)
+            var items = query.ToList();
+            foreach (var item in items)
             {
                 Console.WriteLine(item);
             }
 
             // LINQ
-            familiesChildrenAndPets = client.CreateDocumentQuery<Family>(collectionLink)
+            query = client.CreateDocumentQuery<Family>(collectionLink)
                     .SelectMany(family => family.Children
                     .SelectMany(child => child.Pets
                     .Select(pet => new
@@ -494,7 +523,8 @@
                     }
                     )));
 
-            foreach (var item in familiesChildrenAndPets)
+            items = query.ToList();
+            foreach (var item in items)
             {
                 Console.WriteLine(item);
             }
@@ -504,22 +534,24 @@
         {
 
             // SQL
-            var familiesAndChildren = client.CreateDocumentQuery(collectionLink,
+            var query = client.CreateDocumentQuery(collectionLink,
                 "SELECT f.id " +
                 "FROM Families f " +
                 "JOIN c IN f.Children");
 
-            foreach (var item in familiesAndChildren)
+            var items = query.ToList();
+            foreach (var item in items)
             {
                 Console.WriteLine(JsonConvert.SerializeObject(item));
             }
 
             // LINQ
-            familiesAndChildren = client.CreateDocumentQuery<Family>(collectionLink)
+            query = client.CreateDocumentQuery<Family>(collectionLink)
                     .SelectMany(family => family.Children
                     .Select(c => family.Id));
 
-            foreach (var item in familiesAndChildren)
+            items = query.ToList();
+            foreach (var item in items)
             {
                 Console.WriteLine(JsonConvert.SerializeObject(item));
             }
@@ -528,7 +560,7 @@
         private static void QueryWithStringMathAndArrayOperators(string collectionLink)
         {
             // Find all families where the lastName starts with "An" -> should return the Andersens
-            IQueryable<Family> results = client.CreateDocumentQuery<Family>(collectionLink, "SELECT * FROM family WHERE STARTSWITH(family.LastName, 'An')");
+            var results = client.CreateDocumentQuery<Family>(collectionLink, "SELECT * FROM family WHERE STARTSWITH(family.LastName, 'An')");
             Assert("Expected only 1 family", results.AsEnumerable().Count() == 1);
 
             // Same query in LINQ. You can also use other operators like string.Contains(), string.EndsWith(), string.Trim(), etc.
@@ -536,7 +568,7 @@
             Assert("Expected only 1 family", results.AsEnumerable().Count() == 1);
 
             // Round down numbers using FLOOR
-            IQueryable<int> numericResults = client.CreateDocumentQuery<int>(collectionLink, "SELECT VALUE FLOOR(family.Children[0].Grade) FROM family");
+            var numericResults = client.CreateDocumentQuery<int>(collectionLink, "SELECT VALUE FLOOR(family.Children[0].Grade) FROM family");
             Assert("Expected grades [5, 2]", numericResults.AsEnumerable().SequenceEqual(new [] { 5, 8 }));
 
             // Same query in LINQ. You can also use other Math operators
@@ -600,17 +632,6 @@
             {
                 if (f.Id != "WakefieldFamily") throw new ApplicationException("Should only be the second family");
             }
-        }
-
-        /// <summary>
-        /// Import data into a DocumentDB collection using a "Bulk Import" stored procedure.
-        /// </summary>
-        /// <param name="collection">The collection to run queries against.</param>
-        /// <param name="sourceDirectory">The source directory to read files from.</param>
-        /// <returns></returns>
-        private static async Task ImportData(DocumentCollection collection, string sourceDirectory)
-        {
-            await DocumentClientHelper.RunBulkImport(client, collection, sourceDirectory);
         }
 
         /// <summary>
