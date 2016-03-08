@@ -118,6 +118,20 @@
 
             Console.WriteLine("1.2. Created Collection {0}, with custom index policy \n{1}", c2.Id, c2.IndexingPolicy);
 
+            //***********************************************************************************************
+            // 1.3 - Create collection with OfferType set
+            //***********************************************************************************************
+            // By default a collection is created with the lowest performance tier, S1
+            // You can set this when creating a collection by supplying a value for RequestOptions.OfferType
+            collectionSpec = new DocumentCollection
+            {
+                Id = "SampleCollectionWithS2OfferType"
+            };
+
+            c2 = await client.CreateDocumentCollectionAsync(database.SelfLink, collectionSpec, new RequestOptions { OfferType="S2" });
+
+            Console.WriteLine("1.3. Created Collection {0}, with OfferType of S2\n", c2.Id);
+
             //*********************************************************************************************
             // 2. Get performance tier of a DocumentCollection
             //
