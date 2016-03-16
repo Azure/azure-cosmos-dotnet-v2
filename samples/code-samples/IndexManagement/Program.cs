@@ -63,21 +63,14 @@
         {
             try
             {
-                //Get a Document client
                 using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey))
                 {
                     RunIndexDemo().Wait();
                 }
             }
-            catch (DocumentClientException de)
-            {
-                Exception baseException = de.GetBaseException();
-                Console.WriteLine("\n{0} error occurred: {1}, Message: {2}", de.StatusCode, de.Message, baseException.Message);
-            }
             catch (Exception e)
             {
-                Exception baseException = e.GetBaseException();
-                Console.WriteLine("\nError: {0}, Message: {1}", e.Message, baseException.Message);
+                LogException(e);
             }
             finally
             {
@@ -110,7 +103,7 @@
             await UseRangeIndexesOnStrings();
 
             // 7. Perform an index transform
-            await PerformIndexTransformations();          
+            await PerformIndexTransformations();
 
             // Cleanup
             await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
@@ -125,27 +118,27 @@
         private static async Task ExplicitlyExcludeFromIndex()
         {            
             var databaseUri = UriFactory.CreateDatabaseUri(databaseId);
-            var collectionUri = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);            
+            var collectionUri = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);
             
             Console.WriteLine("\n1. Exclude a document completely from the Index");
             
-            //Create a collection with default index policy (i.e. automatic = true)
+            // Create a collection with default index policy (i.e. automatic = true)
             DocumentCollection collection = await client.CreateDocumentCollectionAsync(databaseUri, new DocumentCollection { Id = collectionId });
             Console.WriteLine("Collection {0} created with index policy \n{1}", collection.Id, collection.IndexingPolicy);
 
-            //Create a document
-            //Then query on it immediately
-            //Will work as this Collection is set to automatically index everyting
+            // Create a document
+            // Then query on it immediately
+            // Will work as this Collection is set to automatically index everything
             Document created = await client.CreateDocumentAsync(collectionUri, new { id = "doc1", orderId = "order1" } );
             Console.WriteLine("\nDocument created: \n{0}", created);
 
             bool found = client.CreateDocumentQuery(collectionUri, "SELECT * FROM root r WHERE r.orderId='order1'").AsEnumerable().Any();
             Console.WriteLine("Document found by query: {0}", found);
 
-            //Now, create a document but this time explictly exclude it from the collection using IndexingDirective
-            //Then query for that document
-            //Shoud NOT find it, because we excluded it from the index
-            //BUT, the document is there and doing a ReadDocument by Id will prove it
+            // Now, create a document but this time explictly exclude it from the collection using IndexingDirective
+            // Then query for that document
+            // Shoud NOT find it, because we excluded it from the index
+            // BUT, the document is there and doing a ReadDocument by Id will prove it
             created = await client.CreateDocumentAsync(collectionUri, new { id = "doc2", orderId = "order2" }, new RequestOptions
             {
                 IndexingDirective = IndexingDirective.Exclude
@@ -158,7 +151,7 @@
             Document document = await client.ReadDocumentAsync(created.SelfLink);
             Console.WriteLine("Document read by id: {0}", document!=null);
             
-            //Cleanup
+            // Cleanup
             await client.DeleteDocumentCollectionAsync(collectionUri);
         }
         
@@ -347,22 +340,10 @@
                         
             var collDefinition = new DocumentCollection { Id =  collectionId };
 
-            // We COULD create a Range index for ALL paths for Numbers AND Strings. 
-            // This indexing policy gives you the most flexibility as it allows you to perform range queries and order by on strings and number on the whole document.
-            // This might have a higher index storage overhead if you have long strings or a large number of unique strings. 
-            // You can be selective of which paths need a Range index through IncludedPath configuration
-            IndexingPolicy indexingPolicy = new IndexingPolicy();
-            indexingPolicy.IncludedPaths.Add(new IncludedPath
-            {
-                Path = "/*",
-                Indexes = new Collection<Index>() 
-                {
-                    new RangeIndex(DataType.Number) { Precision = -1 },
-                    new RangeIndex(DataType.String) { Precision = -1 }
-                }
-            });
+            // This is how you can specify a range index on strings (and numbers) for all properties. This is the recommended indexing policy for collections.
+            IndexingPolicy indexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
 
-            // So instead, for demo purposes, we are going to use the default (range on numbers, hash on strings) for the whole document (/* )
+            // For demo purposes, we are going to use the default (range on numbers, hash on strings) for the whole document (/* )
             // and just include a range index on strings for the "region".
             indexingPolicy = new IndexingPolicy();
             indexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/*" });
@@ -434,17 +415,8 @@
             // Switch to use string & number range indexing with maximum precision.
             Console.WriteLine("Changing to string & number range indexing with maximum precision (needed for Order By).");
 
+            collection.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
             collection.IndexingPolicy.IndexingMode = IndexingMode.Consistent;
-            collection.IndexingPolicy.IncludedPaths = new Collection<IncludedPath>() {
-                    new IncludedPath() 
-                    {
-                        Path = "/*",
-                        Indexes = new Collection<Index>() {
-                            new RangeIndex(DataType.Number) { Precision = -1},
-                            new RangeIndex(DataType.String) { Precision = -1 }
-                        }
-                    }
-                };
 
             // Apply change and wait until it completes
             await client.ReplaceDocumentCollectionAsync(collection);
@@ -523,6 +495,29 @@
 
             database = await client.CreateDatabaseAsync(new Database { Id = id });
             return database;
+        }
+
+        /// <summary>
+        /// Log exception error message to the console
+        /// </summary>
+        /// <param name="e">The caught exception.</param>
+        private static void LogException(Exception e)
+        {
+            ConsoleColor color = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Red;
+
+            Exception baseException = e.GetBaseException();
+            if (e is DocumentClientException)
+            {
+                DocumentClientException de = (DocumentClientException)e;
+                Console.WriteLine("{0} error occurred: {1}, Message: {2}", de.StatusCode, de.Message, baseException.Message);
+            }
+            else
+            {
+                Console.WriteLine("Error: {0}, Message: {1}", e.Message, baseException.Message);
+            }
+
+            Console.ForegroundColor = color;
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿namespace DocumentDB.Samples.UserManagement
 {
+    using DocumentDB.Samples.Shared.Util;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using Microsoft.Azure.Documents.Linq;
@@ -19,8 +20,8 @@
         private static DocumentClient client;
 
         //Assign a id for your database & collection 
-        private static readonly string databaseId = ConfigurationManager.AppSettings["DatabaseId"];
-        private static readonly string collectionId = ConfigurationManager.AppSettings["CollectionId"];
+        private static readonly string DatabaseName = ConfigurationManager.AppSettings["DatabaseId"];
+        private static readonly string CollectionName = ConfigurationManager.AppSettings["CollectionId"];
 
         //Read the DocumentDB endpointUrl and authorisationKeys from config
         //These values are available from the Azure Management Portal on the DocumentDB Account Blade under "Keys"
@@ -35,19 +36,15 @@
                 //Get a Document client
                 using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey))
                 {
-                    RunDemoAsync(databaseId, collectionId).Wait();
+                    RunDemoAsync(DatabaseName, CollectionName).Wait();
                 }
             }
-            catch (DocumentClientException de)
-            {
-                Exception baseException = de.GetBaseException();
-                Console.WriteLine("{0} error occurred: {1}, Message: {2}", de.StatusCode, de.Message, baseException.Message);
-            }
+#if !DEBUG
             catch (Exception e)
             {
-                Exception baseException = e.GetBaseException();
-                Console.WriteLine("Error: {0}, Message: {1}", e.Message, baseException.Message);
+                LogException(e);
             }
+#endif
             finally
             {
                 Console.WriteLine("End of demo, press any key to exit.");
@@ -58,26 +55,26 @@
         private static async Task RunDemoAsync(string databaseId, string collectionId)
         {
             //--------------------------------------------------------------------------------------------------
-            //We need a Database, Two Collections, Two Users, and some permissions for this sample,
-            //So let's go ahead and set these up initially
+            // We need a Database, Two Collections, Two Users, and some permissions for this sample,
+            // So let's go ahead and set these up initially
             //--------------------------------------------------------------------------------------------------
 
-            //Get, or Create, the Database
-            Database db = await GetOrCreateDatabaseAsync(databaseId);
-            Database db2 = await GetOrCreateDatabaseAsync("Test");
+            // Get, or Create, the Database
+            Database db = await GetNewDatabaseAsync(databaseId);
+            Database db2 = await GetNewDatabaseAsync("Test");
 
-            //Get, or Create, two seperate Collections
+            // Get, or Create, two seperate Collections
             DocumentCollection col1 = await GetOrCreateCollectionAsync(db.SelfLink, "COL1");
             DocumentCollection col2 = await GetOrCreateCollectionAsync(db.SelfLink, "COL2");
 
-            //Insert two documents in to col1
-            Document doc1 = await client.CreateDocumentAsync(col1.DocumentsLink, new { id = "doc1" });
-            Document doc2 = await client.CreateDocumentAsync(col1.DocumentsLink, new { id = "doc2" });
+            // Insert two documents in to col1
+            Document doc1 = await client.CreateDocumentAsync(col1.DocumentsLink, new { id = "doc1", partitionKey = "partitionKey1" });
+            Document doc2 = await client.CreateDocumentAsync(col1.DocumentsLink, new { id = "doc2", partitionKey = "pk2" });
 
-            //Insert one document in to col2
+            // Insert one document in to col2
             Document doc3 = await client.CreateDocumentAsync(col2.DocumentsLink, new { id = "doc3" });
 
-            //Create two users
+            // Create two users
             User user1 = await client.CreateUserAsync(db.UsersLink, new User { Id = "Thomas Andersen" });
             User user2 = await client.CreateUserAsync(db.UsersLink, new User { Id = "Robin Wakefield" });
 
@@ -85,7 +82,7 @@
             Permission permissionUser1Col1 = await CreatePermissionAsync(col1.SelfLink, user1.SelfLink, PermissionMode.Read);
 
             // All Permissions on Doc1 for user1
-            Permission permissionUser1Doc1 = await CreatePermissionAsync(doc1.SelfLink, user1.SelfLink, PermissionMode.All);
+            Permission permissionUser1Doc1 = await CreatePermissionAsync(doc1.SelfLink, user1.SelfLink, PermissionMode.All, "partitionKey1");
 
             // Read Permissions on col2 for user1
             Permission permissionUser1Col2 = await CreatePermissionAsync(col2.SelfLink, user1.SelfLink, PermissionMode.Read);
@@ -97,9 +94,9 @@
             List<Permission> user1Permissions = await GetUserPermissionsAsync(user1.SelfLink);
 
             //--------------------------------------------------------------------------------------------------
-            //That takes care of the creating Users, Permissions on Resources, Linking user to permissions etc. 
-            //Now let's take a look at the result of User.Id = 1 having ALL permission on a single Collection
-            //but not on anything else
+            // That takes care of the creating Users, Permissions on Resources, Linking user to permissions etc. 
+            // Now let's take a look at the result of User.Id = 1 having ALL permission on a single Collection
+            // but not on anything else
             //----------------------------------------------------------------------------------------------------
 
             //Attempt to do admin operations when user only has Read on a collection
@@ -111,12 +108,12 @@
             //Attempt to read across multiple collections
             await AttemptReadFromTwoCollections(new List<string> { col1.SelfLink, col2.SelfLink }, user1Permissions);
             
-            //Cleanup 
+            // Cleanup 
             await client.DeleteDatabaseAsync(db.SelfLink);
             await client.DeleteDatabaseAsync(db2.SelfLink);
         }
         
-        private static async Task<Permission> CreatePermissionAsync(string resourceLink, string userLink, PermissionMode mode)
+        private static async Task<Permission> CreatePermissionAsync(string resourceLink, string userLink, PermissionMode mode, string resourcePartitionKey = null)
         {
             Permission permission = new Permission
             {
@@ -125,7 +122,16 @@
                 ResourceLink = resourceLink
             };
 
-            return (Permission)await client.CreatePermissionAsync(userLink, permission);
+            if (resourcePartitionKey != null)
+            {
+                permission.ResourcePartitionKey = new object[] { resourcePartitionKey };
+            }
+
+            ResourceResponse<Permission> response = await DocumentClientHelper.ExecuteWithRetries<ResourceResponse<Permission>>(
+                client, 
+                () => client.CreatePermissionAsync(userLink, permission));
+
+            return response.Resource;
         }
         
         private static async Task AttemptReadFromTwoCollections(List<string> collectionLinks, List<Permission> permissions)
@@ -148,7 +154,7 @@
                 //attempt to write a doc in col 2 > should fail with Forbidden
                 try
                 {
-                    await client.CreateDocumentAsync(collectionLinks[1], new { id = "not allowed" });
+                    await client.UpsertDocumentAsync(collectionLinks[1], new { id = "not allowed" });
 
                     //should never get here, because we expect the create to fail
                     throw new ApplicationException("should never get here");
@@ -170,7 +176,7 @@
                 //attempt to write a document > should fail
                 try
                 {
-                    await client.CreateDocumentAsync(collectionLink, new { id = "not allowed" });
+                    await client.UpsertDocumentAsync(collectionLink, new { id = "not allowed" });
 
                     //should never get here, because we expect the create to fail
                     throw new ApplicationException("should never get here");
@@ -205,7 +211,7 @@
                 catch (DocumentClientException de)
                 {
                     //expecting an Unauthorised exception, anything else, rethrow
-                    if (de.StatusCode != HttpStatusCode.Unauthorized) throw;
+                    if (de.StatusCode != HttpStatusCode.Forbidden) throw;
                 }
             }
         }
@@ -237,7 +243,14 @@
             var collection = client.CreateDocumentCollectionQuery(dbLink).Where(c => c.Id == id).ToArray().FirstOrDefault();
             if (collection == null)
             {
-                collection = await client.CreateDocumentCollectionAsync(dbLink, new DocumentCollection { Id = id });
+                DocumentCollection collectionDefinition = new DocumentCollection();
+                collectionDefinition.Id = id;
+                collectionDefinition.PartitionKey.Paths.Add("/partitionKey");
+
+                collection = await client.CreateDocumentCollectionAsync(
+                    dbLink,
+                    collectionDefinition,
+                    new RequestOptions { OfferThroughput = 400 });
             }
 
             return collection;
@@ -248,15 +261,39 @@
         /// </summary>
         /// <param id="id">The id of the Database to search for, or create.</param>
         /// <returns>The matched, or created, Database object</returns>
-        private static async Task<Database> GetOrCreateDatabaseAsync(string id)
+        private static async Task<Database> GetNewDatabaseAsync(string id)
         {
             var database = client.CreateDatabaseQuery().Where(d => d.Id == id).ToArray().FirstOrDefault();
-            if (database == null)
+            if (database != null)
             {
-                database = await client.CreateDatabaseAsync(new Database { Id = id });
+                await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(id));
             }
 
+            database = await client.CreateDatabaseAsync(new Database { Id = id });
             return database;
+        }
+
+        /// <summary>
+        /// Log exception error message to the console
+        /// </summary>
+        /// <param name="e">The caught exception.</param>
+        private static void LogException(Exception e)
+        {
+            ConsoleColor color = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Red;
+
+            Exception baseException = e.GetBaseException();
+            if (e is DocumentClientException)
+            {
+                DocumentClientException de = (DocumentClientException)e;
+                Console.WriteLine("{0} error occurred: {1}, Message: {2}", de.StatusCode, de.Message, baseException.Message);
+            }
+            else
+            {
+                Console.WriteLine("Error: {0}, Message: {1}", e.Message, baseException.Message);
+            }
+
+            Console.ForegroundColor = color;
         }
     }
 }
