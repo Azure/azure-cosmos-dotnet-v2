@@ -34,6 +34,8 @@ These samples demonstrate how to use the Client SDKs to interact with the servic
 
 - **UserManagement** - CRUD operations on User and Permission resources
 
+- **Spatial** - How to work with GeoJSON and DocumentDB geospatial capabilities
+
 After walking through these samples you should have a good idea of how to get going and how to make user of the various Azure DocumentDB APIs. 
 
 There are step-by-step tutorials and more documentation on the [DocumentDB domentation](http://azure.microsoft.com/en-us/documentation/services/documentdb/) page so head on over, sign-up, and learn about this cool new NoSQL document database.

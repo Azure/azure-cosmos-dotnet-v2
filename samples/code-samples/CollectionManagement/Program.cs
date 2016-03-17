@@ -153,8 +153,10 @@
 
             Console.WriteLine("1.2. Created Collection {0}, with custom index policy \n{1}", collectionWithLazyIndexing.Id, collectionWithLazyIndexing.IndexingPolicy);
         }
+        
         private static async Task GetAndChangeCollectionPerformance(DocumentCollection simpleCollection)
         {
+
             //*********************************************************************************************
             // Get configured performance (reserved throughput) of a DocumentCollection
             //
@@ -170,16 +172,16 @@
             // Change performance (reserved throughput) of DocumentCollection
             //    Let's change the performance of the collection to 500 RU/s
             //******************************************************************************************************************
-            offer.OfferThroughput = 500;
-            Offer replaced = await client.ReplaceOfferAsync(offer);
 
-            Console.WriteLine("\n3. Replaced Offer. Throughput is now {0}.\n", replaced.OfferThroughput);
+            Offer replaced = await client.ReplaceOfferAsync(new OfferV2 { Content = new OfferContentV2(500) });
+            Console.WriteLine("\n3. Replaced Offer. Offer is now {0}.\n", replaced);
 
             // Get the offer again after replace
             offer = client.CreateOfferQuery().Where(o => o.ResourceLink == simpleCollection.SelfLink).AsEnumerable().Single();
 
-            Console.WriteLine("3. Found Offer \n{0}\nusing collection's ResourceId {1}.\n", offer, simpleCollection.ResourceId);
+            Console.WriteLine("3. Found Offer \n{0}\n using collection's ResourceId {1}.\n", offer, simpleCollection.ResourceId);
         }
+        
         private static async Task ReadCollectionProperties()
         {
             //*************************************************

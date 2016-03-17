@@ -117,14 +117,14 @@
 
             // 3. Run the script. Pass "Hello, " as parameter. 
             // The script will take the 1st document and echo: Hello, <document as json>.
-            var response = await client.ExecuteStoredProcedureWithPartitionKeyAsync<string>(
+            var response = await client.ExecuteStoredProcedureAsync<string>(
                 sproc.SelfLink, 
-                new object[] { "Estel" }, 
+                new RequestOptions { PartitionKey = new PartitionKeyValue("Estel") },
                 "Hello, ");
 
             Console.WriteLine("Result from script: {0}\r\n", response.Response);
 
-            await client.DeleteDocumentAsync(created.SelfLink, new RequestOptions { PartitionKey = new object[] { "Estel" } });
+            await client.DeleteDocumentAsync(created.SelfLink, new RequestOptions { PartitionKey = new PartitionKeyValue("Estel") });
         }
         
         /// <summary>
@@ -174,9 +174,9 @@
                 var args = new dynamic[] { JsonConvert.DeserializeObject<dynamic>(argsJson) };
 
                 // 6. execute the batch.
-                StoredProcedureResponse<int> scriptResult = await client.ExecuteStoredProcedureWithPartitionKeyAsync<int>(
+                StoredProcedureResponse<int> scriptResult = await client.ExecuteStoredProcedureAsync<int>(
                     sproc.SelfLink, 
-                    new object[] { "Andersen"},
+                    new PartitionKeyValue("Andersen"),
                     args);
 
                 // 7. Prepare for next batch.
@@ -227,9 +227,9 @@
             do
             {
                 // 3. Run the stored procedure.
-                var response = await client.ExecuteStoredProcedureWithPartitionKeyAsync<OrderByResult>(
+                var response = await client.ExecuteStoredProcedureAsync<OrderByResult>(
                     sproc.SelfLink, 
-                    new object[] { "Andersen"},
+                    new PartitionKeyValue("Andersen"),
                     filterQuery, 
                     orderByFieldName, 
                     continuationToken);

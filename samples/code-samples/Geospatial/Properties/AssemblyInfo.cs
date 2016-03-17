@@ -5,12 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Documents.MobileServices")]
+[assembly: AssemblyTitle("DocumentDB.Samples.Geospatial")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Documents.MobileServices")]
-[assembly: AssemblyCopyright("Copyright ©  2014")]
+[assembly: AssemblyProduct("DocumentDB.Samples.Geospatial")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +19,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("0de2ffdc-009b-4569-aa4b-71a3783d2655")]
+[assembly: Guid("fecc9d98-9370-4af5-99bb-897394526fb7")]
 
 // Version information for an assembly consists of the following four values:
 //
