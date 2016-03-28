@@ -178,6 +178,8 @@
 
             // Get the offer again after replace
             offer = client.CreateOfferQuery().Where(o => o.ResourceLink == simpleCollection.SelfLink).AsEnumerable().Single();
+            OfferV2 offerV2 = (OfferV2)offer;
+            Console.WriteLine(offerV2.Content.OfferThroughput);
 
             Console.WriteLine("3. Found Offer \n{0}\n using collection's ResourceId {1}.\n", offer, simpleCollection.ResourceId);
         }

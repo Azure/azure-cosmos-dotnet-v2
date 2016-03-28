@@ -209,7 +209,7 @@
                 () => client.CreateDocumentCollectionAsync(
                         UriFactory.CreateDatabaseUri(databaseId),
                         collectionDefinition,
-                        new RequestOptions { OfferThroughput = (uint)offerThroughput }));
+                        new RequestOptions { OfferThroughput = offerThroughput }));
         }
 
         /// <summary>

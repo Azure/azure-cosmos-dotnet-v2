@@ -363,7 +363,7 @@
             aggregateEntry = client.CreateDocumentQuery<dynamic>(
                 collectionLink, 
                 "SELECT * FROM root r WHERE r.isMetadata = true",
-                new FeedOptions { PartitionKey = new object[] { "Device001" } }).AsEnumerable().First();
+                new FeedOptions { PartitionKey = new PartitionKeyValue("Device0001") }).AsEnumerable().First();
 
             Console.WriteLine("Document statistics: min size: {0}, max size: {1}, total size: {2}", 
                 aggregateEntry.MinSize, 

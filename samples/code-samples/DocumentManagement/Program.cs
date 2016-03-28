@@ -398,7 +398,7 @@
             Console.WriteLine("\n3.1 - Using optimistic concurrency when doing a ReplaceDocumentAsync");
 
             //read a document
-            Document readDoc = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseId, collectionId, "POCO1"));
+            Document readDoc = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, "POCO1"));
             Console.WriteLine("ETag of read document - {0}", readDoc.ETag);
 
             //take advantage of the dynamic nature of Document and set a new property on the document we just read
@@ -437,7 +437,7 @@
             Console.WriteLine("\n3.2 - Using ETag to do a conditional ReadDocumentAsync");
 
             //get a document
-            var response = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseId, collectionId, "POCO2"));
+            var response = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, "POCO2"));
             readDoc = response.Resource;
             Console.WriteLine("Read doc with StatusCode of {0}", response.StatusCode);
             
@@ -448,14 +448,14 @@
                 Type = AccessConditionType.IfNoneMatch
             };
 
-            response = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseId, collectionId, "POCO2"), new RequestOptions { AccessCondition = accessCondition });
+            response = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, "POCO2"), new RequestOptions { AccessCondition = accessCondition });
             Console.WriteLine("Read doc with StatusCode of {0}", response.StatusCode);
 
             //now change something on the document, then do another get and this time we should get the document back
             readDoc.SetPropertyValue("foo", "updated");
             response = await client.ReplaceDocumentAsync(readDoc);
 
-            response = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseId, collectionId, "POCO2"), new RequestOptions { AccessCondition = accessCondition });
+            response = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, "POCO2"), new RequestOptions { AccessCondition = accessCondition });
             Console.WriteLine("Read doc with StatusCode of {0}", response.StatusCode);
         }
         private static void Cleanup()

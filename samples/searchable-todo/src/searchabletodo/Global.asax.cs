@@ -26,8 +26,8 @@ namespace searchabletodo
 
             // uncomment to force reset and reload
             // ItemSearchRepository.DeleteAll().Wait();
-            ItemSearchRepository.SetupSearchAsync().Wait();
-            ItemSearchRepository.RunIndexerAsync().Wait();
+            //ItemSearchRepository.SetupSearchAsync().Wait();
+            //ItemSearchRepository.RunIndexerAsync().Wait();
         }
     }
 }
