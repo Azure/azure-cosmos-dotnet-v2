@@ -21,7 +21,7 @@ namespace searchabletodo.Models
         public bool Completed { get; set; }
 
         private DateTime dueDate;
-        [DataType(System.ComponentModel.DataAnnotations.DataType.Date)]
+        [DataType(DataType.Date)]
         [JsonProperty(PropertyName = "dueDate")]
         public DateTime DueDate 
         {

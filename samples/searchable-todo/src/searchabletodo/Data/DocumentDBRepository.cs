@@ -15,15 +15,15 @@ namespace searchabletodo.Data
     {
         public static T Get(Expression<Func<T, bool>> predicate)
         {
-            return Client.CreateDocumentQuery<T>(Collection.DocumentsLink, DefaultOptions)
-                .Where(predicate)
-                .AsEnumerable()
-                .FirstOrDefault();
+            return Client.CreateDocumentQuery<T>(Collection.DocumentsLink)
+                        .Where(predicate)
+                        .AsEnumerable()
+                        .FirstOrDefault();
         }
 
         public static T GetById(string id)
         {
-            T doc = Client.CreateDocumentQuery<T>(Collection.SelfLink, DefaultOptions)
+            T doc = Client.CreateDocumentQuery<T>(Collection.SelfLink)
                 .Where(d => d.Id == id)
                 .AsEnumerable()
                 .FirstOrDefault();
@@ -33,7 +33,7 @@ namespace searchabletodo.Data
 
         public static IEnumerable<T> Find(Expression<Func<T, bool>> predicate)
         {
-            var ret = Client.CreateDocumentQuery<T>(Collection.SelfLink, DefaultOptions)
+            var ret = Client.CreateDocumentQuery<T>(Collection.SelfLink)
                 .Where(predicate)
                 .AsEnumerable();
 
@@ -43,7 +43,6 @@ namespace searchabletodo.Data
         public static async Task<T> CreateAsync(T entity)
         {
             Document doc = await Client.CreateDocumentAsync(Collection.SelfLink, entity);
-
             T ret = (T)(dynamic)doc;
             return ret;
         }
@@ -60,6 +59,7 @@ namespace searchabletodo.Data
             await Client.DeleteDocumentAsync(doc.SelfLink);
         }
 
+        private static string databaseId;
         public static String DatabaseId
         {
             get
@@ -74,6 +74,7 @@ namespace searchabletodo.Data
             }
         }
 
+        private static string collectionId;
         public static String CollectionId
         {
             get
@@ -88,6 +89,7 @@ namespace searchabletodo.Data
             }
         }
 
+        private static Database database;
         private static Database Database
         {
             get
@@ -102,6 +104,7 @@ namespace searchabletodo.Data
             }
         }
 
+        private static DocumentCollection collection;
         private static DocumentCollection Collection
         {
             get
@@ -115,6 +118,7 @@ namespace searchabletodo.Data
             }
         }
 
+        private static DocumentClient client;
         private static DocumentClient Client
         {
             get
@@ -138,47 +142,33 @@ namespace searchabletodo.Data
 
         public static DocumentCollection GetOrCreateCollection(string databaseLink, string collectionId)
         {
-            var collection = Client.CreateDocumentCollectionQuery(databaseLink)
-                .Where(c => c.Id == collectionId)
-                .AsEnumerable()
-                .FirstOrDefault();
+            var col = Client.CreateDocumentCollectionQuery(databaseLink)
+                              .Where(c => c.Id == collectionId)
+                              .AsEnumerable()
+                              .FirstOrDefault();
 
-            if (collection == null)
+            if (col == null)
             {
-                DocumentCollection collectionDefinition = new DocumentCollection();
-                collectionDefinition.Id = collectionId;
-                collectionDefinition.PartitionKey.Paths.Add("/title");
-                collectionDefinition.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
-
-                collection = client.CreateDocumentCollectionAsync(
-                    databaseLink,
-                    collectionDefinition,
-                    new RequestOptions { OfferThroughput = 500 }
-                    ).Result;
+                col = client.CreateDocumentCollectionAsync(databaseLink,
+                    new DocumentCollection { Id = collectionId },
+                    new RequestOptions { OfferType = "S1" }).Result;
             }
 
-            return collection;
+            return col;
         }
         public static Database GetOrCreateDatabase(string databaseId)
         {
-            Database database = Client.CreateDatabaseQuery()
-                .Where(d => d.Id == databaseId)
-                .AsEnumerable()
-                .FirstOrDefault();
+            var db = Client.CreateDatabaseQuery()
+                            .Where(d => d.Id == databaseId)
+                            .AsEnumerable()
+                            .FirstOrDefault();
 
-            if (database == null)
+            if (db == null)
             {
-                database = client.CreateDatabaseAsync(new Database { Id = databaseId }).Result;
+                db = client.CreateDatabaseAsync(new Database { Id = databaseId }).Result;
             }
 
-            return database;
+            return db;
         }
-
-        private static FeedOptions DefaultOptions = new FeedOptions { EnableCrossPartitionQuery = true };
-        private static string databaseId;
-        private static string collectionId;
-        private static Database database;
-        private static DocumentCollection collection;
-        private static DocumentClient client;
     }
 }
