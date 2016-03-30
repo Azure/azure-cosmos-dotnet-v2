@@ -62,19 +62,13 @@
             {
                 using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey, connectionPolicy))
                 {
-                    CreateDatabaseIfNotExistsAsync().Wait();
+                    CreateNewDatabaseAsync().Wait();
                     RunCollectionDemo().Wait();
                 }
             }            
-            catch (DocumentClientException de)
-            {
-                Exception baseException = de.GetBaseException();
-                Console.WriteLine("{0} error occurred: {1}, Message: {2}", de.StatusCode, de.Message, baseException.Message);
-            }
             catch (Exception e)
             {
-                Exception baseException = e.GetBaseException();
-                Console.WriteLine("Error: {0}, Message: {1}", e.Message, baseException.Message);
+                LogException(e);
             }
             finally
             {
@@ -87,12 +81,12 @@
         /// Create database if it does not exist
         /// </summary>
         /// <returns></returns>
-        private static async Task CreateDatabaseIfNotExistsAsync()
+        private static async Task CreateNewDatabaseAsync()
         {
             try
             {
                 await client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
-                return;
+                await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
             }
             catch (DocumentClientException e)
             {
@@ -137,12 +131,12 @@
             Console.WriteLine("\n1.1. Created Collection \n{0}", simpleCollection);
             return simpleCollection;
         }
+
         private static async Task CreateCollectionWithCustomIndexingPolicy()
         {
             // Create a collection with custom index policy (lazy indexing)
             // We cover index policies in detail in IndexManagement sample project
             DocumentCollection collectionDefinition = new DocumentCollection();
-
             collectionDefinition.Id = "SampleCollectionWithCustomIndexPolicy";
             collectionDefinition.IndexingPolicy.IndexingMode = IndexingMode.Lazy;
 
@@ -173,7 +167,7 @@
             //    Let's change the performance of the collection to 500 RU/s
             //******************************************************************************************************************
 
-            Offer replaced = await client.ReplaceOfferAsync(new OfferV2 { Content = new OfferContentV2(500) });
+            Offer replaced = await client.ReplaceOfferAsync(new OfferV2(offer, 500));
             Console.WriteLine("\n3. Replaced Offer. Offer is now {0}.\n", replaced);
 
             // Get the offer again after replace
@@ -217,6 +211,26 @@
         {
             await client.DeleteDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(databaseName, collectionName));
             Console.WriteLine("\n6. Deleted Collection\n");
+        }
+
+        private static void LogException(Exception e)
+        {
+            ConsoleColor color = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Red;
+
+            if (e is DocumentClientException)
+            {
+                DocumentClientException de = (DocumentClientException)e;
+                Exception baseException = de.GetBaseException();
+                Console.WriteLine("{0} error occurred: {1}, Message: {2}", de.StatusCode, de.Message, baseException.Message);
+            }
+            else
+            {
+                Exception baseException = e.GetBaseException();
+                Console.WriteLine("Error: {0}, Message: {1}", e.Message, baseException.Message);
+            }
+
+            Console.ForegroundColor = color;
         }
     }
 }

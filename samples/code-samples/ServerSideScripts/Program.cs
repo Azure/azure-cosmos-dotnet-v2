@@ -6,9 +6,7 @@
     using Newtonsoft.Json;
     using System;
     using System.Collections.Generic;
-    using System.Collections.ObjectModel;
     using System.Configuration;
-    using System.Diagnostics;
     using System.Globalization;
     using System.IO;
     using System.Linq;
@@ -44,10 +42,12 @@
                     RunDemoAsync(DatabaseName, CollectionName).Wait();
                 }
             }
+#if !DEBUG
             catch (Exception e)
             {
                 LogException(e);
             }
+#endif
             finally
             {
                 Console.WriteLine("End of demo, press any key to exit.");
@@ -119,12 +119,12 @@
             // The script will take the 1st document and echo: Hello, <document as json>.
             var response = await client.ExecuteStoredProcedureAsync<string>(
                 sproc.SelfLink, 
-                new RequestOptions { PartitionKey = new PartitionKeyValue("Estel") },
+                new RequestOptions { PartitionKey = new PartitionKey("Estel") },
                 "Hello, ");
 
             Console.WriteLine("Result from script: {0}\r\n", response.Response);
 
-            await client.DeleteDocumentAsync(created.SelfLink, new RequestOptions { PartitionKey = new PartitionKeyValue("Estel") });
+            await client.DeleteDocumentAsync(created.SelfLink, new RequestOptions { PartitionKey = new PartitionKey("Estel") });
         }
         
         /// <summary>
@@ -175,8 +175,8 @@
 
                 // 6. execute the batch.
                 StoredProcedureResponse<int> scriptResult = await client.ExecuteStoredProcedureAsync<int>(
-                    sproc.SelfLink, 
-                    new PartitionKeyValue("Andersen"),
+                    sproc.SelfLink,
+                    new RequestOptions { PartitionKey = new PartitionKey("Andersen") },
                     args);
 
                 // 7. Prepare for next batch.
@@ -228,8 +228,8 @@
             {
                 // 3. Run the stored procedure.
                 var response = await client.ExecuteStoredProcedureAsync<OrderByResult>(
-                    sproc.SelfLink, 
-                    new PartitionKeyValue("Andersen"),
+                    sproc.SelfLink,
+                    new RequestOptions { PartitionKey = new PartitionKey("Andersen") },
                     filterQuery, 
                     orderByFieldName, 
                     continuationToken);
@@ -363,7 +363,7 @@
             aggregateEntry = client.CreateDocumentQuery<dynamic>(
                 collectionLink, 
                 "SELECT * FROM root r WHERE r.isMetadata = true",
-                new FeedOptions { PartitionKey = new PartitionKeyValue("Device0001") }).AsEnumerable().First();
+                new FeedOptions { PartitionKey = new PartitionKey("Device001") }).AsEnumerable().First();
 
             Console.WriteLine("Document statistics: min size: {0}, max size: {1}, total size: {2}", 
                 aggregateEntry.MinSize, 

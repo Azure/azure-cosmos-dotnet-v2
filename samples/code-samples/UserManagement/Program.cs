@@ -124,7 +124,7 @@
 
             if (resourcePartitionKey != null)
             {
-                permission.ResourcePartitionKey = new PartitionKeyValue(resourcePartitionKey);
+                permission.ResourcePartitionKey = new PartitionKey(resourcePartitionKey);
             }
 
             ResourceResponse<Permission> response = await DocumentClientHelper.ExecuteWithRetries<ResourceResponse<Permission>>(

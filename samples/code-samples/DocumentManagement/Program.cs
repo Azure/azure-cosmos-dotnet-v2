@@ -161,7 +161,7 @@
             // partitioned i.e. does not have a partition key definition during creation.
             var response = await client.ReadDocumentAsync(
                 UriFactory.CreateDocumentUri(databaseName, collectionName, "SalesOrder1"), 
-                new RequestOptions { PartitionKey = new PartitionKeyValue("Account1") });
+                new RequestOptions { PartitionKey = new PartitionKey("Account1") });
 
             // You can measure the throughput consumed by any operation by inspecting the RequestCharge property
             Console.WriteLine("Document read by Id {0}", response.Resource);
@@ -257,7 +257,7 @@
             Console.WriteLine("\n1.7 - Deleting a document");
             ResourceResponse<Document> response = await client.DeleteDocumentAsync(
                 UriFactory.CreateDocumentUri(databaseName, collectionName, "SalesOrder3"),
-                new RequestOptions { PartitionKey = new PartitionKeyValue("Account1") });
+                new RequestOptions { PartitionKey = new PartitionKey("Account1") });
 
             Console.WriteLine("Request charge of delete operation: {0}", response.RequestCharge);
             Console.WriteLine("StatusCode of operation: {0}", response.StatusCode);
@@ -349,7 +349,7 @@
 
             response = await client.ReadDocumentAsync(
                 UriFactory.CreateDocumentUri(databaseName, collectionName, "_SalesOrder5"), 
-                new RequestOptions { PartitionKey = new PartitionKeyValue("NewUser01") });
+                new RequestOptions { PartitionKey = new PartitionKey("NewUser01") });
             
             var readDocument = response.Resource;
 
@@ -398,7 +398,10 @@
             Console.WriteLine("\n3.1 - Using optimistic concurrency when doing a ReplaceDocumentAsync");
 
             //read a document
-            Document readDoc = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, "POCO1"));
+            Document readDoc = await client.ReadDocumentAsync(
+                UriFactory.CreateDocumentUri(databaseName, collectionName, "SalesOrder1"),
+                new RequestOptions { PartitionKey = new PartitionKey("Account1") });
+
             Console.WriteLine("ETag of read document - {0}", readDoc.ETag);
 
             //take advantage of the dynamic nature of Document and set a new property on the document we just read
@@ -437,7 +440,10 @@
             Console.WriteLine("\n3.2 - Using ETag to do a conditional ReadDocumentAsync");
 
             //get a document
-            var response = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, "POCO2"));
+            var response = await client.ReadDocumentAsync(
+                UriFactory.CreateDocumentUri(databaseName, collectionName, "SalesOrder2"),
+                new RequestOptions { PartitionKey = new PartitionKey("Account2") });
+
             readDoc = response.Resource;
             Console.WriteLine("Read doc with StatusCode of {0}", response.StatusCode);
             
@@ -448,16 +454,31 @@
                 Type = AccessConditionType.IfNoneMatch
             };
 
-            response = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, "POCO2"), new RequestOptions { AccessCondition = accessCondition });
+            response = await client.ReadDocumentAsync(
+                UriFactory.CreateDocumentUri(databaseName, collectionName, "SalesOrder2"), 
+                new RequestOptions
+                {
+                    AccessCondition = accessCondition,
+                    PartitionKey = new PartitionKey("Account2")
+                });
+
             Console.WriteLine("Read doc with StatusCode of {0}", response.StatusCode);
 
             //now change something on the document, then do another get and this time we should get the document back
             readDoc.SetPropertyValue("foo", "updated");
             response = await client.ReplaceDocumentAsync(readDoc);
 
-            response = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(databaseName, collectionName, "POCO2"), new RequestOptions { AccessCondition = accessCondition });
+            response = await client.ReadDocumentAsync(
+                UriFactory.CreateDocumentUri(databaseName, collectionName, "SalesOrder2"), 
+                new RequestOptions
+                {
+                    AccessCondition = accessCondition,
+                    PartitionKey = new PartitionKey("Account2")
+                });
+
             Console.WriteLine("Read doc with StatusCode of {0}", response.StatusCode);
         }
+
         private static void Cleanup()
         {
             client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName)).Wait();
