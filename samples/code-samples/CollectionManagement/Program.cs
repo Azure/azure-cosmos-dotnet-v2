@@ -10,7 +10,7 @@
     using System.Threading.Tasks;
 
     // ----------------------------------------------------------------------------------------------------------
-    // Prerequistes - 
+    // Prerequisites - 
     // 
     // 1. An Azure DocumentDB account - 
     //    https://azure.microsoft.com/en-us/documentation/articles/documentdb-create-account/
@@ -24,11 +24,11 @@
     //    1.1 - Basic Create
     //    1.2 - Create collection with custom IndexPolicy
     //
-    // 2. Get DocumentCollection performance tier
-    //    An Offer.OfferType represents the current performance tier of a Collection
+    // 2. Get DocumentCollection performance (reserved throughput)
+    //    Read the Offer object for the collection and extract OfferThroughput
     //
-    // 3. Change performance tier
-    //    By changing the Offer.OfferType you scale the linked Collection up, or down, between performance tiers
+    // 3. Change performance (reserved throughput)
+    //    By changing the Offer.OfferThroughput you can scale throughput up or down
     //
     // 4. Get a DocumentCollection by its Id property
     //
@@ -49,42 +49,26 @@
 
     public class Program
     {
-        //Read config
         private static readonly string endpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
         private static readonly string authorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
-        private static readonly string databaseId = ConfigurationManager.AppSettings["DatabaseId"];
-        private static readonly string collectionId = ConfigurationManager.AppSettings["CollectionId"];
+        private static readonly string databaseName = ConfigurationManager.AppSettings["DatabaseId"];
+        private static readonly string collectionName = ConfigurationManager.AppSettings["CollectionId"];
         private static readonly ConnectionPolicy connectionPolicy = new ConnectionPolicy { UserAgentSuffix = " samples-net/3" };
 
-        //Reusable instance of DocumentClient which represents the connection to a DocumentDB endpoint
         private static DocumentClient client;
-
-        //The instance of a Database which we will be using for all the Collection operations being demo'd
-        private static Database database;
-
         public static void Main(string[] args)
         {
             try
             {
-                //Instantiate a new DocumentClient instance
                 using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey, connectionPolicy))
                 {
-                    //Get, or Create, a reference to Database
-                    database = GetOrCreateDatabaseAsync(databaseId).Result;
-                    
-                    //Do operations on Collections
+                    CreateNewDatabaseAsync().Wait();
                     RunCollectionDemo().Wait();
                 }
             }            
-            catch (DocumentClientException de)
-            {
-                Exception baseException = de.GetBaseException();
-                Console.WriteLine("{0} error occurred: {1}, Message: {2}", de.StatusCode, de.Message, baseException.Message);
-            }
             catch (Exception e)
             {
-                Exception baseException = e.GetBaseException();
-                Console.WriteLine("Error: {0}, Message: {1}", e.Message, baseException.Message);
+                LogException(e);
             }
             finally
             {
@@ -93,129 +77,160 @@
             }
         }
 
-        private static async Task RunCollectionDemo()
-        {     
-            //************************************
-            // 1.1 - Basic Create
-            //************************************
-            DocumentCollection c1 = await client.CreateDocumentCollectionAsync(database.SelfLink, new DocumentCollection { Id = collectionId });
-
-            Console.WriteLine("\n1.1. Created Collection \n{0}", c1);
-
-            //*************************************************
-            // 1.2 - Create collection with custom IndexPolicy
-            //*************************************************
-            //This is just a very simple example with custome index policies
-            //We cover index policies in detail in IndexManagement sample project
-            DocumentCollection collectionSpec = new DocumentCollection
+        /// <summary>
+        /// Create database if it does not exist
+        /// </summary>
+        /// <returns></returns>
+        private static async Task CreateNewDatabaseAsync()
+        {
+            try
             {
-                Id = "SampleCollectionWithCustomIndexPolicy"
-            };
-
-            collectionSpec.IndexingPolicy.Automatic = false;
-            collectionSpec.IndexingPolicy.IndexingMode = IndexingMode.Lazy;
-            DocumentCollection c2 = await client.CreateDocumentCollectionAsync(database.SelfLink, collectionSpec );
-
-            Console.WriteLine("1.2. Created Collection {0}, with custom index policy \n{1}", c2.Id, c2.IndexingPolicy);
-
-            //***********************************************************************************************
-            // 1.3 - Create collection with OfferType set
-            //***********************************************************************************************
-            // By default a collection is created with the lowest performance tier, S1
-            // You can set this when creating a collection by supplying a value for RequestOptions.OfferType
-            collectionSpec = new DocumentCollection
+                await client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
+                await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
+            }
+            catch (DocumentClientException e)
             {
-                Id = "SampleCollectionWithS2OfferType"
-            };
-
-            c2 = await client.CreateDocumentCollectionAsync(database.SelfLink, collectionSpec, new RequestOptions { OfferType="S2" });
-
-            Console.WriteLine("1.3. Created Collection {0}, with OfferType of S2\n", c2.Id);
-
-            //*********************************************************************************************
-            // 2. Get performance tier of a DocumentCollection
-            //
-            //    DocumentCollection have offers which are of type S1, S2, or S3. 
-            //    Each of these determine the performance throughput of a collection. 
-            //    DocumentCollection is loosely coupled to Offer through its ResourceId (or its SelfLink)
-            //    Offers are "linked" to DocumentCollection through the collection's SelfLink
-            //    Offer.ResourceLink == Collection.SelfLink
-            //**********************************************************************************************
-            Offer offer = client.CreateOfferQuery().Where(o => o.ResourceLink == c1.SelfLink).AsEnumerable().Single();
-
-            Console.WriteLine("\n2. Found Offer \n{0}\nusing collection's SelfLink \n{1}", offer, c1.SelfLink);
-
-            //******************************************************************************************************************
-            // 3. Change performance tier of DocumentCollection
-            //    So the Offer is S1 by default (we see that b/c we never set this @ creation and it is an S1 as shown above), 
-            //    Now let's step this collection up to an S2
-            //    To do this, change the OfferType property of the Offer to S2
-            //
-            //    NB! If you run this you will be billed for 1 hour @ S2 price until we delete the DocumentCollection
-            //******************************************************************************************************************
-            offer.OfferType = "S2";
-            Offer replaced = await client.ReplaceOfferAsync(offer);
-
-            Console.WriteLine("\n3. Replaced Offer. OfferType is now {0}.\n", replaced.OfferType);
-
-            //Get the offer again after replace
-            offer = client.CreateOfferQuery().Where(o => o.ResourceLink == c1.SelfLink).AsEnumerable().Single();
-            
-            Console.WriteLine("3. Found Offer \n{0}\nusing collection's ResourceId {1}.\n", offer, c1.ResourceId);
-
-            //*************************************************
-            //4. Get a DocumentCollection by its Id property
-            //*************************************************
-            DocumentCollection collection = await client.ReadDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(databaseId, collectionId));
-
-            Console.WriteLine("\n4. Found Collection \n{0}\n", collection);
-
-            //******************************************************** 
-            //5. List all DocumentCollection resources on a Database
-            //********************************************************
-            var colls = await client.ReadDocumentCollectionFeedAsync(UriFactory.CreateDatabaseUri(databaseId));
-            Console.WriteLine("\n5. Reading all DocumentCollection resources for a database");
-            foreach (var coll in colls)
-            {
-                Console.WriteLine(coll);                
+                // If we receive an error other than database not found, fail
+                if (e.StatusCode != System.Net.HttpStatusCode.NotFound)
+                {
+                    throw;
+                }
             }
 
-            //*******************************************************************************
-            //6. Delete a DocumentCollection 
-            //
-            //   NB! Deleting a collection will delete everything linked to the collection.
-            //       This includes ALL documents, stored procedures, triggers, udfs
-            //*******************************************************************************
-            await client.DeleteDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(databaseId, collectionId));
-            
-            Console.WriteLine("\n6. Deleted Collection {0}\n", c1.Id);
-            
-            //Cleanup
-            //Delete Database. 
-            // - will delete everything linked to the database, 
-            // - we didn't really need to explictly delete the collection above
-            // - it was just done for demonstration purposes. 
-            await client.DeleteDatabaseAsync(database.SelfLink);
+            await client.CreateDatabaseAsync(new Database { Id = databaseName });
         }
 
-        private static async Task<Database> GetOrCreateDatabaseAsync(string id)
+        /// <summary>
+        /// Run through basic collection access methods as a console app demo.
+        /// </summary>
+        /// <returns></returns>
+        private static async Task RunCollectionDemo()
         {
-            // Get the database by name, or create a new one if one with the name provided doesn't exist.
-            // Create a query object for database, filter by name.
-            IEnumerable<Database> query = from db in client.CreateDatabaseQuery() 
-                                          where db.Id == id
-                                          select db;
+            DocumentCollection simpleCollection = await CreateCollection();
 
-            // Run the query and get the database (there should be only one) or null if the query didn't return anything.
-            // Note: this will run synchronously. If async exectution is preferred, use IDocumentServiceQuery<T>.ExecuteNextAsync.
-            Database database = query.FirstOrDefault();
-            if (database == null)
+            await CreateCollectionWithCustomIndexingPolicy();
+
+            await GetAndChangeCollectionPerformance(simpleCollection);
+
+            await ReadCollectionProperties();
+
+            await ListCollectionsInDatabase();
+
+            await DeleteCollection();
+
+            await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
+        }
+        private static async Task<DocumentCollection> CreateCollection()
+        {
+            // Set throughput to the minimum value of 400 RU/s
+            DocumentCollection simpleCollection = await client.CreateDocumentCollectionAsync(
+                UriFactory.CreateDatabaseUri(databaseName),
+                new DocumentCollection { Id = collectionName }, 
+                new RequestOptions { OfferThroughput = 400 });
+
+            Console.WriteLine("\n1.1. Created Collection \n{0}", simpleCollection);
+            return simpleCollection;
+        }
+
+        private static async Task CreateCollectionWithCustomIndexingPolicy()
+        {
+            // Create a collection with custom index policy (lazy indexing)
+            // We cover index policies in detail in IndexManagement sample project
+            DocumentCollection collectionDefinition = new DocumentCollection();
+            collectionDefinition.Id = "SampleCollectionWithCustomIndexPolicy";
+            collectionDefinition.IndexingPolicy.IndexingMode = IndexingMode.Lazy;
+
+            DocumentCollection collectionWithLazyIndexing = await client.CreateDocumentCollectionAsync(
+                UriFactory.CreateDatabaseUri(databaseName),
+                collectionDefinition,
+                new RequestOptions { OfferThroughput = 400 });
+
+            Console.WriteLine("1.2. Created Collection {0}, with custom index policy \n{1}", collectionWithLazyIndexing.Id, collectionWithLazyIndexing.IndexingPolicy);
+        }
+        
+        private static async Task GetAndChangeCollectionPerformance(DocumentCollection simpleCollection)
+        {
+
+            //*********************************************************************************************
+            // Get configured performance (reserved throughput) of a DocumentCollection
+            //
+            //    DocumentCollections each have a corresponding Offer resource that represents the reserved throughput of the collection.
+            //    Offers are "linked" to DocumentCollection through the collection's SelfLink (Offer.ResourceLink == Collection.SelfLink)
+            //
+            //**********************************************************************************************
+            Offer offer = client.CreateOfferQuery().Where(o => o.ResourceLink == simpleCollection.SelfLink).AsEnumerable().Single();
+
+            Console.WriteLine("\n2. Found Offer \n{0}\nusing collection's SelfLink \n{1}", offer, simpleCollection.SelfLink);
+
+            //******************************************************************************************************************
+            // Change performance (reserved throughput) of DocumentCollection
+            //    Let's change the performance of the collection to 500 RU/s
+            //******************************************************************************************************************
+
+            Offer replaced = await client.ReplaceOfferAsync(new OfferV2(offer, 500));
+            Console.WriteLine("\n3. Replaced Offer. Offer is now {0}.\n", replaced);
+
+            // Get the offer again after replace
+            offer = client.CreateOfferQuery().Where(o => o.ResourceLink == simpleCollection.SelfLink).AsEnumerable().Single();
+            OfferV2 offerV2 = (OfferV2)offer;
+            Console.WriteLine(offerV2.Content.OfferThroughput);
+
+            Console.WriteLine("3. Found Offer \n{0}\n using collection's ResourceId {1}.\n", offer, simpleCollection.ResourceId);
+        }
+        
+        private static async Task ReadCollectionProperties()
+        {
+            //*************************************************
+            // Get a DocumentCollection by its Id property
+            //*************************************************
+            DocumentCollection collection = await client.ReadDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(databaseName, collectionName));
+
+            Console.WriteLine("\n4. Found Collection \n{0}\n", collection);
+        }
+
+        /// <summary>
+        /// List the collections within a database by calling the ReadFeed (scan) API.
+        /// </summary>
+        /// <returns></returns>
+        private static async Task ListCollectionsInDatabase()
+        {
+            Console.WriteLine("\n5. Reading all DocumentCollection resources for a database");
+
+            foreach (var collection in await client.ReadDocumentCollectionFeedAsync(UriFactory.CreateDatabaseUri(databaseName)))
             {
-                // Create the database.
-                database = await client.CreateDatabaseAsync(new Database { Id = id });
+                Console.WriteLine(collection);
             }
-            
-            return database;
+        }
+
+        /// <summary>
+        /// Delete a collection
+        /// </summary>
+        /// <param name="simpleCollection"></param>
+        /// <returns></returns>
+        private static async Task DeleteCollection()
+        {
+            await client.DeleteDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(databaseName, collectionName));
+            Console.WriteLine("\n6. Deleted Collection\n");
+        }
+
+        private static void LogException(Exception e)
+        {
+            ConsoleColor color = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Red;
+
+            if (e is DocumentClientException)
+            {
+                DocumentClientException de = (DocumentClientException)e;
+                Exception baseException = de.GetBaseException();
+                Console.WriteLine("{0} error occurred: {1}, Message: {2}", de.StatusCode, de.Message, baseException.Message);
+            }
+            else
+            {
+                Exception baseException = e.GetBaseException();
+                Console.WriteLine("Error: {0}, Message: {1}", e.Message, baseException.Message);
+            }
+
+            Console.ForegroundColor = color;
         }
     }
 }

@@ -33,20 +33,18 @@
     public class Program
     {
         //Read config
-        private static readonly string databaseId = ConfigurationManager.AppSettings["DatabaseId"];
+        private static readonly string databaseName = ConfigurationManager.AppSettings["DatabaseId"];
         private static readonly string endpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
         private static readonly string authorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
         private static readonly ConnectionPolicy connectionPolicy = new ConnectionPolicy { UserAgentSuffix = " samples-net/3" };
 
-        //Reusable instance of DocumentClient which represents the connection to a DocumentDB endpoint
         private static DocumentClient client;
 
         public static void Main(string[] args)
         {
             try
             {   
-                //Connect to DocumentDB
-                //Setup a single instance of DocumentClient that is reused throughout the application
+                // Setup a single instance of DocumentClient that is reused throughout the application
                 using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey))
                 {
                     RunDatabaseDemo().Wait();
@@ -69,54 +67,42 @@
             }
         }
 
+        /// <summary>
+        /// Run basic database metadata operations as a console app.
+        /// </summary>
+        /// <returns></returns>
         private static async Task RunDatabaseDemo()
         {
-            //********************************************************************************************************
-            // 1 -  Query for a Database
-            //
-            // Note: we are using query here instead of ReadDatabaseAsync because we're checking if something exists
-            //       the ReadDatabaseAsync method expects the resource to be there, if its not we will get an error
-            //       instead of an empty 
-            //********************************************************************************************************
-            Database database = client.CreateDatabaseQuery().Where(db => db.Id == databaseId).AsEnumerable().FirstOrDefault();
-            Console.WriteLine("1. Query for a database returned: {0}", database==null?"no results":database.Id);
+            await CreateDatabaseIfNotExists();
 
-            //check if a database was returned
-            if (database==null)
-            {
-                //**************************
-                // 2 -  Create a Database
-                //**************************
-                database = await client.CreateDatabaseAsync(new Database { Id = databaseId });
-                Console.WriteLine("\n2. Created Database: id - {0} and selfLink - {1}", database.Id, database.SelfLink);
-            }
-
-            //*********************************************************************************
-            // 3 - Get a single database
-            // Note: that we don't need to use the SelfLink of a Database anymore
-            //       the links for a resource are now comprised of their Id properties
-            //       using UriFactory will give you the correct URI for a resource
-            //
-            //       SelfLink will still work if you're already using this
-            //********************************************************************************
-            database = await client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
+            Database database = await client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
             Console.WriteLine("\n3. Read a database resource: {0}", database);
 
-            //***************************************
-            // 4 - List all databases for an account
-            //***************************************
-            var databases = await client.ReadDatabaseFeedAsync();
             Console.WriteLine("\n4. Reading all databases resources for an account");
-            foreach (var db in databases)
+            foreach (var db in await client.ReadDatabaseFeedAsync())
             {
-                Console.WriteLine(db);    
+                Console.WriteLine(db);
             }
 
-            //*************************************
-            // 5 - Delete a Database using its Id
-            //*************************************
-            await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
+            await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
             Console.WriteLine("\n5. Database {0} deleted.", database.Id);
-        }        
+        }
+
+        /// <summary>
+        /// Create a database if it doesn't exist.
+        /// </summary>
+        /// <returns></returns>
+        private static async Task CreateDatabaseIfNotExists()
+        {
+            Database database = client.CreateDatabaseQuery().Where(db => db.Id == databaseName).AsEnumerable().FirstOrDefault();
+            Console.WriteLine("1. Query for a database returned: {0}", database == null ? "no results" : database.Id);
+
+            //check if a database was returned
+            if (database == null)
+            {
+                database = await client.CreateDatabaseAsync(new Database { Id = databaseName });
+                Console.WriteLine("\n2. Created Database: id - {0}", database.Id);
+            }
+        }
     }
 }

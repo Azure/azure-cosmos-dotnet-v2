@@ -23,7 +23,7 @@
         public DateTime ShippedDate { get; set; }
         public string AccountNumber { get; set; }
         public decimal SubTotal { get; set; }
-        public decimal TaxAmt { get; set; }
+        public decimal TaxAmount { get; set; }
         public decimal Freight { get; set; }
         public decimal TotalDue { get; set; }
         public SalesOrderDetail[] Items { get; set; }
