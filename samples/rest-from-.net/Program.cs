@@ -82,6 +82,9 @@ namespace REST_from.NET
             client.DefaultRequestHeaders.Add("authorization", authHeader);
 
             response = client.GetStringAsync(new Uri(baseUri, resourceLink)).Result;
+            
+            Console.WriteLine(response);
+            Console.ReadKey();
 
             //GET a database
             verb = "GET";
@@ -95,6 +98,10 @@ namespace REST_from.NET
             client.DefaultRequestHeaders.Add("authorization", authHeader);
 
             response = client.GetStringAsync(new Uri(baseUri, resourceLink)).Result;
+            
+            Console.WriteLine(response);
+            Console.ReadKey();
+
 
             //LIST all collections
             verb = "GET";
@@ -108,6 +115,9 @@ namespace REST_from.NET
             client.DefaultRequestHeaders.Add("authorization", authHeader);
 
             response = client.GetStringAsync(new Uri(baseUri, resourceLink)).Result;
+            
+            Console.WriteLine(response);
+            Console.ReadKey();
 
             //GET a collections
             verb = "GET";
@@ -121,6 +131,9 @@ namespace REST_from.NET
             client.DefaultRequestHeaders.Add("authorization", authHeader);
 
             response = client.GetStringAsync(new Uri(baseUri, resourceLink)).Result;
+            
+            Console.WriteLine(response);
+            Console.ReadKey();
 
             //LIST all documents in a collection
             verb = "GET";
@@ -134,6 +147,9 @@ namespace REST_from.NET
             client.DefaultRequestHeaders.Add("authorization", authHeader);
 
             response = client.GetStringAsync(new Uri(baseUri, resourceLink)).Result;
+            
+            Console.WriteLine(response);
+            Console.ReadKey();
 
             //GET a document
             verb = "GET";
@@ -147,6 +163,9 @@ namespace REST_from.NET
             client.DefaultRequestHeaders.Add("authorization", authHeader);
 
             response = client.GetStringAsync(new Uri(baseUri, resourceLink)).Result;
+            
+            Console.WriteLine(response);
+            Console.ReadKey();
 
             //EXECUTE a query
             verb = "POST";

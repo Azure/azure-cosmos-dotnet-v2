@@ -3,7 +3,7 @@ These samples demonstrate how to use the .NET Client SDK to interact with the [A
 
 ##<a id="Building"></a>Building the sample ##
 
-Open in Visual Studio 2013, hit build the solution and enjoy ...
+Open in solution Visual Studio, hit build the solution and enjoy ...
 
 The solution has been configured to restore missing NuGet packages, so it should "just work", but in case it does not, you will need to manually install the DocumentDB NuGet package. To do this, open the NuGet package console on the solution and select the "Restore" button top left.
 
