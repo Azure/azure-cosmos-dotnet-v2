@@ -15,9 +15,9 @@
         public IndexingPolicy IndexingPolicy { get; set; }
 
         /// <summary>
-        /// Gets or sets the OfferType to use, e.g., S1, S2, S3.
+        /// Gets or sets the collection performance (reserved throughput) in terms of RU/s
         /// </summary>
-        public string OfferType { get; set; }
+        public int? OfferThroughput { get; set; }
 
         /// <summary>
         /// Gets or sets the stored procedures to register.

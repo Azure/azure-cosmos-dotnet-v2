@@ -32,8 +32,8 @@
             DocumentCollectionSpec collectionSpec = null,
             string collectionIdPrefix = "ManagedHashCollection.")
             : base(
-            partitionKeyExtractor, 
-            GetCollections(client, database, numberOfCollections, collectionIdPrefix, collectionSpec), 
+            partitionKeyExtractor,
+            GetCollections(client, database.Id, numberOfCollections, collectionIdPrefix, collectionSpec), 
             128,
             hashGenerator)
         {
@@ -72,7 +72,7 @@
         /// <returns>The list of collection self links.</returns>
         private static List<string> GetCollections(
             DocumentClient client, 
-            Database database, 
+            string databaseId, 
             int numberOfCollections, 
             string collectionIdPrefix, 
             DocumentCollectionSpec spec)
@@ -80,8 +80,8 @@
             var collections = new List<string>();
             for (int i = 0; i < numberOfCollections; i++)
             {
-                string collectionId = string.Format("{0}{1}", collectionIdPrefix, i);
-                var collection = DocumentClientHelper.GetCollectionAsync(client, database, collectionId, spec).Result;
+                var collectionId = string.Format("{0}{1}", collectionIdPrefix, i);
+                var collection = DocumentClientHelper.GetOrCreateCollectionAsync(client, databaseId, collectionId, spec).Result;
                 collections.Add(collection.SelfLink);
             }
 

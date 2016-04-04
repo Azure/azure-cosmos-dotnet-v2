@@ -10,385 +10,416 @@
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using Microsoft.Azure.Documents.Linq;
+    using System.Collections.Generic;
 
-    //----------------------------------------------------------------------------------------------------------
-    // DocumentDB DocumentCollections will, by default, create a HASH index for every numeric and string field
-    // A HASH index is great for doing point equality & inequality operations but what about other operations? 
-    // This sample demonstrates how to control the Index Policy
+    // ----------------------------------------------------------------------------------------------------------
+    // Prerequistes - 
+    // 
+    // 1. An Azure DocumentDB account - 
+    //    https://azure.microsoft.com/en-us/documentation/articles/documentdb-create-account/
     //
-    // For basic CRUD on DocumentCollection samples please refer to DocumentDB.Samples.CollectionManagement
-    //----------------------------------------------------------------------------------------------------------
-    
+    // 2. Microsoft.Azure.DocumentDB NuGet package - 
+    //    http://www.nuget.org/packages/Microsoft.Azure.DocumentDB/ 
+    // ----------------------------------------------------------------------------------------------------------
+    // DocumentDB will, by default, create a HASH index for every numeric and string field
+    // This default index policy is best for;
+    // - Equality queries against strings
+    // - Range & equality queries on numbers
+    // - Geospatial indexing on all GeoJson types. 
+    //
+    // This sample project demonstrates how to customize and alter the index policy on a DocumentCollection.
+    //
+    // 1. Exclude a document completely from the Index
+    // 2. Use manual (instead of automatic) indexing
+    // 3. Use lazy (instead of consistent) indexing
+    // 4. Exclude specified paths from document index
+    // 5. Force a range scan operation on a hash indexed path
+    // 6. Perform index transform
+    // ----------------------------------------------------------------------------------------------------------
+    // Note - 
+    // 
+    // Running this sample will create (and delete) multiple DocumentCollection resources on your account. 
+    // Each time a DocumentCollection is created the account will be billed for 1 hour of usage based on
+    // the performance tier of that account. 
+    // ----------------------------------------------------------------------------------------------------------
+    // See Also - 
+    //
+    // DocumentDB.Samples.CollectionManagement - basic CRUD operations on a DatabaseCollection
+    // ----------------------------------------------------------------------------------------------------------
+
     public class Program
     {
-        //an instance of the DocumentDB client that we will create once, and reuse multiple times throughout the sample
-        private static DocumentClient client;
-
-        //Read names for your database & collection from configuration file
-        private static readonly string databaseId = ConfigurationManager.AppSettings["DatabaseId"];
-        private static readonly string CollectionId = ConfigurationManager.AppSettings["CollectionId"];
-
-        //Read the DocumentDB endpointUrl and authorisationKeys from config
-        //These values are available from the Azure Management Portal on the DocumentDB Account Blade under "Keys"
-        //NB > Keep these values in a safe & secure location. Together they provide Administrative access to your DocDB account
+        //Read config
         private static readonly string endpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
         private static readonly string authorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
+        private static readonly string databaseId = ConfigurationManager.AppSettings["DatabaseId"];
+        private static readonly string collectionId = ConfigurationManager.AppSettings["CollectionId"];
+        private static readonly ConnectionPolicy connectionPolicy = new ConnectionPolicy { UserAgentSuffix = " samples-net/3" };
+
+        //Reusable instance of DocumentClient which represents the connection to a DocumentDB endpoint
+        private static DocumentClient client;
 
         public static void Main(string[] args)
         {
             try
             {
-                //Get a Document client
                 using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey))
                 {
-                    RunDemoAsync(databaseId, CollectionId).Wait();
+                    RunIndexDemo().Wait();
                 }
-            }
-            catch (DocumentClientException de)
-            {
-                Exception baseException = de.GetBaseException();
-                Console.WriteLine("{0} error occurred: {1}, Message: {2}", de.StatusCode, de.Message, baseException.Message);
             }
             catch (Exception e)
             {
-                Exception baseException = e.GetBaseException();
-                Console.WriteLine("Error: {0}, Message: {1}", e.Message, baseException.Message);
+                LogException(e);
             }
             finally
             {
-                Console.WriteLine("End of demo, press any key to exit.");
+                Console.WriteLine("\nEnd of demo, press any key to exit.");
                 Console.ReadKey();
             }
         }
 
-        private static async Task RunDemoAsync(string databaseId, string CollectionId)
+        private static async Task RunIndexDemo()
         {
-            //Get, or Create, the Database
+            // Init
             var database = await GetNewDatabaseAsync(databaseId);
 
-            //--------------------------------------------------------------------------------------------------------------------
-            // The default behavior when creating a DocumentDollection is creating a Hash index for all string & numeric fields. 
-            // Hash indexes are compact and offer efficient performance for equality queries.
-            // Let's have a look at some of the options available for controlling the indexing behavior of a collection
-            //--------------------------------------------------------------------------------------------------------------------
+            // 1. Exclude a document from the index
+            await ExplicitlyExcludeFromIndex();
 
-            // Explicitly exclude a document from automatic indexing
-            await ExplicitlyExcludeFromIndex(database);
+            // 2. Use manual (instead of automatic) indexing
+            await UseManualIndexing();
 
-            // Use opt-in indexing of documents with manual indexing policy
-            await UseManualIndexing(database);
-            
-            // Use lazy indexing of documents for bulk import/read heavy collection
-            await UseLazyIndexing(database);
+            // 3. Use lazy (instead of consistent) indexing
+            await UseLazyIndexing();
 
-            // By default, DocumentDB supports equality queries on strings and equality, range and order by queries against numbers
-            // You can use Range indexing over strings in order to support Order by and range queries against both strings and numbers
-            await UseRangeIndexesOnStrings(database);
+            // 4. Exclude specified document paths from the index
+            await ExcludePathsFromIndex();
 
-            // Exclude certain paths from indexing
-            await ExcludePathsFromIndex(database);
+            // 5. Force a range scan operation on a hash indexed path
+            await RangeScanOnHashIndex();
 
-            // Force a range-based scan on a Hash index
-            await RangeScanOnHashIndex(database);
+            // 6. Use range indexes on strings
+            await UseRangeIndexesOnStrings();
 
-            // make changes to the indexing policy
-            await PerformIndexTransformations(database);
+            // 7. Perform an index transform
+            await PerformIndexTransformations();
 
             // Cleanup
-            await client.DeleteDatabaseAsync(database.SelfLink);
+            await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
         }
 
-        private static async Task ExplicitlyExcludeFromIndex(Database database)
-        {
-            //There may be scenarios where you want to exclude a specific doc from the index even though all other 
-            //documents are being indexed automatically. You can use an index directive to control this when you
-            //create a document
-
-            //Create a document collection with the default indexing policy (Automatically index everything)
-            DocumentCollection collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(
-                client,
-                database, 
-                new DocumentCollection { Id = ConfigurationManager.AppSettings["CollectionId"]});
-
-            //Create a document and query on it immediately, should work as this Collection is set to automatically index everyting
-            Document created = await client.CreateDocumentAsync(collection.SelfLink, new { id = "doc1", orderId = "order1" });
-
-            //Query for document, should find it
-            bool found = client.CreateDocumentQuery(collection.SelfLink, "SELECT * FROM root r WHERE r.orderId='order1'").AsEnumerable().Any();
+        /// <summary>
+        /// The default index policy on a DocumentCollection will AUTOMATICALLY index ALL documents added.
+        /// There may be scenarios where you want to exclude a specific doc from the index even though all other 
+        /// documents are being indexed automatically. 
+        /// This method demonstrates how to use an index directive to control this
+        /// </summary>
+        private static async Task ExplicitlyExcludeFromIndex()
+        {            
+            var databaseUri = UriFactory.CreateDatabaseUri(databaseId);
+            var collectionUri = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);
             
-            //Now, create a document but this time explictly exclude it from the collection using IndexingDirective
-            created = await client.CreateDocumentAsync(collection.SelfLink, new { id = "doc2", orderId = "order2" }, new RequestOptions 
+            Console.WriteLine("\n1. Exclude a document completely from the Index");
+            
+            // Create a collection with default index policy (i.e. automatic = true)
+            DocumentCollection collection = await client.CreateDocumentCollectionAsync(databaseUri, new DocumentCollection { Id = collectionId });
+            Console.WriteLine("Collection {0} created with index policy \n{1}", collection.Id, collection.IndexingPolicy);
+
+            // Create a document
+            // Then query on it immediately
+            // Will work as this Collection is set to automatically index everything
+            Document created = await client.CreateDocumentAsync(collectionUri, new { id = "doc1", orderId = "order1" } );
+            Console.WriteLine("\nDocument created: \n{0}", created);
+
+            bool found = client.CreateDocumentQuery(collectionUri, "SELECT * FROM root r WHERE r.orderId='order1'").AsEnumerable().Any();
+            Console.WriteLine("Document found by query: {0}", found);
+
+            // Now, create a document but this time explictly exclude it from the collection using IndexingDirective
+            // Then query for that document
+            // Shoud NOT find it, because we excluded it from the index
+            // BUT, the document is there and doing a ReadDocument by Id will prove it
+            created = await client.CreateDocumentAsync(collectionUri, new { id = "doc2", orderId = "order2" }, new RequestOptions
             {
                 IndexingDirective = IndexingDirective.Exclude
             });
+            Console.WriteLine("\nDocument created: \n{0}", created);
 
-            //Query for document, should not find it
-            found = client.CreateDocumentQuery(collection.SelfLink, "SELECT * FROM root r WHERE r.orderId='order2'").AsEnumerable().Any();
+            found = client.CreateDocumentQuery(collectionUri, "SELECT * FROM root r WHERE r.orderId='order2'").AsEnumerable().Any();
+            Console.WriteLine("Document found by query: {0}", found);
 
-            //Read on document, should still find it
             Document document = await client.ReadDocumentAsync(created.SelfLink);
+            Console.WriteLine("Document read by id: {0}", document!=null);
             
-            //Cleanup
-            await client.DeleteDocumentCollectionAsync(collection.SelfLink);
+            // Cleanup
+            await client.DeleteDocumentCollectionAsync(collectionUri);
         }
-
-        private static async Task UseManualIndexing(Database database)
+        
+        /// <summary>
+        ///  The default index policy on a DocumentCollection will AUTOMATICALLY index ALL documents added.
+        /// There may be cases where you can want to turn-off automatic indexing and only selectively add only specific documents to the index. 
+        ///
+        /// This method demonstrates how to control this by setting the value of IndexingPolicy.Automatic
+        /// </summary>
+        private static async Task UseManualIndexing()
         {
-            Console.WriteLine("Trying manual indexing. Documents are indexed only if the create includes a IndexingDirective.Include");
+            var collectionUri = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId); 
 
-            //The default behavior for DocumentDB DocumentCollections is to automatically index every document written to it.
-            //There are cases where you can want to turn-off automatic indexing on the collection
-            //and selectively add only specific documents to the index. 
+            Console.WriteLine("\n2. Use manual (instead of automatic) indexing");           
 
-            var collection = new DocumentCollection { Id = ConfigurationManager.AppSettings["CollectionId"] };
-            collection.IndexingPolicy.Automatic = false;
+            var collectionSpec = new DocumentCollection { Id = collectionId };
+            collectionSpec.IndexingPolicy.Automatic = false;
 
-            collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, database, collection);
+            var collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, databaseId, collectionSpec);
+            Console.WriteLine("Collection {0} created with index policy \n{1}", collection.Id, collection.IndexingPolicy);
 
             // Create a dynamic document, with just a single property for simplicity, 
             // then query for document using that property and we should find nothing
+            // BUT, the document is there and doing a ReadDocument by Id will retrieve it
             Document created = await client.CreateDocumentAsync(collection.SelfLink, new { id = "doc1", orderId = "order1" });
+            Console.WriteLine("\nDocument created: \n{0}", created);
 
-            // This should be false as the document won't be in the index
             bool found = client.CreateDocumentQuery(collection.SelfLink, "SELECT * FROM root r WHERE r.orderId = 'order1'").AsEnumerable().Any();
-            
-            // If we do a specific Read on the Document we will find it because it is in the collection
+            Console.WriteLine("Document found by query: {0}", found);
+                    
             Document doc = await client.ReadDocumentAsync(created.SelfLink);
+            Console.WriteLine("Document read by id: {0}", doc!=null);
+
 
             // Now create a document, passing in an IndexingDirective saying we want to specifically index this document
+            // Query for the document again and this time we should find it because we manually included the document in the index
             created = await client.CreateDocumentAsync(collection.SelfLink, new { id = "doc2", orderId = "order2" }, new RequestOptions
             {
                 IndexingDirective = IndexingDirective.Include
             });
-            
-            // Query for the document again and this time we should find it because we manually included the document in the index
+            Console.WriteLine("\nDocument created: \n{0}", created);
+                        
             found = client.CreateDocumentQuery(collection.SelfLink, "SELECT * FROM root r WHERE r.orderId = 'order2'").AsEnumerable().Any();
+            Console.WriteLine("Document found by query: {0}", found);
 
             // Cleanup collection
-            await client.DeleteDocumentCollectionAsync(collection.SelfLink);
-
-            Console.WriteLine("Done with manual indexing.");
+            await client.DeleteDocumentCollectionAsync(collectionUri);
         }
 
-        private static async Task UseLazyIndexing(Database database)
+        /// <summary>
+        /// DocumentDB offers synchronous (consistent) and asynchronous (lazy) index updates. 
+        /// By default, the index is updated synchronously on each insert, replace or delete of a document to the collection. 
+        /// There are times when you might want to configure certain collections to update their index asynchronously. 
+        /// Lazy indexing boosts write performance and is ideal for bulk ingestion scenarios for primarily read-heavy collections
+        /// It is important to note that you might get inconsistent reads whilst the writes are in progress,
+        /// However once the write volume tapers off and the index catches up, then reads continue as normal
+        /// 
+        /// This method demonstrates how to switch IndexMode to Lazy
+        /// </summary>
+        private static async Task UseLazyIndexing()
         {
-            Console.WriteLine("Trying lazy indexing. Queries will be eventually consistent with this config.");
+            var collectionUri = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);
 
-            // DocumentDB offers synchronous (consistent) and asynchronous (lazy) index updates. 
-            // By default, the index is updated synchronously on each insert, replace or delete of a document to the collection. 
-            // There are times when you might want to configure certain collections to update their index asynchronously. 
-            // Lazy indexing boosts the write performance further and is ideal for bulk ingestion scenarios for primarily read-heavy collections
-            // It is important to note that you might get inconsistent reads whilst the writes are in progress,
-            // However once the write volume tapers off and the index catches up, then the reads continue as normal
+            Console.WriteLine("\n3. Use lazy (instead of consistent) indexing");
 
-            var collection = new DocumentCollection { Id = ConfigurationManager.AppSettings["CollectionId"] };
-            collection.IndexingPolicy.IndexingMode = IndexingMode.Lazy;
+            var collDefinition = new DocumentCollection { Id = ConfigurationManager.AppSettings["CollectionId"] };
+            collDefinition.IndexingPolicy.IndexingMode = IndexingMode.Lazy;
 
-            collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, database, collection);
-            
-            await client.DeleteDocumentCollectionAsync(collection.SelfLink);
+            var collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, databaseId, collDefinition);
+            Console.WriteLine("Collection {0} created with index policy \n{1}", collection.Id, collection.IndexingPolicy);
 
-            Console.WriteLine("Done with lazy indexing.");
-        }
-        
-        private static async Task UseRangeIndexesOnStrings(Database database)
-        {
-            Console.WriteLine("Trying Range index on strings. This enables Order By and range queries on strings.");
+            //it is very difficult to demonstrate lazy indexing as you only notice the difference under sustained heavy write load
+            //because we're using an S1 collection in this demo we'd likely get throttled long before we were able to replicate sustained high throughput
+            //which would give the index time to catch-up.
 
-            var collection = new DocumentCollection { Id =  ConfigurationManager.AppSettings["CollectionId"] };
-
-            // Overide to Range, Max (-1) for Strings. This allows you to perform string range queries and string order by queries.
-            // Note that this might have a higher index storage overhead however if you have long strings or a large number of unique
-            // strings. You can be selective of which paths need a Range index through IncludedPath configuration, 
-            collection.IndexingPolicy.IncludedPaths.Add(new IncludedPath
-            {
-                Path = "/*",
-                Indexes = new Collection<Index>() 
-                {
-                    new RangeIndex(DataType.Number) { Precision = -1 },
-                    new RangeIndex(DataType.String) { Precision = -1 }
-                }
-            });
-
-            // Alternatively, you can use the default for /* and just range for the "region".
-            // Not creating collection with this in the sample, but this can be used instead.
-            IndexingPolicy alternateIndexingPolicy = new IndexingPolicy();
-            alternateIndexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/*" });
-            alternateIndexingPolicy.IncludedPaths.Add(new IncludedPath
-            {
-                Path = "/region/?",
-                Indexes = new Collection<Index>() 
-                {
-                    new RangeIndex(DataType.Number) { Precision = -1 }
-                }
-            });
-
-            collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, database, collection);
-
-            await client.CreateDocumentAsync(collection.SelfLink, new { id = "doc1", region = "USA" });
-            await client.CreateDocumentAsync(collection.SelfLink, new { id = "doc2", region = "UK" });
-            await client.CreateDocumentAsync(collection.SelfLink, new { id = "doc3", region = "Armenia" });
-            await client.CreateDocumentAsync(collection.SelfLink, new { id = "doc4", region = "Egypt" });
-            
-            // Now ordering against region is allowed. You can run the following query
-            foreach (var doc in client.CreateDocumentQuery(
-                collection.SelfLink, 
-                "SELECT * FROM orders o ORDER BY o.region"))
-            {
-                Console.WriteLine(doc);
-            }
-
-            // You can also perform filters against string comparisons like >= 'UK'. Note that you can perform a prefix query
-            // i.e., the equivalent of LIKE 'U%' is >='U' AND < 'U\uffff'
-            foreach (var doc in client.CreateDocumentQuery(
-                collection.SelfLink, 
-                "SELECT * FROM orders o WHERE o.region >= 'UK'"))
-            {
-                Console.WriteLine(doc);
-            }
-
-            // Cleanup
-            await client.DeleteDocumentCollectionAsync(collection.SelfLink);
-
-            Console.WriteLine("Done with Range indexing on strings.");
+            await client.DeleteDocumentCollectionAsync(collectionUri);
         }
 
-        private static async Task ExcludePathsFromIndex(Database database)
+        /// <summary>
+        /// The default behavior is for DocumentDB to index every attribute in every document automatically.
+        /// There are times when a document contains large amounts of information, in deeply nested structures
+        /// that you know you will never search on. In extreme cases like this, you can exclude paths from the 
+        /// index to save on storage cost, improve write performance and also improve read performance because the index is smaller
+        ///
+        /// This method demonstrates how to set IndexingPolicy.ExcludedPaths
+        /// </summary>
+        private static async Task ExcludePathsFromIndex()
         {
-            Console.WriteLine("Trying exclusions of paths from indexing to save storage space and improve write throughput.");
+            var collectionUri = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);
 
-            dynamic dyn = new 
+            Console.WriteLine("\n4. Exclude specified paths from document index");
+
+            dynamic dyn = new
             {
                 id = "doc1",
+                foo = "bar",
                 metaData = "meta",
-                subDoc = new { searchable = "searchable", subSubDoc = new { someProperty = "value" } }
+                subDoc = new { searchable = "searchable", nonSearchable = "value"  },
+                excludedNode = new { subExcluded = "something", subExcludedNode = new { someProperty = "value" } }
             };
 
-            // The default behavior is for DocumentDB to index every attribute in every document.
-            // There are times when a document contains large amounts of information, in deeply nested structures
-            // that you know you will never search on. In extreme cases like this, you can exclude paths from the 
-            // index to save on storage cost, improve write performance because there is less work that needs to 
-            // happen on writing and also improve read performance because the index is smaller
+            var collDefinition = new DocumentCollection { Id = collectionId };
+                      
+            collDefinition.IndexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/*" });  // Special manadatory path of "/*" required to denote include entire tree
+            collDefinition.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/metaData/*" });   // exclude metaData node, and anything under it
+            collDefinition.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/subDoc/nonSearchable/*" });  // exclude ONLY a part of subDoc    
+            collDefinition.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/\"excludedNode\"/*" }); // exclude excludedNode node, and anything under it
+            
+            // The effect of the above IndexingPolicy is that only id, foo, and the subDoc/searchable are indexed
 
-            var collection = new DocumentCollection { Id = ConfigurationManager.AppSettings["CollectionId"] };
+            var collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, databaseId, collDefinition);
+            Console.WriteLine("Collection {0} created with index policy \n{1}", collection.Id, collection.IndexingPolicy);
 
-            // Special manadatory path of "/*" required to denote include entire tree
-            collection.IndexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/*" });
-
-            collection.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/metaData/*" });
-            collection.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/subDoc/subSubDoc/someProperty/*" });
-
-            collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, database, collection);
-
-            var created = await client.CreateDocumentAsync(collection.SelfLink, dyn);
+            Document created = await client.CreateDocumentAsync(collection.SelfLink, dyn);
+            Console.WriteLine("\nDocument created: \n{0}", created);
 
             // Querying for a document on either metaData or /subDoc/subSubDoc/someProperty > fail because they were excluded
-            ShowQueryIsNotAllowed(collection, "SELECT * FROM root r WHERE r.metaData='meta'");
+            var found = ShowQueryIsNotAllowed(collection, "SELECT * FROM root r WHERE r.metaData='meta'");
+            Console.WriteLine("Query on metaData returned results? {0}", found);
 
-            ShowQueryIsNotAllowed(collection, "SELECT * FROM root r WHERE r.subDoc.subSubDoc.someProperty='value'");
- 
-            // Querying for a document using id, or even subDoc/searchable > succeed because they were not excluded
-            ShowQueryReturnsResults(collection, "SELECT * FROM root r WHERE r.id='doc1'");
+            found = ShowQueryIsNotAllowed(collection, "SELECT * FROM root r WHERE r.subDoc.nonSearchable='value'");
+            Console.WriteLine("Query on /subDoc/nonSearchable/ returned results? {0}", found);
 
-            ShowQueryReturnsResults(collection, "SELECT * FROM root r WHERE r.subDoc.searchable='searchable'");
+            found = ShowQueryIsNotAllowed(collection, "SELECT * FROM root r WHERE r.excludedNode.subExcludedNode.someProperty='value'");
+            Console.WriteLine("Query on /excludedNode/subExcludedNode/someProperty/ returned results? {0}", found);
 
-            // Cleanup collection
-            await client.DeleteDocumentCollectionAsync(collection.SelfLink);
-            
-            // To exclude subDoc and anything under it add an ExcludePath of "/\"subDoc\"/*"
-            collection = new DocumentCollection { Id = ConfigurationManager.AppSettings["CollectionId"] };
+            // Querying for a document using food, or even subDoc/searchable > succeed because they were not excluded
+            found = ShowQueryIsAllowed(collection, "SELECT * FROM root r WHERE r.foo='bar'");
+            Console.WriteLine("Query on foo returned results? {0}", found);
 
-            // Special manadatory path of "/*" required to denote include entire tree
-            collection.IndexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/*" });
-            collection.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/subDoc/*" });
-
-            collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, database, collection);
-
-            // Query for /subDoc/searchable > fail because we have excluded the whole subDoc, and all its children.
-            ShowQueryIsNotAllowed(collection, "SELECT * FROM root r WHERE r.subDoc.searchable='searchable'");
+            found = ShowQueryIsAllowed(collection, "SELECT * FROM root r WHERE r.subDoc.searchable='searchable'");
+            Console.WriteLine("Query on /subDoc/searchable/ returned results? {0}", found);
 
             //Cleanup
-            await client.DeleteDocumentCollectionAsync(collection.SelfLink);
-
-            Console.WriteLine("Done with Exclude paths.");
+            await client.DeleteDocumentCollectionAsync(collectionUri);
         }
 
-        private static async Task RangeScanOnHashIndex(Database database)
+        /// <summary>
+        /// When a range index is not available (i.e. Only hash or no index found on the path), comparisons queries can still 
+        /// can still be performed as scans using AllowScanInQuery request option using the .NET SDK
+        ///
+        /// This method demonstrates how to force a scan when only hash indexes exist on the path
+        /// </summary>
+        private static async Task RangeScanOnHashIndex()
         {
-            Console.WriteLine("Trying query with EnableScanInQuery option to run a range query against a hash index");
+            // *************************************************************************************************************
+            // Warning: This was made an opt-in model by design. 
+            //          Scanning is an expensive operation and doing this will have a large impact 
+            //          on RequstUnits charged for an operation and will likely result in queries being throttled sooner.
+            // *************************************************************************************************************
 
-            // When a range index is not available (i.e. Only hash or no index found on the path), comparisons queries can still 
-            // can still be performed as scans using AllowScanInQuery request option using the .NET SDK
-            // Warning: This was made an opt-in model by design. Scanning is an expensive operation and doing this 
-            //         will have an impact on your RequstUnits and could result in other queries not being throttled.
+            var collectionUri = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);
 
-            var collection = new DocumentCollection { Id = ConfigurationManager.AppSettings["CollectionId"] };
-            collection.IndexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/" });
-            collection.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/length/*" });
+            Console.WriteLine("\n5. Force a range scan operation on a hash indexed path");
             
-            collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, database, collection);
-            
+            var collDefinition = new DocumentCollection { Id = collectionId };
+            collDefinition.IndexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/" });
+            collDefinition.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/length/*" });
+
+            var collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, databaseId, collDefinition);
+            Console.WriteLine("Collection {0} created with index policy \n{1}", collection.Id, collection.IndexingPolicy);
+
             var doc1 = await client.CreateDocumentAsync(collection.SelfLink, new { id = "dyn1", length = 10, width = 5, height = 15 });
             var doc2 = await client.CreateDocumentAsync(collection.SelfLink, new { id = "dyn2", length = 7, width = 15});
             var doc3 = await client.CreateDocumentAsync(collection.SelfLink, new { id = "dyn3", length = 2});
             
-
             // Query for length > 5 - fail, this is a range based query on a Hash index only document
-            ShowQueryIsNotAllowed(collection, "SELECT * FROM root r WHERE r.length > 5");
-            
-            // Now add IndexingDirective and repeat query - expect success because now we are explictly allowing scans in a query 
+            var found = ShowQueryIsNotAllowed(collection, "SELECT * FROM root r WHERE r.length > 5");
+            Console.WriteLine("Range query allowed? {0}", found);
+
+            // Now add IndexingDirective and repeat query
+            // expect success because now we are explictly allowing scans in a query 
             // using the EnableScanInQuery directive
-            ShowQueryIsAllowed(collection, "SELECT * FROM root r WHERE r.length > 5", new FeedOptions { EnableScanInQuery = true });
-
+            found = ShowQueryIsAllowed(collection, "SELECT * FROM root r WHERE r.length > 5", new FeedOptions { EnableScanInQuery = true } );
+            Console.WriteLine("Range query allowed? {0}", found);
+            
             //Cleanup
-            await client.DeleteDocumentCollectionAsync(collection.SelfLink);
+            await client.DeleteDocumentCollectionAsync(collectionUri);
+        }
+        
+        private static async Task UseRangeIndexesOnStrings()
+        {
+            var collectionUri = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);
 
-            Console.WriteLine("Done with Query scan hints.");
+            Console.WriteLine("\n6. Use range indexes on strings");
+                        
+            var collDefinition = new DocumentCollection { Id =  collectionId };
+
+            // This is how you can specify a range index on strings (and numbers) for all properties. This is the recommended indexing policy for collections.
+            IndexingPolicy indexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
+
+            // For demo purposes, we are going to use the default (range on numbers, hash on strings) for the whole document (/* )
+            // and just include a range index on strings for the "region".
+            indexingPolicy = new IndexingPolicy();
+            indexingPolicy.IncludedPaths.Add(new IncludedPath { Path = "/*" });
+            indexingPolicy.IncludedPaths.Add(new IncludedPath
+            {
+                Path = "/region/?",
+                Indexes = new Collection<Index>() 
+                {
+                    new RangeIndex(DataType.String) { Precision = -1 }
+                }
+            });
+
+            collDefinition.IndexingPolicy = indexingPolicy;
+
+            var collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, databaseId, collDefinition);
+            Console.WriteLine("Collection {0} created with index policy \n{1}", collection.Id, collection.IndexingPolicy);
+            
+            await client.CreateDocumentAsync(collection.SelfLink, new { id = "doc1", region = "USA" });
+            await client.CreateDocumentAsync(collection.SelfLink, new { id = "doc2", region = "UK" });
+            await client.CreateDocumentAsync(collection.SelfLink, new { id = "doc3", region = "Armenia" });
+            await client.CreateDocumentAsync(collection.SelfLink, new { id = "doc4", region = "Egypt" });
+
+            // Now ordering against region is allowed. You can run the following query 
+            Console.WriteLine("Documents ordered by region");
+            foreach (var doc in client.CreateDocumentQuery(collectionUri, "SELECT * FROM orders o ORDER BY o.region"))
+            {
+                Console.WriteLine(doc);
+            }
+
+            // You can also perform filters against string comparisons like >= 'UK'. Note that you can perform a prefix query, 
+            // the equivalent of LIKE 'U%' (is >= 'U' AND < 'U')
+            Console.WriteLine("Documents with region begining with U");
+            foreach (var doc in client.CreateDocumentQuery(collection.SelfLink, "SELECT * FROM orders o WHERE o.region >= 'U'"))
+            {
+                Console.WriteLine(doc);
+            }
+            
+            // Cleanup
+            await client.DeleteDocumentCollectionAsync(collection.SelfLink);
         }
 
-        private static async Task PerformIndexTransformations(Database database)
+        private static async Task PerformIndexTransformations()
         {
-            Console.WriteLine("Performing indexing transformations on an existing collection ...");
+            var collectionUri = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);
 
-            // Create a collection with default indexing policy
-            var collection = new DocumentCollection { Id = ConfigurationManager.AppSettings["CollectionId"] };
-            collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, database, collection);
-
-            // Insert some documents
-            var doc1 = await client.CreateDocumentAsync(collection.SelfLink, new { id = "dyn1", length = 10, width = 5, height = 15 });
-            var doc2 = await client.CreateDocumentAsync(collection.SelfLink, new { id = "dyn2", length = 7, width = 15 });
-            var doc3 = await client.CreateDocumentAsync(collection.SelfLink, new { id = "dyn3", length = 2 });
+            Console.WriteLine("\n7. Perform index transform");
             
+            // Create a collection with default indexing policy
+            var collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, databaseId, new DocumentCollection { Id = collectionId });
+            Console.WriteLine("Collection {0} created with index policy \n{1}", collection.Id, collection.IndexingPolicy);
+            
+            // Insert some documents
+            await client.CreateDocumentAsync(collectionUri, new { id = "dyn1", length = 10, width = 5, height = 15 });
+            await client.CreateDocumentAsync(collectionUri, new { id = "dyn2", length = 7, width = 15 });
+            await client.CreateDocumentAsync(collectionUri, new { id = "dyn3", length = 2 });
+
             // Switch to lazy indexing and wait till complete.
             Console.WriteLine("Changing from Default to Lazy IndexingMode.");
 
+            // change the collection's indexing policy,
+            // and then do a replace operation on the collection
             collection.IndexingPolicy.IndexingMode = IndexingMode.Lazy;
-
             await client.ReplaceDocumentCollectionAsync(collection);
 
             // Check progress and wait for completion - should be instantaneous since we have only a few documents, but larger
             // collections will take time.
             await WaitForIndexTransformationToComplete(collection);
 
-            // Switch to use string range indexing with maximum precision.
-            Console.WriteLine("Changing to string range indexing with maximum precision for Order By.");
+            // Switch to use string & number range indexing with maximum precision.
+            Console.WriteLine("Changing to string & number range indexing with maximum precision (needed for Order By).");
 
+            collection.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
             collection.IndexingPolicy.IndexingMode = IndexingMode.Consistent;
-            collection.IndexingPolicy.IncludedPaths = new Collection<IncludedPath>() {
-                new IncludedPath() 
-                {
-                    Path = "/*",
-                    Indexes = new Collection<Index>() {
-                        new RangeIndex(DataType.Number) { Precision = -1},
-                        new RangeIndex(DataType.String) { Precision = -1 }
-                    }
-                }
-            };
 
-            // Apply change
+            // Apply change and wait until it completes
             await client.ReplaceDocumentCollectionAsync(collection);
-
-            // Wait for completion. Once complete, you can run string range and order by queries.
             await WaitForIndexTransformationToComplete(collection);
 
             // Now exclude a path from indexing to save on storage space.
@@ -396,16 +427,12 @@
 
             collection.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath()
             {
-                Path = "/excluded/*"
+                Path = "/length/*"
             });
 
-            // Apply change
-            await client.ReplaceDocumentCollectionAsync(collection);
-
-            // Wait for completion. Once complete, you can run string range and order by queries.
+            // Apply change, and wait for completion. Once complete, you can run string range and order by queries.
+            await client.ReplaceDocumentCollectionAsync(collection);            
             await WaitForIndexTransformationToComplete(collection);
-
-            Console.WriteLine("Done with indexing policy transformations.");
         }
 
         /// <summary>
@@ -413,7 +440,6 @@
         /// The service returns a 0-100 value based on the progress.
         /// </summary>
         /// <param name="collection">the collection to monitor progress</param>
-        /// <returns>a Task for async completion of the wait operation.</returns>
         private static async Task WaitForIndexTransformationToComplete(DocumentCollection collection)
         {
             long smallWaitTimeMilliseconds = 1000;
@@ -424,38 +450,34 @@
                 ResourceResponse<DocumentCollection> collectionReadResponse = await client.ReadDocumentCollectionAsync(collection.SelfLink);
                 progress = collectionReadResponse.IndexTransformationProgress;
 
+                Console.WriteLine("Waiting...");
                 await Task.Delay(TimeSpan.FromMilliseconds(smallWaitTimeMilliseconds));
             }
+
+            Console.WriteLine("Done!");
         }
 
-        private static void ShowQueryReturnsResults(DocumentCollection collection, string query, FeedOptions options = null)
+        private static bool ShowQueryIsAllowed(DocumentCollection collection, string query, FeedOptions options = null)
         {
-            int count = ShowQueryIsAllowed(collection, query, options);
-            if (count == 0)
-            {
-                throw new ApplicationException("Expected results");
-            }
+            return client.CreateDocumentQuery(collection.SelfLink, query, options).AsEnumerable().Any();
         }
 
-        private static int ShowQueryIsAllowed(DocumentCollection collection, string query, FeedOptions options = null)
-        {
-            return client.CreateDocumentQuery(collection.SelfLink, query, options).AsEnumerable().Count();
-        }
-
-        private static void ShowQueryIsNotAllowed(DocumentCollection collection, string query, FeedOptions options = null)
+        private static bool ShowQueryIsNotAllowed(DocumentCollection collection, string query, FeedOptions options = null)
         {
             try
             {
-                client.CreateDocumentQuery(collection.SelfLink, query, options).AsEnumerable().Any();
+                return client.CreateDocumentQuery(collection.SelfLink, query, options).AsEnumerable().Any();
             }
             catch (Exception e)
             {
                 var baseEx = (DocumentClientException)e.GetBaseException();
-                if (baseEx.StatusCode != HttpStatusCode.BadRequest) 
-                { 
-                    throw; 
+                if (baseEx.StatusCode != HttpStatusCode.BadRequest)
+                {
+                    throw;
                 }
             }
+
+            return false;
         }
 
         /// <summary>
@@ -465,7 +487,7 @@
         /// <returns>The created Database object</returns>
         private static async Task<Database> GetNewDatabaseAsync(string id)
         {
-            Database database = client.CreateDatabaseQuery().Where(c => c.Id == id).ToArray().FirstOrDefault();
+            Database database = client.CreateDatabaseQuery().Where(c => c.Id == id).ToArray().SingleOrDefault();
             if (database != null)
             {
                 await client.DeleteDatabaseAsync(database.SelfLink);
@@ -473,6 +495,29 @@
 
             database = await client.CreateDatabaseAsync(new Database { Id = id });
             return database;
+        }
+
+        /// <summary>
+        /// Log exception error message to the console
+        /// </summary>
+        /// <param name="e">The caught exception.</param>
+        private static void LogException(Exception e)
+        {
+            ConsoleColor color = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Red;
+
+            Exception baseException = e.GetBaseException();
+            if (e is DocumentClientException)
+            {
+                DocumentClientException de = (DocumentClientException)e;
+                Console.WriteLine("{0} error occurred: {1}, Message: {2}", de.StatusCode, de.Message, baseException.Message);
+            }
+            else
+            {
+                Console.WriteLine("Error: {0}, Message: {1}", e.Message, baseException.Message);
+            }
+
+            Console.ForegroundColor = color;
         }
     }
 }

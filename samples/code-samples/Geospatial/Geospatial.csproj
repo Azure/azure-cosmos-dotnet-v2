@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{F244DE0C-FC94-4D96-AECF-C92BBBAA6627}</ProjectGuid>
+    <ProjectGuid>{B0A55C76-4470-482E-BD16-5AA96068FE61}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>DocumentDB.Samples.CollectionManagement</RootNamespace>
-    <AssemblyName>DocumentDB.Samples.CollectionManagement</AssemblyName>
+    <RootNamespace>DocumentDB.Samples.Geospatial</RootNamespace>
+    <AssemblyName>DocumentDB.Samples.Geospatial</AssemblyName>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>
@@ -68,13 +68,18 @@
     <None Include="..\appSettings.config">
       <Link>appSettings.config</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <SubType>Designer</SubType>
     </None>
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\Shared.csproj">
+      <Project>{16c11979-9b7c-4f35-bcd1-cac434d79467}</Project>
+      <Name>Shared</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\Microsoft.Azure.DocumentDB.1.6.1\build\Microsoft.Azure.DocumentDB.targets" Condition="Exists('..\packages\Microsoft.Azure.DocumentDB.1.6.1\build\Microsoft.Azure.DocumentDB.targets')" />

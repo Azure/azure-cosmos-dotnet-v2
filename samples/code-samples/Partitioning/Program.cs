@@ -149,8 +149,8 @@
         private async Task<HashPartitionResolver> InitializeHashResolver(Database database)
         {
             // Create some collections to partition data.
-            DocumentCollection collection1 = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.HashBucket0");
-            DocumentCollection collection2 = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.HashBucket1");
+            DocumentCollection collection1 = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.HashBucket0");
+            DocumentCollection collection2 = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.HashBucket1");
 
             // Initialize a partition resolver that users hashing, and register with DocumentClient. 
             HashPartitionResolver hashResolver = new HashPartitionResolver("UserId", new[] { collection1.SelfLink, collection2.SelfLink });
@@ -160,15 +160,15 @@
         }
 
         /// <summary>
-        /// Initialize a HashPartitionResolver.
+        /// Initialize a RangePartitionResolver.
         /// </summary>
         /// <param name="database">The database to run the samples on.</param>
-        /// <returns>The created HashPartitionResolver.</returns>
+        /// <returns>The created RangePartitionResolver.</returns>
         private async Task<RangePartitionResolver<string>> InitializeRangeResolver(Database database)
         {
             // Create some collections to partition data.
-            DocumentCollection collection1 = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.A-M");
-            DocumentCollection collection2 = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.N-Z");
+            DocumentCollection collection1 = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.A-M");
+            DocumentCollection collection2 = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.N-Z");
 
             // Initialize a partition resolver that assigns users (A-M) -> collection1, and (N-Z) -> collection2
             // and register with DocumentClient. 
@@ -192,8 +192,8 @@
         /// <returns>The created HashPartitionResolver.</returns>
         private async Task<HashPartitionResolver> InitializeCustomHashResolver(Database database)
         {
-            DocumentCollection collection1 = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.HashBucket0");
-            DocumentCollection collection2 = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.HashBucket1");
+            DocumentCollection collection1 = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.HashBucket0");
+            DocumentCollection collection2 = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.HashBucket1");
 
             var hashResolver = new HashPartitionResolver(
                 u => ((UserProfile)u).UserId,
@@ -210,9 +210,9 @@
         /// <returns>The created HashPartitionResolver.</returns>
         private async Task<LookupPartitionResolver<string>> InitializeLookupPartitionResolver(Database database)
         {
-            DocumentCollection collectionUS = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.US");
-            DocumentCollection collectionEU = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.Europe");
-            DocumentCollection collectionOther = await DocumentClientHelper.GetCollectionAsync(this.client, database, "Collection.Other");
+            DocumentCollection collectionUS = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.US");
+            DocumentCollection collectionEU = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.Europe");
+            DocumentCollection collectionOther = await DocumentClientHelper.GetOrCreateCollectionAsync(this.client, database.Id, "Collection.Other");
 
             // This implementation takes strings as input. If you'd like to implement a strongly typed LookupPartitionResolver, 
             // take a look at EnumLookupPartitionResolver for an example.
@@ -265,7 +265,7 @@
             UserProfile johnProfile = (UserProfile)(dynamic)latestJohnDocument;
             johnProfile.Status = UserStatus.Busy;
 
-            await this.client.ReplaceDocumentAsync(latestJohnDocument);
+            await this.client.ReplaceDocumentAsync(latestJohnDocument.SelfLink, johnProfile);
 
             // Query for John's document by ID. We can use the PartitionResolver to restrict the query to just the partition containing @John
             // Again the query uses the database self link, and relies on the hash resolver to route the appropriate collection.
@@ -273,11 +273,11 @@
                 .Where(u => u.UserName == "@John");
             johnProfile = query.AsEnumerable().FirstOrDefault();
 
-            // Query for all Available users. Here since there is no partition key, the query is serially executed across each partition/collection. 
-            query = this.client.CreateDocumentQuery<UserProfile>(database.SelfLink).Where(u => u.Status == UserStatus.Available);
-            foreach (UserProfile activeUser in query)
+            // Query for all Busy users. Here since there is no partition key, the query is serially executed across each partition/collection. 
+            query = this.client.CreateDocumentQuery<UserProfile>(database.SelfLink).Where(u => u.Status == UserStatus.Busy);
+            foreach (UserProfile busyUser in query)
             {
-                Console.WriteLine(activeUser);
+                Console.WriteLine(busyUser);
             }
              
             // Find the collections where a document exists in. It's uncommon to do this, but can be useful if for example to execute a 
@@ -295,7 +295,6 @@
         /// <summary>
         /// Illustrate how to load and save the serializer state. Uses HashPartitionResolver as example.
         /// </summary>
-        /// <param name="hashResolver">The HashResolver instance.</param>
         private void RunSerializeDeserializeSample(HashPartitionResolver hashResolver)
         {
             // Store the partition resolver's configuration as JSON.
@@ -315,7 +314,7 @@
         /// Show how to repartition a hash resolver by adding/removing collections.
         /// </summary>
         /// <param name="database">The database to run the samples on.</param>
-        /// <returns>The created HashPartitionResolver.</returns>
+        /// <returns>The Task for the asynchronous execution.</returns>
         private async Task RepartitionDataSample(Database database)
         {
             var manager = new DocumentClientHashPartitioningManager(u => ((UserProfile)(dynamic)u).UserId, this.client, database, 3);

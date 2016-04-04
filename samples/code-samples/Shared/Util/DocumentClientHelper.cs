@@ -22,9 +22,9 @@
         /// <param name="client">The DocumentDB client instance.</param>
         /// <param name="id">The id of the Database to search for, or create.</param>
         /// <returns>The matched, or created, Database object</returns>
-        public static async Task<Database> GetDatabaseAsync(DocumentClient client, string id)
+        public static async Task<Database> GetOrCreateDatabaseAsync(DocumentClient client, string id)
         {
-            Database database = client.CreateDatabaseQuery().Where(db => db.Id == id).ToArray().FirstOrDefault();
+            Database database = client.CreateDatabaseQuery().Where(db => db.Id == id).ToArray().SingleOrDefault();
             if (database == null)
             {
                 database = await client.CreateDatabaseAsync(new Database { Id = id });
@@ -41,7 +41,7 @@
         /// <returns>The matched, or created, Database object</returns>
         public static async Task<Database> GetNewDatabaseAsync(DocumentClient client, string id)
         {
-            Database database = client.CreateDatabaseQuery().Where(db => db.Id == id).ToArray().FirstOrDefault();
+            Database database = client.CreateDatabaseQuery().Where(db => db.Id == id).ToArray().SingleOrDefault();
             if (database != null)
             {
                 await client.DeleteDatabaseAsync(database.SelfLink);
@@ -58,14 +58,14 @@
         /// <param name="database">The Database where this DocumentCollection exists / will be created</param>
         /// <param name="collectionId">The id of the DocumentCollection to search for, or create.</param>
         /// <returns>The matched, or created, DocumentCollection object</returns>
-        public static async Task<DocumentCollection> GetCollectionAsync(DocumentClient client, Database database, string collectionId)
+        public static async Task<DocumentCollection> GetOrCreateCollectionAsync(DocumentClient client, string databaseId, string collectionId)
         {
-            DocumentCollection collection = client.CreateDocumentCollectionQuery(database.SelfLink)
-                .Where(c => c.Id == collectionId).ToArray().FirstOrDefault();
+            DocumentCollection collection = client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(databaseId))
+                .Where(c => c.Id == collectionId).ToArray().SingleOrDefault();
 
             if (collection == null)
             {
-                collection = await CreateDocumentCollectionWithRetriesAsync(client, database, new DocumentCollection { Id = collectionId });
+                collection = await CreateDocumentCollectionWithRetriesAsync(client, databaseId, new DocumentCollection { Id = collectionId });
             }
 
             return collection;
@@ -79,18 +79,18 @@
         /// <param name="collectionId">The id of the DocumentCollection to search for, or create.</param>
         /// <param name="collectionSpec">The spec/template to create collections from.</param>
         /// <returns>The matched, or created, DocumentCollection object</returns>
-        public static async Task<DocumentCollection> GetCollectionAsync(
+        public static async Task<DocumentCollection> GetOrCreateCollectionAsync(
             DocumentClient client,
-            Database database,
+            string databaseId,
             string collectionId,
             DocumentCollectionSpec collectionSpec)
         {
-            DocumentCollection collection = client.CreateDocumentCollectionQuery(database.SelfLink)
-                .Where(c => c.Id == collectionId).ToArray().FirstOrDefault();
+            DocumentCollection collection = client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(databaseId))
+                .Where(c => c.Id == collectionId).ToArray().SingleOrDefault();
 
             if (collection == null)
             {
-                collection = await CreateNewCollection(client, database, collectionId, collectionSpec);
+                collection = await CreateNewCollection(client, databaseId, collectionId, collectionSpec);
             }
 
             return collection;
@@ -104,11 +104,7 @@
         /// <param name="collectionId">The id of the DocumentCollection to search for, or create.</param>
         /// <param name="collectionSpec">The spec/template to create collections from.</param>
         /// <returns>The created DocumentCollection object</returns>
-        public static async Task<DocumentCollection> CreateNewCollection(
-            DocumentClient client, 
-            Database database, 
-            string collectionId, 
-            DocumentCollectionSpec collectionSpec)
+        public static async Task<DocumentCollection> CreateNewCollection(DocumentClient client, string databaseId, string collectionId, DocumentCollectionSpec collectionSpec)
         {
             DocumentCollection collectionDefinition = new DocumentCollection { Id = collectionId };
             if (collectionSpec != null)
@@ -117,10 +113,10 @@
             }
 
             DocumentCollection collection = await CreateDocumentCollectionWithRetriesAsync(
-                client, 
-                database, 
+                client,
+                databaseId, 
                 collectionDefinition,
-                (collectionSpec != null) ? collectionSpec.OfferType : null);
+                (collectionSpec != null) ? collectionSpec.OfferThroughput : null);
 
             if (collectionSpec != null)
             {
@@ -195,28 +191,25 @@
         }
 
         /// <summary>
-        /// Create a DocumentCollection, and retry when throttled.
+        /// Create a DocumentCollection, and retries if throttled.
         /// </summary>
         /// <param name="client">The DocumentDB client instance.</param>
         /// <param name="database">The database to use.</param>
         /// <param name="collectionDefinition">The collection definition to use.</param>
-        /// <param name="offerType">The offer type for the collection.</param>
+        /// <param name="offerThroughput">The offer throughput for the collection.</param>
         /// <returns>The created DocumentCollection.</returns>
         public static async Task<DocumentCollection> CreateDocumentCollectionWithRetriesAsync(
-            DocumentClient client,
-            Database database,
-            DocumentCollection collectionDefinition,
-            string offerType = "S1")
+            DocumentClient client, 
+            string databaseId, 
+            DocumentCollection collectionDefinition, 
+            int? offerThroughput = 400)
         {
             return await ExecuteWithRetries(
                 client,
                 () => client.CreateDocumentCollectionAsync(
-                        database.SelfLink,
+                        UriFactory.CreateDatabaseUri(databaseId),
                         collectionDefinition,
-                        new RequestOptions 
-                        { 
-                            OfferType = offerType 
-                        }));
+                        new RequestOptions { OfferThroughput = offerThroughput }));
         }
 
         /// <summary>
@@ -238,7 +231,7 @@
                 }
                 catch (DocumentClientException de)
                 {
-                    if ((int)de.StatusCode != 429)
+                    if ((int)de.StatusCode != 429 && (int)de.StatusCode != 449)
                     {
                         throw;
                     }
@@ -259,6 +252,10 @@
                     }
 
                     sleepTime = de.RetryAfter;
+                    if (sleepTime < TimeSpan.FromMilliseconds(10))
+                    {
+                        sleepTime = TimeSpan.FromMilliseconds(10);
+                    }
                 }
 
                 await Task.Delay(sleepTime);
@@ -273,11 +270,7 @@
         /// <param name="inputDirectory"></param>
         /// <param name="inputFileMask"></param>
         /// <returns></returns>
-        public static async Task RunBulkImport(
-            DocumentClient client,
-            DocumentCollection collection,
-            string inputDirectory,
-            string inputFileMask = "*.json")
+        public static async Task RunBulkImport(DocumentClient client, DocumentCollection collection, string inputDirectory, string inputFileMask = "*.json")
         {
             int maxFiles = 2000;
             int maxScriptSize = 50000;
