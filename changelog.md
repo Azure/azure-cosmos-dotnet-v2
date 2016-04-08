@@ -1,0 +1,1 @@
+Please refer to [Release Notes](https://azure.microsoft.com/en-us/documentation/articles/documentdb-sdk-dotnet/) for the changes done in each release.
