@@ -140,7 +140,7 @@
                 metricCollectionDefinition.Id = MetricCollectionName;
                 metricCollectionDefinition.DefaultTimeToLive = defaultTimeToLive;
 
-                await ExecuteWithRetries<ResourceResponse<DocumentCollection>>(
+                metricCollection = await ExecuteWithRetries<ResourceResponse<DocumentCollection>>(
                    this.client,
                    () => client.CreateDocumentCollectionAsync(
                        UriFactory.CreateDatabaseUri(DatabaseName),
