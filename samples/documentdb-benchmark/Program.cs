@@ -330,6 +330,12 @@
         /// <returns>The requested collection</returns>
         private DocumentCollection GetCollectionIfExists(string databaseName, string collectionName)
         {
+            Database database = client.CreateDatabaseQuery().Where(d => d.Id == databaseName).AsEnumerable().FirstOrDefault();
+            if (database == null)
+            {
+                return null;
+            }
+
             return client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(databaseName))
                 .Where(c => c.Id == collectionName).AsEnumerable().FirstOrDefault();
         }
