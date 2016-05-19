@@ -361,6 +361,7 @@
         public static async Task<V> ExecuteWithRetries<V>(DocumentClient client, Func<Task<V>> function, bool shouldLogRetries = false)
         {
             TimeSpan sleepTime = TimeSpan.Zero;
+            int[] expectedStatusCodes = new int[] { 429, 400, 503 };
 
             while (true)
             {
@@ -368,45 +369,48 @@
                 {
                     return await function();
                 }
-                catch (DocumentClientException de)
-                {
-                    if ((int)de.StatusCode != 429 && (int)de.StatusCode != 400 && (int)de.StatusCode != 503)
-                    {
-                        Trace.TraceError(de.ToString());
-                        throw de;
-                    }
-
-                    sleepTime = de.RetryAfter;
-                }
                 catch (System.Net.Http.HttpRequestException)
                 {
                     sleepTime = TimeSpan.FromSeconds(1);
                 }
-                catch (AggregateException ae)
+                catch (Exception e)
                 {
-                    if (!(ae.InnerException is DocumentClientException))
+                    DocumentClientException de;
+                    if (!TryExtractDocumentClientException(e, out de))
                     {
-                        Trace.TraceError(ae.ToString());
                         throw;
                     }
 
-                    DocumentClientException de = (DocumentClientException)ae.InnerException;
-                    if ((int)de.StatusCode != 429 && (int)de.StatusCode != 400 && (int)de.StatusCode != 503)
-                    {
-                        Trace.TraceError(de.ToString());
-                        throw de;
-                    }
-
                     sleepTime = de.RetryAfter;
-                }
-
-                if (shouldLogRetries)
-                {
-                    Console.WriteLine("Retrying after sleeping for {0}", sleepTime);
+                    if (shouldLogRetries)
+                    {
+                        Console.WriteLine("Retrying after sleeping for {0}", sleepTime);
+                    }
                 }
 
                 await Task.Delay(sleepTime);
             }
+        }
+
+        private static bool TryExtractDocumentClientException(Exception e, out DocumentClientException de)
+        {
+            if (e is DocumentClientException)
+            {
+                de = (DocumentClientException)e;
+                return true;
+            }
+
+            if (e is AggregateException)
+            {
+                if (e.InnerException is DocumentClientException)
+                {
+                    de = (DocumentClientException)e.InnerException;
+                    return true;
+                }
+            }
+
+            de = null;
+            return false;
         }
     }
 }
