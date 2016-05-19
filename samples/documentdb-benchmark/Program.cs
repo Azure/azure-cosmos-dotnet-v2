@@ -29,6 +29,7 @@
         private static readonly string DatabaseName = ConfigurationManager.AppSettings["DatabaseName"];
         private static readonly string DataCollectionName = ConfigurationManager.AppSettings["CollectionName"];
         private static readonly string MetricCollectionName = ConfigurationManager.AppSettings["MetricCollectionName"];
+        private static readonly int CollectionThroughput = int.Parse(ConfigurationManager.AppSettings["CollectionThroughput"]);
 
         private static readonly ConnectionPolicy ConnectionPolicy = new ConnectionPolicy { ConnectionMode = ConnectionMode.Gateway, ConnectionProtocol = Protocol.Https, RequestTimeout = new TimeSpan(1, 0, 0) };
 
@@ -37,7 +38,7 @@
         private static readonly string InstanceId = Dns.GetHostEntry("LocalHost").HostName + Process.GetCurrentProcess().Id;
         private const int MinThreadPoolSize = 100;
 
-        private volatile int pendingTaskCount;
+        private int pendingTaskCount;
         private long documentsInserted;
         private ConcurrentDictionary<int, double> requestUnitsConsumed = new ConcurrentDictionary<int, double>();
         private DocumentClient client;
@@ -100,8 +101,6 @@
 
             finally
             {
-                Console.WriteLine("End of samples, press any key to exit.");
-                Console.ReadKey();
             }
         }
 
@@ -113,7 +112,7 @@
         {
             DocumentCollection dataCollection = GetCollectionIfExists(DatabaseName, DataCollectionName);
 
-            if (bool.Parse(ConfigurationManager.AppSettings["ShouldDeleteAndRecreateDatabaseAndCollection"]) || dataCollection == null)
+            if (bool.Parse(ConfigurationManager.AppSettings["ShouldCleanupOnStart"]) || dataCollection == null)
             {
                 Database database = GetDatabaseIfExists(DatabaseName);
                 if (database != null)
@@ -124,8 +123,14 @@
                 Console.WriteLine("Creating database {0}", DatabaseName);
                 database = await client.CreateDatabaseAsync(new Database { Id = DatabaseName });
 
-                Console.WriteLine("Creating collection {0}", DataCollectionName);
-                dataCollection = await this.CreatePartitionedCollectionAsync(database);
+                Console.WriteLine("Creating collection {0} with {1} RU/s", DataCollectionName, CollectionThroughput);
+                dataCollection = await this.CreatePartitionedCollectionAsync(DatabaseName, DataCollectionName);
+            }
+            else
+            {
+                OfferV2 offer = (OfferV2)client.CreateOfferQuery().Where(o => o.ResourceLink == dataCollection.SelfLink).AsEnumerable().FirstOrDefault();
+                int throughput = offer.Content.OfferThroughput;
+                Console.WriteLine("Found collection {0} with {1} RU/s", DataCollectionName, CollectionThroughput);
             }
 
             DocumentCollection metricCollection = GetCollectionIfExists(DatabaseName, MetricCollectionName);
@@ -140,7 +145,7 @@
                 metricCollectionDefinition.Id = MetricCollectionName;
                 metricCollectionDefinition.DefaultTimeToLive = defaultTimeToLive;
 
-                await ExecuteWithRetries<ResourceResponse<DocumentCollection>>(
+                metricCollection = await ExecuteWithRetries<ResourceResponse<DocumentCollection>>(
                    this.client,
                    () => client.CreateDocumentCollectionAsync(
                        UriFactory.CreateDatabaseUri(DatabaseName),
@@ -155,7 +160,7 @@
             }
 
             Console.WriteLine("Starting Inserts with {0} tasks", TaskCount);
-            Dictionary<string, object> sampleDocument = JsonConvert.DeserializeObject<Dictionary<string, object>>(File.ReadAllText(ConfigurationManager.AppSettings["DocumentTemplateFile"]));
+            string sampleDocument = File.ReadAllText(ConfigurationManager.AppSettings["DocumentTemplateFile"]);
 
             pendingTaskCount = TaskCount;
             var tasks = new List<Task>();
@@ -168,14 +173,22 @@
             }
 
             await Task.WhenAll(tasks);
+
+            if (bool.Parse(ConfigurationManager.AppSettings["ShouldCleanupOnFinish"]))
+            {
+                Console.WriteLine("Deleting Database {0}", DatabaseName);
+                await ExecuteWithRetries<ResourceResponse<Database>>(
+                   this.client,
+                   () => client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(DatabaseName)),
+                   true);
+            }
         }
 
-        private async Task InsertDocument(int taskId, DocumentClient client, DocumentCollection collection, IDictionary<string, object> sampleDocument, long numberOfDocumentsToInsert)
+        private async Task InsertDocument(int taskId, DocumentClient client, DocumentCollection collection, string sampleJson, long numberOfDocumentsToInsert)
         {
             requestUnitsConsumed[taskId] = 0;
             string partitionKeyProperty = collection.PartitionKey.Paths[0].Replace("/", "");
-            Dictionary<string, int> perPartitionCount = new Dictionary<string, int>();
-            Dictionary<string, object> newDictionary = new Dictionary<string, object>(sampleDocument);
+            Dictionary<string, object> newDictionary = JsonConvert.DeserializeObject<Dictionary<string, object>>(sampleJson);
 
             for (var i = 0; i < numberOfDocumentsToInsert; i++)
             {
@@ -186,18 +199,12 @@
                 {
                     ResourceResponse<Document> response = await ExecuteWithRetries<ResourceResponse<Document>>(
                         client,
-                        () => client.UpsertDocumentAsync(
+                        () => client.CreateDocumentAsync(
                             UriFactory.CreateDocumentCollectionUri(DatabaseName, DataCollectionName),
                             newDictionary,
                             new RequestOptions() { }));
 
                     string partition = response.SessionToken.Split(':')[0];
-                    if (!perPartitionCount.ContainsKey(partition))
-                    {
-                        perPartitionCount[partition] = 0;
-                    }
-
-                    perPartitionCount[partition]++;
                     requestUnitsConsumed[taskId] += response.RequestCharge;
                     Interlocked.Increment(ref this.documentsInserted);
                 }
@@ -297,22 +304,27 @@
         /// Create a partitioned collection.
         /// </summary>
         /// <returns>The created collection.</returns>
-        private async Task<DocumentCollection> CreatePartitionedCollectionAsync(Database database)
+        private async Task<DocumentCollection> CreatePartitionedCollectionAsync(string databaseName, string collectionName)
         {
-            DocumentCollection existingCollection = client.CreateDocumentCollectionQuery(database.SelfLink).Where(c => c.Id == DataCollectionName).AsEnumerable().FirstOrDefault();
-            if (existingCollection != null)
-            {
-                return existingCollection;
-            }
+            DocumentCollection existingCollection = GetCollectionIfExists(databaseName, collectionName);
 
             DocumentCollection collection = new DocumentCollection();
-            collection.Id = DataCollectionName;
+            collection.Id = collectionName;
             collection.PartitionKey.Paths.Add(ConfigurationManager.AppSettings["CollectionPartitionKey"]);
-            int collectionThroughput = int.Parse(ConfigurationManager.AppSettings["CollectionThroughput"]);
+
+            // Show user cost of running this test
+            double estimatedCostPerMonth = 0.06 * CollectionThroughput;
+            double estimatedCostPerHour = estimatedCostPerMonth / (24 * 30);
+            Console.WriteLine("The collection will cost an estimated ${0} per hour (${1} per month)", estimatedCostPerHour, estimatedCostPerMonth);
+            Console.WriteLine("Press enter to continue ...");
+            Console.ReadLine();
 
             return await ExecuteWithRetries<ResourceResponse<DocumentCollection>>(
                 this.client,
-                () => client.CreateDocumentCollectionAsync(database.SelfLink, collection, new RequestOptions { OfferThroughput = collectionThroughput }));
+                () => client.CreateDocumentCollectionAsync(
+                    UriFactory.CreateDatabaseUri(databaseName), 
+                    collection, 
+                    new RequestOptions { OfferThroughput = CollectionThroughput }));
         }
 
         /// <summary>
@@ -330,6 +342,11 @@
         /// <returns>The requested collection</returns>
         private DocumentCollection GetCollectionIfExists(string databaseName, string collectionName)
         {
+            if (GetDatabaseIfExists(databaseName) == null)
+            {
+                return null;
+            }
+
             return client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(databaseName))
                 .Where(c => c.Id == collectionName).AsEnumerable().FirstOrDefault();
         }
@@ -344,6 +361,7 @@
         public static async Task<V> ExecuteWithRetries<V>(DocumentClient client, Func<Task<V>> function, bool shouldLogRetries = false)
         {
             TimeSpan sleepTime = TimeSpan.Zero;
+            int[] expectedStatusCodes = new int[] { 429, 400, 503 };
 
             while (true)
             {
@@ -351,45 +369,48 @@
                 {
                     return await function();
                 }
-                catch (DocumentClientException de)
-                {
-                    if ((int)de.StatusCode != 429 && (int)de.StatusCode != 400 && (int)de.StatusCode != 503)
-                    {
-                        Trace.TraceError(de.ToString());
-                        throw de;
-                    }
-
-                    sleepTime = de.RetryAfter;
-                }
                 catch (System.Net.Http.HttpRequestException)
                 {
                     sleepTime = TimeSpan.FromSeconds(1);
                 }
-                catch (AggregateException ae)
+                catch (Exception e)
                 {
-                    if (!(ae.InnerException is DocumentClientException))
+                    DocumentClientException de;
+                    if (!TryExtractDocumentClientException(e, out de))
                     {
-                        Trace.TraceError(ae.ToString());
                         throw;
                     }
 
-                    DocumentClientException de = (DocumentClientException)ae.InnerException;
-                    if ((int)de.StatusCode != 429 && (int)de.StatusCode != 400 && (int)de.StatusCode != 503)
-                    {
-                        Trace.TraceError(de.ToString());
-                        throw de;
-                    }
-
                     sleepTime = de.RetryAfter;
-                }
-
-                if (shouldLogRetries)
-                {
-                    Console.WriteLine("Retrying after sleeping for {0}", sleepTime);
+                    if (shouldLogRetries)
+                    {
+                        Console.WriteLine("Retrying after sleeping for {0}", sleepTime);
+                    }
                 }
 
                 await Task.Delay(sleepTime);
             }
+        }
+
+        private static bool TryExtractDocumentClientException(Exception e, out DocumentClientException de)
+        {
+            if (e is DocumentClientException)
+            {
+                de = (DocumentClientException)e;
+                return true;
+            }
+
+            if (e is AggregateException)
+            {
+                if (e.InnerException is DocumentClientException)
+                {
+                    de = (DocumentClientException)e.InnerException;
+                    return true;
+                }
+            }
+
+            de = null;
+            return false;
         }
     }
 }
