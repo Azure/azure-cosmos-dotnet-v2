@@ -84,6 +84,7 @@
             
             // Querying for all documents
             QueryAllDocuments(collection.SelfLink);
+            await QueryAllDocumentsAsync(collection.SelfLink);
 
             // Querying for equality using ==
             QueryWithEquality(collection.SelfLink);
@@ -134,6 +135,23 @@
 
             // SQL
             families = client.CreateDocumentQuery<Family>(collectionLink, "SELECT * FROM Families", DefaultOptions);
+            Assert("Expected two families", families.ToList().Count == 2);
+        }
+
+        private static async Task QueryAllDocumentsAsync(string collectionLink)
+        {
+            // LINQ Query
+            var families = await
+                (from f in client.CreateDocumentQuery<Family>(collectionLink, DefaultOptions)
+                select f).QueryAsync();
+            Assert("Expected two families", families.ToList().Count == 2);
+
+            // LINQ Lambda
+            families = await client.CreateDocumentQuery<Family>(collectionLink, DefaultOptions).QueryAsync();
+            Assert("Expected two families", families.ToList().Count == 2);
+
+            // SQL
+            families = await client.CreateDocumentQuery<Family>(collectionLink, "SELECT * FROM Families", DefaultOptions).QueryAsync();
             Assert("Expected two families", families.ToList().Count == 2);
         }
 
