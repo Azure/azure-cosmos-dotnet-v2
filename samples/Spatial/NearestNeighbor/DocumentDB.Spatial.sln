@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", "{4BC78984-F2D8-4834-9472-0C03B1E9E986}"
+	ProjectSection(ProjectDependencies) = postProject
+		{402EE4D6-CAD8-4BBE-831F-8F95BA78C289} = {402EE4D6-CAD8-4BBE-831F-8F95BA78C289}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spatial", "Spatial\Spatial.csproj", "{402EE4D6-CAD8-4BBE-831F-8F95BA78C289}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4BC78984-F2D8-4834-9472-0C03B1E9E986}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4BC78984-F2D8-4834-9472-0C03B1E9E986}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4BC78984-F2D8-4834-9472-0C03B1E9E986}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4BC78984-F2D8-4834-9472-0C03B1E9E986}.Release|Any CPU.Build.0 = Release|Any CPU
+		{402EE4D6-CAD8-4BBE-831F-8F95BA78C289}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{402EE4D6-CAD8-4BBE-831F-8F95BA78C289}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{402EE4D6-CAD8-4BBE-831F-8F95BA78C289}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{402EE4D6-CAD8-4BBE-831F-8F95BA78C289}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
