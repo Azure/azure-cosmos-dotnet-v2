@@ -31,7 +31,7 @@
         private static readonly string MetricCollectionName = ConfigurationManager.AppSettings["MetricCollectionName"];
         private static readonly int CollectionThroughput = int.Parse(ConfigurationManager.AppSettings["CollectionThroughput"]);
 
-        private static readonly ConnectionPolicy ConnectionPolicy = new ConnectionPolicy { ConnectionMode = ConnectionMode.Gateway, ConnectionProtocol = Protocol.Https, RequestTimeout = new TimeSpan(1, 0, 0) };
+        private static readonly ConnectionPolicy ConnectionPolicy = new ConnectionPolicy { ConnectionMode = ConnectionMode.Direct, ConnectionProtocol = Protocol.Tcp, RequestTimeout = new TimeSpan(1, 0, 0) };
 
         private static readonly int TaskCount = int.Parse(ConfigurationManager.AppSettings["DegreeOfParallelism"]);
         private static readonly int DefaultConnectionLimit = int.Parse(ConfigurationManager.AppSettings["DegreeOfParallelism"]);
@@ -101,6 +101,8 @@
 
             finally
             {
+                Console.WriteLine("Press any key to exit...");
+                Console.ReadLine();
             }
         }
 
@@ -150,7 +152,7 @@
                    () => client.CreateDocumentCollectionAsync(
                        UriFactory.CreateDatabaseUri(DatabaseName),
                        new DocumentCollection { Id = MetricCollectionName },
-                       new RequestOptions { OfferThroughput = 5000 }), 
+                       new RequestOptions { OfferThroughput = 5000 }),
                    true);
             }
             else
