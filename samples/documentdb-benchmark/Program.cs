@@ -31,7 +31,7 @@
         private static readonly string MetricCollectionName = ConfigurationManager.AppSettings["MetricCollectionName"];
         private static readonly int CollectionThroughput = int.Parse(ConfigurationManager.AppSettings["CollectionThroughput"]);
 
-        private static readonly ConnectionPolicy ConnectionPolicy = new ConnectionPolicy { ConnectionMode = ConnectionMode.Gateway, ConnectionProtocol = Protocol.Https, RequestTimeout = new TimeSpan(1, 0, 0) };
+        private static readonly ConnectionPolicy ConnectionPolicy = new ConnectionPolicy { ConnectionMode = ConnectionMode.Direct, ConnectionProtocol = Protocol.Tcp, RequestTimeout = new TimeSpan(1, 0, 0) };
 
         private static readonly int TaskCount = int.Parse(ConfigurationManager.AppSettings["DegreeOfParallelism"]);
         private static readonly int DefaultConnectionLimit = int.Parse(ConfigurationManager.AppSettings["DegreeOfParallelism"]);
@@ -101,6 +101,8 @@
 
             finally
             {
+                Console.WriteLine("Press any key to exit...");
+                Console.ReadLine();
             }
         }
 
@@ -138,26 +140,26 @@
             // Configure to expire metrics for old clients if not updated for longer than a minute
             int defaultTimeToLive = 60;
 
-            if (metricCollection == null)
-            {
-                Console.WriteLine("Creating metric collection {0}", MetricCollectionName);
-                DocumentCollection metricCollectionDefinition = new DocumentCollection();
-                metricCollectionDefinition.Id = MetricCollectionName;
-                metricCollectionDefinition.DefaultTimeToLive = defaultTimeToLive;
+            //if (metricCollection == null)
+            //{
+            //    Console.WriteLine("Creating metric collection {0}", MetricCollectionName);
+            //    DocumentCollection metricCollectionDefinition = new DocumentCollection();
+            //    metricCollectionDefinition.Id = MetricCollectionName;
+            //    metricCollectionDefinition.DefaultTimeToLive = defaultTimeToLive;
 
-                metricCollection = await ExecuteWithRetries<ResourceResponse<DocumentCollection>>(
-                   this.client,
-                   () => client.CreateDocumentCollectionAsync(
-                       UriFactory.CreateDatabaseUri(DatabaseName),
-                       new DocumentCollection { Id = MetricCollectionName },
-                       new RequestOptions { OfferThroughput = 5000 }), 
-                   true);
-            }
-            else
-            {
-                metricCollection.DefaultTimeToLive = defaultTimeToLive;
-                await client.ReplaceDocumentCollectionAsync(metricCollection);
-            }
+            //    metricCollection = await ExecuteWithRetries<ResourceResponse<DocumentCollection>>(
+            //       this.client,
+            //       () => client.CreateDocumentCollectionAsync(
+            //           UriFactory.CreateDatabaseUri(DatabaseName),
+            //           new DocumentCollection { Id = MetricCollectionName },
+            //           new RequestOptions { OfferThroughput = 5000 }), 
+            //       true);
+            //}
+            //else
+            //{
+            //    metricCollection.DefaultTimeToLive = defaultTimeToLive;
+            //    await client.ReplaceDocumentCollectionAsync(metricCollection);
+            //}
 
             Console.WriteLine("Starting Inserts with {0} tasks", TaskCount);
             string sampleDocument = File.ReadAllText(ConfigurationManager.AppSettings["DocumentTemplateFile"]);
@@ -262,7 +264,7 @@
                 latestStats["requestUnitsPerMonthBasedOnLastSecond"] =
                     Math.Round(((requestUnits - lastRequestUnits) / (seconds - lastSeconds)) * 86400 * 30);
 
-                await InsertMetricsToDocumentDB(latestStats);
+                //await InsertMetricsToDocumentDB(latestStats);
 
                 lastCount = documentsInserted;
                 lastSeconds = seconds;
