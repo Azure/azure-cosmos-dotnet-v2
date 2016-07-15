@@ -1,4 +1,16 @@
 
+There is a known issue when attempting to extract partition routing information when the query spans multiple partitions in a 32 bit process for .NET SDK version 1.9.0. This issue results in the following exception: System.BadImageFormatException: Could not load file or assembly Microsoft.Azure.Documents.ServiceInterop.dll or one of its dependencies. The module was expected to contain an assembly manifest, set the platform to x64 and rebuild your application to resolve this issue.
+
+## Changes in 1.9.0 : ##
+
+- Changed the default connection mode for the .NET client to ConnectionMode.Direct to improve performance by using Direct connectivity with TCP. Deprecated the ConnectionPolicy.ConnectionProtocol property and added a DirectHttps value to the ConnectionMode enumeration. 
+- Fixed a bug for globally replicated accounts where Upsert calls were being directed to read locations instead of write locations.
+- Added methods to the IDocumentClient interface that were missing which include: UpsertAttachmentAsync method that takes mediaStream and options as parameters, CreateAttachmentAsync method that takes options as a parameter, and CreateOfferQuery method that takes querySpec as a parameter. 
+- Unsealed public classes that are exposed in the IDocumentClient interface. 
+- Added support for parallel queries for partitioned collections. 
+- Added cross partition Order By support for partitioned collections. 
+
+
 ## Changes in 1.8.0 : ##
 
 - Added the support for multi-region database accounts.
