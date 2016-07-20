@@ -1,5 +1,11 @@
+## Changes in 1.9.1 : ##
 
-There is a known issue when attempting to extract partition routing information when the query spans multiple partitions in a 32 bit process for .NET SDK version 1.9.0. This issue results in the following exception: System.BadImageFormatException: Could not load file or assembly Microsoft.Azure.Documents.ServiceInterop.dll or one of its dependencies. The module was expected to contain an assembly manifest, set the platform to x64 and rebuild your application to resolve this issue.
+- Added support for SELECT VALUE for parallel queries, cross-partition TOP queries, and cross-partition ORDER BY queries.
+- Improved the performance of cross-partition TOP and ORDER BY queries.
+- Updated an error message to clarify that if you receive an unhandled System.NotSupportedException when running queries against partitioned collections, uncheck the "Prefer 32-bit" option in your project properties window, on the Build tab, to avoid the error.
+- Fixed the missing references to DocumentDB.Spatial.Sql.dll and Microsoft.Azure.Documents.ServiceInterop.dll that are required when referencing a DocumentDB project with a reference to the DocumentDB Nuget package.
+- Fixed the ability to use parameters of different types when using user defined functions in LINQ. 
+
 
 ## Changes in 1.9.0 : ##
 
