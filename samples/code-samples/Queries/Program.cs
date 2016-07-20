@@ -115,6 +115,12 @@
             // Query with explict Paging
             await QueryWithPagingAsync(collection.SelfLink);
             
+            // Query across multiple partitions in parallel
+            await QueryPartitionedCollectionInParallelAsync(collection.SelfLink);
+
+            // Query using order by across multiple partitions
+            await QueryWithOrderByForPartitionedCollectionAsync(collection.SelfLink);
+            
             //Cleanup
              await client.DeleteDatabaseAsync(database.SelfLink);
         }
@@ -654,6 +660,154 @@
                 if (f.Id != "WakefieldFamily") throw new ApplicationException("Should only be the second family");
             }
         }
+        
+        private static async Task QueryPartitionedCollectionInParallelAsync(string collectionLink)
+        {
+            // The .NET client automatically iterates through all the pages of query results 
+            // Developers can explicitly control paging by creating an IDocumentQueryable 
+            // using the IQueryable object, then by reading the ResponseContinuationToken values 
+            // and passing them back as RequestContinuationToken in FeedOptions.
+
+            List<Family> familiesSerial = new List<Family>();
+            String queryText = "SELECT * FROM Families";
+
+            // 0 maximum parallel tasks, effectively serial execution
+            FeedOptions options = new FeedOptions
+            {
+                MaxDegreeOfParallelism = 0,
+                MaxBufferedItemCount = 100,
+                EnableCrossPartitionQuery = true
+            };
+
+            var query = client.CreateDocumentQuery<Family>(collectionLink, queryText, options).AsDocumentQuery();
+            while (query.HasMoreResults)
+            {
+                foreach (Family family in await query.ExecuteNextAsync().ConfigureAwait(false))
+                {
+                    familiesSerial.Add(family);
+                }
+            }
+
+            Assert("Parallel Query expected two families", familiesSerial.ToList().Count == 2);
+
+            // 1 maximum parallel tasks, 1 dedicated asynchrousnous task to continuously make REST calls
+            List<Family> familiesParallel1= new List<Family>();
+            options = new FeedOptions
+            {
+                MaxDegreeOfParallelism = 1,
+                MaxBufferedItemCount = 100,
+                EnableCrossPartitionQuery = true
+            };
+
+            query = client.CreateDocumentQuery<Family>(collectionLink, options).AsDocumentQuery();
+            while (query.HasMoreResults)
+            {
+                foreach (Family family in await query.ExecuteNextAsync())
+                {
+                    familiesParallel1.Add(family);
+                }
+            }
+
+            Assert("Parallel Query expected two families", familiesParallel1.ToList().Count == 2);
+            AssertSequenceEqual("Parallel query returns result out of order compared to serial execution", familiesSerial, familiesParallel1);
+
+
+            // 10 maximum parallel tasks, a maximum of 10 dedicated asynchrousnous tasks to continuously make REST calls
+            List<Family> familiesParallel10 = new List<Family>();
+            options = new FeedOptions
+            {
+                MaxDegreeOfParallelism = 10,
+                MaxBufferedItemCount = 100,
+                EnableCrossPartitionQuery = true
+            };
+
+            query = client.CreateDocumentQuery<Family>(collectionLink, options).AsDocumentQuery();
+            while (query.HasMoreResults)
+            {
+                foreach (Family family in await query.ExecuteNextAsync())
+                {
+                    familiesParallel10.Add(family);
+                }
+            }
+
+            Assert("Parallel Query expected two families", familiesParallel10.ToList().Count == 2);
+            AssertSequenceEqual("Parallel query returns result out of order compared to serial execution", familiesSerial, familiesParallel10);
+        }
+        
+        private static async Task QueryWithOrderByForPartitionedCollectionAsync(string collectionLink)
+        {
+            // The .NET client automatically iterates through all the pages of query results 
+            // Developers can explicitly control paging by creating an IDocumentQueryable 
+            // using the IQueryable object, then by reading the ResponseContinuationToken values 
+            // and passing them back as RequestContinuationToken in FeedOptions.
+
+            List<Family> familiesSerial = new List<Family>();
+            String queryText = "SELECT * FROM Families order by Families.LastName";
+
+            // 0 maximum parallel tasks, effectively serial execution
+            FeedOptions options = new FeedOptions
+            {
+                MaxDegreeOfParallelism = 0,
+                MaxBufferedItemCount = 100,
+                EnableCrossPartitionQuery = true
+            };
+
+            var query = client.CreateDocumentQuery<Family>(collectionLink, queryText, options).AsDocumentQuery();
+            while (query.HasMoreResults)
+            {
+                foreach (Family family in await query.ExecuteNextAsync())
+                {
+                    familiesSerial.Add(family);
+                }
+            }
+
+            Assert("Order By Query expected two families", familiesSerial.ToList().Count == 2);
+
+            // 1 maximum parallel tasks, 1 dedicated asynchrousnous task to continuously make REST calls
+            List<Family> familiesParallel1 = new List<Family>();
+            options = new FeedOptions
+            {
+                MaxDegreeOfParallelism = 1,
+                MaxBufferedItemCount = 100,
+                EnableCrossPartitionQuery = true
+            };
+
+            // using AsDocumentQuery you get access to whether or not the query HasMoreResults
+            // If it does, just call ExecuteNextAsync until there are no more results
+            // No need to supply a continuation token here as the server keeps track of progress
+            query = client.CreateDocumentQuery<Family>(collectionLink, queryText, options).AsDocumentQuery();
+            while (query.HasMoreResults)
+            {
+                foreach (Family family in await query.ExecuteNextAsync())
+                {
+                    familiesParallel1.Add(family);
+                }
+            }
+
+            Assert("Order By Query expected two families", familiesParallel1.ToList().Count == 2);
+            AssertSequenceEqual("Parallel query returns result out of order compared to serial execution", familiesSerial, familiesParallel1);
+
+            // 10 maximum parallel tasks, a maximum of 10 dedicated asynchrousnous tasks to continuously make REST calls
+            List<Family> familiesParallel10 = new List<Family>();
+            options = new FeedOptions
+            {
+                MaxDegreeOfParallelism = 10,
+                MaxBufferedItemCount = 100,
+                EnableCrossPartitionQuery = true
+            };
+
+            query = client.CreateDocumentQuery<Family>(collectionLink, queryText, options).AsDocumentQuery();
+            while (query.HasMoreResults)
+            {
+                foreach (Family family in await query.ExecuteNextAsync())
+                {
+                    familiesParallel10.Add(family);
+                }
+            }
+
+            Assert("Order By Query expected two families", familiesParallel10.ToList().Count == 2);
+            AssertSequenceEqual("Parallel query returns result out of order compared to serial execution", familiesSerial, familiesParallel10);
+        }
 
         /// <summary>
         /// Creates the documents used in this Sample
@@ -794,6 +948,15 @@
         private static void Assert(string message, bool condition)
         {
             if (!condition)
+            {
+                throw new ApplicationException(message);
+            }
+        }
+        
+        private static void AssertSequenceEqual(string message, List<Family> list1, List<Family> list2)
+        {
+            if(!string.Join(",", list1.Select(family => family.Id).ToArray()).Equals(
+                string.Join(",", list1.Select(family => family.Id).ToArray())))
             {
                 throw new ApplicationException(message);
             }
