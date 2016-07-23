@@ -1,20 +1,19 @@
-## Changes in 1.9.1 : ##
+## Changes in 1.9.2 : ##
 
-- Added support for SELECT VALUE for parallel queries, cross-partition TOP queries, and cross-partition ORDER BY queries.
-- Improved the performance of cross-partition TOP and ORDER BY queries.
-- Updated an error message to clarify that if you receive an unhandled System.NotSupportedException when running queries against partitioned collections, uncheck the "Prefer 32-bit" option in your project properties window, on the Build tab, to avoid the error.
+**Important:**
+You may receive System.NotSupportedException when querying partitioned collections. To avoid this error, uncheck the "Prefer 32-bit" option in your project properties window, on the Build tab.
+
+- Added support for parallel queries for partitioned collections.
+- Added support for cross partition ORDER BY and TOP queries for partitioned collections.
 - Fixed the missing references to DocumentDB.Spatial.Sql.dll and Microsoft.Azure.Documents.ServiceInterop.dll that are required when referencing a DocumentDB project with a reference to the DocumentDB Nuget package.
 - Fixed the ability to use parameters of different types when using user defined functions in LINQ. 
-
-
-## Changes in 1.9.0 : ##
-
-- Changed the default connection mode for the .NET client to ConnectionMode.Direct to improve performance by using Direct connectivity with TCP. Deprecated the ConnectionPolicy.ConnectionProtocol property and added a DirectHttps value to the ConnectionMode enumeration. 
 - Fixed a bug for globally replicated accounts where Upsert calls were being directed to read locations instead of write locations.
-- Added methods to the IDocumentClient interface that were missing which include: UpsertAttachmentAsync method that takes mediaStream and options as parameters, CreateAttachmentAsync method that takes options as a parameter, and CreateOfferQuery method that takes querySpec as a parameter. 
-- Unsealed public classes that are exposed in the IDocumentClient interface. 
-- Added support for parallel queries for partitioned collections. 
-- Added cross partition Order By support for partitioned collections. 
+- Added methods to the IDocumentClient interface that were missing: 
+	- UpsertAttachmentAsync method that takes mediaStream and options as parameters.
+    - CreateAttachmentAsync method that takes options as a parameter.
+    - CreateOfferQuery method that takes querySpec as a parameter.
+
+- Unsealed public classes that are exposed in the IDocumentClient interface.
 
 
 ## Changes in 1.8.0 : ##
