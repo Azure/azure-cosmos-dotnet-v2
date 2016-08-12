@@ -28,13 +28,21 @@
     {
         private static readonly string DatabaseName = ConfigurationManager.AppSettings["DatabaseName"];
         private static readonly string DataCollectionName = ConfigurationManager.AppSettings["CollectionName"];
-        private static readonly string MetricCollectionName = ConfigurationManager.AppSettings["MetricCollectionName"];
         private static readonly int CollectionThroughput = int.Parse(ConfigurationManager.AppSettings["CollectionThroughput"]);
 
-        private static readonly ConnectionPolicy ConnectionPolicy = new ConnectionPolicy { ConnectionMode = ConnectionMode.Direct, ConnectionProtocol = Protocol.Tcp, RequestTimeout = new TimeSpan(1, 0, 0) };
+        private static readonly ConnectionPolicy ConnectionPolicy = new ConnectionPolicy 
+        { 
+            ConnectionMode = ConnectionMode.Direct, 
+            ConnectionProtocol = Protocol.Tcp, 
+            RequestTimeout = new TimeSpan(1, 0, 0), 
+            MaxConnectionLimit = 1000, 
+            RetryOptions = new RetryOptions 
+            { 
+                MaxRetryAttemptsOnThrottledRequests = 100,
+                MaxRetryWaitTimeInSeconds = 60
+            } 
+        };
 
-        private static readonly int TaskCount = int.Parse(ConfigurationManager.AppSettings["DegreeOfParallelism"]);
-        private static readonly int DefaultConnectionLimit = int.Parse(ConfigurationManager.AppSettings["DegreeOfParallelism"]);
         private static readonly string InstanceId = Dns.GetHostEntry("LocalHost").HostName + Process.GetCurrentProcess().Id;
         private const int MinThreadPoolSize = 100;
 
@@ -58,9 +66,6 @@
         /// <param name="args">command line arguments.</param>
         public static void Main(string[] args)
         {
-            ServicePointManager.UseNagleAlgorithm = true;
-            ServicePointManager.Expect100Continue = true;
-            ServicePointManager.DefaultConnectionLimit = DefaultConnectionLimit;
             ThreadPool.SetMinThreads(MinThreadPoolSize, MinThreadPoolSize);
 
             string endpoint = ConfigurationManager.AppSettings["EndPointUrl"];
@@ -71,7 +76,7 @@
             Console.WriteLine("Endpoint: {0}", endpoint);
             Console.WriteLine("Collection : {0}.{1} at {2} request units per second", DatabaseName, DataCollectionName, ConfigurationManager.AppSettings["CollectionThroughput"]);
             Console.WriteLine("Document Template*: {0}", ConfigurationManager.AppSettings["DocumentTemplateFile"]);
-            Console.WriteLine("Degree of parallelism*: {0}", TaskCount);
+            Console.WriteLine("Degree of parallelism*: {0}", ConfigurationManager.AppSettings["DegreeOfParallelism"]);
             Console.WriteLine("--------------------------------------------------------------------- ");
             Console.WriteLine();
 
@@ -112,7 +117,9 @@
         /// <returns>a Task object.</returns>
         private async Task RunAsync()
         {
+            
             DocumentCollection dataCollection = GetCollectionIfExists(DatabaseName, DataCollectionName);
+            int currentCollectionThroughput = 0;
 
             if (bool.Parse(ConfigurationManager.AppSettings["ShouldCleanupOnStart"]) || dataCollection == null)
             {
@@ -127,49 +134,39 @@
 
                 Console.WriteLine("Creating collection {0} with {1} RU/s", DataCollectionName, CollectionThroughput);
                 dataCollection = await this.CreatePartitionedCollectionAsync(DatabaseName, DataCollectionName);
+
+                currentCollectionThroughput = CollectionThroughput;
             }
             else
             {
                 OfferV2 offer = (OfferV2)client.CreateOfferQuery().Where(o => o.ResourceLink == dataCollection.SelfLink).AsEnumerable().FirstOrDefault();
-                int throughput = offer.Content.OfferThroughput;
-                Console.WriteLine("Found collection {0} with {1} RU/s", DataCollectionName, CollectionThroughput);
+                currentCollectionThroughput = offer.Content.OfferThroughput;
+
+                Console.WriteLine("Found collection {0} with {1} RU/s", DataCollectionName, currentCollectionThroughput);
             }
 
-            DocumentCollection metricCollection = GetCollectionIfExists(DatabaseName, MetricCollectionName);
+            int taskCount;
+            int degreeOfParallelism = int.Parse(ConfigurationManager.AppSettings["DegreeOfParallelism"]);
 
-            // Configure to expire metrics for old clients if not updated for longer than a minute
-            int defaultTimeToLive = 60;
-
-            if (metricCollection == null)
+            if (degreeOfParallelism == -1)
             {
-                Console.WriteLine("Creating metric collection {0}", MetricCollectionName);
-                DocumentCollection metricCollectionDefinition = new DocumentCollection();
-                metricCollectionDefinition.Id = MetricCollectionName;
-                metricCollectionDefinition.DefaultTimeToLive = defaultTimeToLive;
-
-                metricCollection = await ExecuteWithRetries<ResourceResponse<DocumentCollection>>(
-                   this.client,
-                   () => client.CreateDocumentCollectionAsync(
-                       UriFactory.CreateDatabaseUri(DatabaseName),
-                       new DocumentCollection { Id = MetricCollectionName },
-                       new RequestOptions { OfferThroughput = 5000 }),
-                   true);
+                // set TaskCount = 10 for each 10k RUs
+                taskCount = currentCollectionThroughput / 1000;
             }
             else
             {
-                metricCollection.DefaultTimeToLive = defaultTimeToLive;
-                await client.ReplaceDocumentCollectionAsync(metricCollection);
+                taskCount = degreeOfParallelism;
             }
 
-            Console.WriteLine("Starting Inserts with {0} tasks", TaskCount);
+            Console.WriteLine("Starting Inserts with {0} tasks", taskCount);
             string sampleDocument = File.ReadAllText(ConfigurationManager.AppSettings["DocumentTemplateFile"]);
 
-            pendingTaskCount = TaskCount;
+            pendingTaskCount = taskCount;
             var tasks = new List<Task>();
             tasks.Add(this.LogOutputStats());
 
-            long numberOfDocumentsToInsert = long.Parse(ConfigurationManager.AppSettings["NumberOfDocumentsToInsert"])/TaskCount;
-            for (var i = 0; i < TaskCount; i++)
+            long numberOfDocumentsToInsert = long.Parse(ConfigurationManager.AppSettings["NumberOfDocumentsToInsert"]) / taskCount;
+            for (var i = 0; i < taskCount; i++)
             {
                 tasks.Add(this.InsertDocument(i, client, dataCollection, sampleDocument, numberOfDocumentsToInsert));
             }
@@ -179,10 +176,7 @@
             if (bool.Parse(ConfigurationManager.AppSettings["ShouldCleanupOnFinish"]))
             {
                 Console.WriteLine("Deleting Database {0}", DatabaseName);
-                await ExecuteWithRetries<ResourceResponse<Database>>(
-                   this.client,
-                   () => client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(DatabaseName)),
-                   true);
+                await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(DatabaseName));
             }
         }
 
@@ -199,12 +193,10 @@
 
                 try
                 {
-                    ResourceResponse<Document> response = await ExecuteWithRetries<ResourceResponse<Document>>(
-                        client,
-                        () => client.CreateDocumentAsync(
+                    ResourceResponse<Document> response = await client.CreateDocumentAsync(
                             UriFactory.CreateDocumentCollectionUri(DatabaseName, DataCollectionName),
                             newDictionary,
-                            new RequestOptions() { }));
+                            new RequestOptions() { });
 
                     string partition = response.SessionToken.Split(':')[0];
                     requestUnitsConsumed[taskId] += response.RequestCharge;
@@ -252,20 +244,6 @@
                     Math.Round(ruPerSecond),
                     Math.Round(ruPerMonth / (1000 * 1000 * 1000)));
 
-                Dictionary<string, object> latestStats = new Dictionary<string, object>();
-                latestStats["id"] = string.Format("latest{0}", InstanceId);
-                latestStats["type"] = "latest";
-                latestStats["totalDocumentsCreated"] = currentCount;
-                latestStats["documentsCreatedPerSecond"] = Math.Round(this.documentsInserted / seconds);
-                latestStats["requestUnitsPerSecond"] = Math.Round(ruPerSecond);
-                latestStats["requestUnitsPerMonth"] = Math.Round(ruPerSecond) * 86400 * 30;
-                latestStats["documentsCreatedInLastSecond"] = Math.Round((currentCount - lastCount) / (seconds - lastSeconds));
-                latestStats["requestUnitsInLastSecond"] = Math.Round((requestUnits - lastRequestUnits) / (seconds - lastSeconds));
-                latestStats["requestUnitsPerMonthBasedOnLastSecond"] =
-                    Math.Round(((requestUnits - lastRequestUnits) / (seconds - lastSeconds)) * 86400 * 30);
-
-                await InsertMetricsToDocumentDB(latestStats);
-
                 lastCount = documentsInserted;
                 lastSeconds = seconds;
                 lastRequestUnits = requestUnits;
@@ -286,22 +264,6 @@
             Console.WriteLine("--------------------------------------------------------------------- ");
         }
 
-        private async Task InsertMetricsToDocumentDB(Dictionary<string, object> latestStats)
-        {
-            try
-            {
-                await ExecuteWithRetries<ResourceResponse<Document>>(
-                    client,
-                    () => client.UpsertDocumentAsync(
-                        UriFactory.CreateDocumentCollectionUri(DatabaseName, MetricCollectionName),
-                        latestStats));
-            }
-            catch (Exception e)
-            {
-                Trace.TraceError("Insert metrics document failed with {0}", e);
-            }
-        }
-
         /// <summary>
         /// Create a partitioned collection.
         /// </summary>
@@ -317,16 +279,14 @@
             // Show user cost of running this test
             double estimatedCostPerMonth = 0.06 * CollectionThroughput;
             double estimatedCostPerHour = estimatedCostPerMonth / (24 * 30);
-            Console.WriteLine("The collection will cost an estimated ${0} per hour (${1} per month)", estimatedCostPerHour, estimatedCostPerMonth);
+            Console.WriteLine("The collection will cost an estimated ${0} per hour (${1} per month)", Math.Round(estimatedCostPerHour, 2), Math.Round(estimatedCostPerMonth, 2));
             Console.WriteLine("Press enter to continue ...");
             Console.ReadLine();
 
-            return await ExecuteWithRetries<ResourceResponse<DocumentCollection>>(
-                this.client,
-                () => client.CreateDocumentCollectionAsync(
+            return await client.CreateDocumentCollectionAsync(
                     UriFactory.CreateDatabaseUri(databaseName), 
                     collection, 
-                    new RequestOptions { OfferThroughput = CollectionThroughput }));
+                    new RequestOptions { OfferThroughput = CollectionThroughput });
         }
 
         /// <summary>
@@ -351,68 +311,6 @@
 
             return client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(databaseName))
                 .Where(c => c.Id == collectionName).AsEnumerable().FirstOrDefault();
-        }
-
-        /// <summary>
-        /// Execute the function with retries on throttle.
-        /// </summary>
-        /// <typeparam name="V">The type of return value from the execution.</typeparam>
-        /// <param name="client">The DocumentDB client instance.</param>
-        /// <param name="function">The function to execute.</param>
-        /// <returns>The response from the execution.</returns>
-        public static async Task<V> ExecuteWithRetries<V>(DocumentClient client, Func<Task<V>> function, bool shouldLogRetries = false)
-        {
-            TimeSpan sleepTime = TimeSpan.Zero;
-            int[] expectedStatusCodes = new int[] { 429, 400, 503 };
-
-            while (true)
-            {
-                try
-                {
-                    return await function();
-                }
-                catch (System.Net.Http.HttpRequestException)
-                {
-                    sleepTime = TimeSpan.FromSeconds(1);
-                }
-                catch (Exception e)
-                {
-                    DocumentClientException de;
-                    if (!TryExtractDocumentClientException(e, out de))
-                    {
-                        throw;
-                    }
-
-                    sleepTime = de.RetryAfter;
-                    if (shouldLogRetries)
-                    {
-                        Console.WriteLine("Retrying after sleeping for {0}", sleepTime);
-                    }
-                }
-
-                await Task.Delay(sleepTime);
-            }
-        }
-
-        private static bool TryExtractDocumentClientException(Exception e, out DocumentClientException de)
-        {
-            if (e is DocumentClientException)
-            {
-                de = (DocumentClientException)e;
-                return true;
-            }
-
-            if (e is AggregateException)
-            {
-                if (e.InnerException is DocumentClientException)
-                {
-                    de = (DocumentClientException)e.InnerException;
-                    return true;
-                }
-            }
-
-            de = null;
-            return false;
         }
     }
 }
