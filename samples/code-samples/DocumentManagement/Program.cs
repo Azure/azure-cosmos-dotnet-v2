@@ -265,7 +265,7 @@
 
         private static SalesOrder GetSalesOrderSample(string documentId)
         {
-            return new SalesOrder
+            SalesOrder salesOrder = new SalesOrder
             {
                 Id = documentId,
                 AccountNumber = "Account1",
@@ -286,7 +286,13 @@
                     }
                 },
             };
+
+            // Set the "ttl" property to auto-expire sales orders in 30 days 
+            salesOrder.TimeToLive = 60 * 60 * 24 * 30;
+
+            return salesOrder;
         }
+
         private static SalesOrder2 GetSalesOrderV2Sample(string documentId)
         {
             return new SalesOrder2
@@ -363,7 +369,6 @@
             salesOrder.foo = "bar";
 
             //now do a replace using this dynamic document
-            //notice here you don't have to set collectionLink, or documentSelfLink, 
             //everything that is needed is contained in the readDynOrder object 
             //it has a .self Property
             Console.WriteLine("\nReplacing document");

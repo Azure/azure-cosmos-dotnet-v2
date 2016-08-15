@@ -19,6 +19,11 @@
 
         [JsonProperty(PropertyName="ponumber")]
         public string PurchaseOrderNumber { get; set; }
+
+        // used to set expiration policy
+        [JsonProperty(PropertyName = "ttl", NullValueHandling = NullValueHandling.Ignore)]
+        public int? TimeToLive { get; set; }
+
         public DateTime OrderDate { get; set; }
         public DateTime ShippedDate { get; set; }
         public string AccountNumber { get; set; }
