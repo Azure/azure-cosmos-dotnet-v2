@@ -108,7 +108,11 @@
         {
             DocumentCollection simpleCollection = await CreateCollection();
 
+            await CreatePartitionedCollection();
+
             await CreateCollectionWithCustomIndexingPolicy();
+
+            await CreateCollectionWithTtlExpiration();
 
             await GetAndChangeCollectionPerformance(simpleCollection);
 
@@ -132,6 +136,25 @@
             return simpleCollection;
         }
 
+        private static async Task<DocumentCollection> CreatePartitionedCollection()
+        {
+            // Define "deviceId" as the partition key
+            // Set throughput to the minimum value of 10,100 RU/s
+
+            DocumentCollection collectionDefinition = new DocumentCollection();
+            collectionDefinition.Id = "PartitionedCollection";
+            collectionDefinition.PartitionKey.Paths.Add("/deviceId");
+
+            DocumentCollection partitionedCollection = await client.CreateDocumentCollectionAsync(
+                UriFactory.CreateDatabaseUri(databaseName),
+                collectionDefinition,
+                new RequestOptions { OfferThroughput = 10100 });
+
+            Console.WriteLine("\n1.1. Created Collection \n{0}", partitionedCollection);
+
+            return partitionedCollection;
+        }
+
         private static async Task CreateCollectionWithCustomIndexingPolicy()
         {
             // Create a collection with custom index policy (lazy indexing)
@@ -146,6 +169,20 @@
                 new RequestOptions { OfferThroughput = 400 });
 
             Console.WriteLine("1.2. Created Collection {0}, with custom index policy \n{1}", collectionWithLazyIndexing.Id, collectionWithLazyIndexing.IndexingPolicy);
+        }
+
+        private static async Task CreateCollectionWithTtlExpiration()
+        {
+            DocumentCollection collectionDefinition = new DocumentCollection();
+            collectionDefinition.Id = "TtlExpiryCollection";
+            collectionDefinition.DefaultTimeToLive = 60 * 60 * 24; //expire in 1 day
+
+            DocumentCollection ttlEnabledCollection = await client.CreateDocumentCollectionAsync(
+                UriFactory.CreateDatabaseUri(databaseName),
+                collectionDefinition,
+                new RequestOptions { OfferThroughput = 400 });
+
+            Console.WriteLine("\n1.3. Created Collection \n{0} with TTL expiration of {1}", ttlEnabledCollection.Id, ttlEnabledCollection.DefaultTimeToLive);
         }
         
         private static async Task GetAndChangeCollectionPerformance(DocumentCollection simpleCollection)

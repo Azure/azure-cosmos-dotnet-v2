@@ -1,17 +1,12 @@
 ﻿namespace DocumentDB.Samples.DocumentManagement
 {
-    using DocumentDB.Samples.Shared;
+    using Shared;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
-    using Microsoft.Azure.Documents.Linq;
-    using Newtonsoft.Json;
     using System;
-    using System.Collections.Generic;
     using System.Configuration;
-    using System.IO;
     using System.Linq;
     using System.Net;
-    using System.Text;
     using System.Threading.Tasks;
 
     // ----------------------------------------------------------------------------------------------------------
@@ -55,32 +50,39 @@
     
     public class Program
     {
-        //Read config
+        // Read config
         private static readonly string endpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
         private static readonly string authorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
         private static readonly string databaseName = ConfigurationManager.AppSettings["DatabaseId"];
         private static readonly string collectionName = ConfigurationManager.AppSettings["CollectionId"];
-        private static readonly ConnectionPolicy connectionPolicy = new ConnectionPolicy { UserAgentSuffix = " samples-net/3" };
 
         //Reusable instance of DocumentClient which represents the connection to a DocumentDB endpoint
         private static DocumentClient client;
+
         public static void Main(string[] args)
         {
             try
             {
-                //Get a single instance of Document client and reuse this for all the samples
-                //This is the recommended approach for DocumentClient as opposed to new'ing up new instances each time
-                using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey))
+                ConnectionPolicy connectionPolicy = new ConnectionPolicy();
+                connectionPolicy.UserAgentSuffix = " samples-net/3";
+                connectionPolicy.ConnectionMode = ConnectionMode.Direct;
+                connectionPolicy.ConnectionProtocol = Protocol.Tcp;
+
+                // Set the read region selection preference order
+                connectionPolicy.PreferredLocations.Add(LocationNames.EastUS); // first preference
+                connectionPolicy.PreferredLocations.Add(LocationNames.NorthEurope); // second preference
+                connectionPolicy.PreferredLocations.Add(LocationNames.SoutheastAsia); // third preference
+
+                using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey, connectionPolicy))
                 {
-                    //ensure the database & collection exist before running samples
                     Initialize().Wait();
 
                     RunDocumentsDemo().Wait();
 
-                    //Clean-up environment
                     Cleanup();
                 }
             }
+#if !DEBUG
             catch (DocumentClientException de)
             {
                 Exception baseException = de.GetBaseException();
@@ -91,9 +93,10 @@
                 Exception baseException = e.GetBaseException();
                 Console.WriteLine("Error: {0}, Message: {1}", e.Message, baseException.Message);
             }
+#endif
             finally
             {
-                Console.WriteLine("\nEnd of demo, press any key to exit.");
+                Console.WriteLine("End of demo, press any key to exit.");
                 Console.ReadKey();
             }
         }
@@ -138,19 +141,19 @@
 
         private static async Task CreateDocumentsAsync()
         {
-            Uri collectionLink = UriFactory.CreateDocumentCollectionUri(databaseName, collectionName);
+            Uri collectionUri = UriFactory.CreateDocumentCollectionUri(databaseName, collectionName);
 
             Console.WriteLine("\n1.1 - Creating documents");
 
             // Create a SalesOrder object. This object has nested properties and various types including numbers, DateTimes and strings.
             // This can be saved as JSON as is without converting into rows/columns.
             SalesOrder salesOrder = GetSalesOrderSample("SalesOrder1");
-            await client.CreateDocumentAsync(collectionLink, salesOrder);
+            await client.CreateDocumentAsync(collectionUri, salesOrder);
 
             // As your app evolves, let's say your object has a new schema. You can insert SalesOrderV2 objects without any 
             // changes to the database tier.
             SalesOrder2 newSalesOrder = GetSalesOrderV2Sample("SalesOrder2");
-            await client.CreateDocumentAsync(collectionLink, newSalesOrder);
+            await client.CreateDocumentAsync(collectionUri, newSalesOrder);
         }
 
         private static async Task ReadDocumentAsync()
@@ -185,6 +188,7 @@
                 Console.WriteLine(document);
             }
         }
+
         private static SalesOrder QueryDocuments()
         {
             //******************************************************************************************************************
@@ -212,6 +216,7 @@
 
             return querySalesOrder;
         }
+
         private static async Task ReplaceDocumentAsync(SalesOrder order)
         {
             //******************************************************************************************************************
@@ -230,6 +235,7 @@
             Console.WriteLine("Request charge of replace operation: {0}", response.RequestCharge);
             Console.WriteLine("Shipped date of updated document: {0}", updated.GetPropertyValue<DateTime>("ShippedDate"));
         }
+
         private static async Task UpsertDocumentAsync()
         {
             Console.WriteLine("\n1.6 - Upserting a document");
@@ -252,6 +258,7 @@
             Console.WriteLine("Id of upserted document: {0}", upserted.Id);
             Console.WriteLine("AccountNumber of upserted document: {0}", upserted.GetPropertyValue<string>("AccountNumber"));
         }
+
         private static async Task DeleteDocumentAsync()
         {
             Console.WriteLine("\n1.7 - Deleting a document");
@@ -265,7 +272,7 @@
 
         private static SalesOrder GetSalesOrderSample(string documentId)
         {
-            return new SalesOrder
+            SalesOrder salesOrder = new SalesOrder
             {
                 Id = documentId,
                 AccountNumber = "Account1",
@@ -286,7 +293,13 @@
                     }
                 },
             };
+
+            // Set the "ttl" property to auto-expire sales orders in 30 days 
+            salesOrder.TimeToLive = 60 * 60 * 24 * 30;
+
+            return salesOrder;
         }
+
         private static SalesOrder2 GetSalesOrderV2Sample(string documentId)
         {
             return new SalesOrder2
@@ -320,7 +333,6 @@
 
         /// <summary>
         /// 2. Basic CRUD operations using dynamics instead of strongly typed objects
-        /// 
         /// DocumentDB does not require objects to be typed. Applications that merge data from different data sources, or 
         /// need to handle evolving schemas can write data directly as JSON or dynamic objects.
         /// </summary>
@@ -363,7 +375,6 @@
             salesOrder.foo = "bar";
 
             //now do a replace using this dynamic document
-            //notice here you don't have to set collectionLink, or documentSelfLink, 
             //everything that is needed is contained in the readDynOrder object 
             //it has a .self Property
             Console.WriteLine("\nReplacing document");
@@ -383,7 +394,6 @@
         /// <returns></returns>
         private static async Task UseETags()
         {
-
             //******************************************************************************************************************
             // 3.1 - Use ETag to control if a replace should succeed, or not, based on whether the ETag on the requst matches
             //       the current ETag value of the persisted Document
@@ -432,14 +442,15 @@
             }
 
             //*******************************************************************************************************************
-            // 3.2 - ETag on a ReadDcoumentAsync request can be used to tell the server whether it should return a result, or not
+            // 3.2 - ETag on a ReadDocumentAsync request can be used to tell the server whether it should return a result, or not
             //
             // By setting the ETag on a ReadDocumentRequest along with an AccessCondition of IfNoneMatch instructs the server
             // to only return a result if the ETag of the request does not match that of the persisted Document
             //*******************************************************************************************************************
+
             Console.WriteLine("\n3.2 - Using ETag to do a conditional ReadDocumentAsync");
 
-            //get a document
+            // Get a document
             var response = await client.ReadDocumentAsync(
                 UriFactory.CreateDocumentUri(databaseName, collectionName, "SalesOrder2"),
                 new RequestOptions { PartitionKey = new PartitionKey("Account2") });
@@ -447,7 +458,7 @@
             readDoc = response.Resource;
             Console.WriteLine("Read doc with StatusCode of {0}", response.StatusCode);
             
-            //get the document again with conditional access set, no document should be returned
+            // Get the document again with conditional access set, no document should be returned
             var accessCondition = new AccessCondition
             {
                 Condition = readDoc.ETag,
@@ -464,7 +475,7 @@
 
             Console.WriteLine("Read doc with StatusCode of {0}", response.StatusCode);
 
-            //now change something on the document, then do another get and this time we should get the document back
+            // Now change something on the document, then do another get and this time we should get the document back
             readDoc.SetPropertyValue("foo", "updated");
             response = await client.ReplaceDocumentAsync(readDoc);
 
@@ -512,6 +523,7 @@
                 collectionDefinition,
                 new RequestOptions { OfferThroughput = 1000 });
         }
+
         private static async Task<Database> DeleteDatabaseIfExists(string databaseId)
         {
             var databaseUri = UriFactory.CreateDatabaseUri(databaseId);
