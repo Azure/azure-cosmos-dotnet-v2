@@ -1,3 +1,8 @@
+## Changes in 1.9.3 : ##
+
+- Fixed an issue that caused long running queries to fail with error: Authorization token is not valid at the current time.
+- Fixed an issue that removed the original SqlParameterCollection from cross partition top/order-by queries.
+
 ## Changes in 1.9.2 : ##
 
 **Important:**
