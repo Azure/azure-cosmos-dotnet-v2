@@ -1,12 +1,17 @@
+**Important:**
+You may receive System.NotSupportedException when querying partitioned collections. To avoid this error, uncheck the "Prefer 32-bit" option in your project properties window, on the Build tab.
+
+## Changes in 1.9.4 : ##
+
+- Modified the ResourceResponse, FeedResponse, StoredProcedureResponse and MediaResponse classes to implement the corresponding public interface so that they can be mocked for test driven deployment (TDD).
+- Fixed an issue that caused a malformed partition key header when using a custom JsonSerializerSettings object for serializing data.
+
 ## Changes in 1.9.3 : ##
 
 - Fixed an issue that caused long running queries to fail with error: Authorization token is not valid at the current time.
 - Fixed an issue that removed the original SqlParameterCollection from cross partition top/order-by queries.
 
 ## Changes in 1.9.2 : ##
-
-**Important:**
-You may receive System.NotSupportedException when querying partitioned collections. To avoid this error, uncheck the "Prefer 32-bit" option in your project properties window, on the Build tab.
 
 - Added support for parallel queries for partitioned collections.
 - Added support for cross partition ORDER BY and TOP queries for partitioned collections.
