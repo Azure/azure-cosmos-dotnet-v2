@@ -1,6 +1,11 @@
 **Important:**
 You may receive System.NotSupportedException when querying partitioned collections. To avoid this error, uncheck the "Prefer 32-bit" option in your project properties window, on the Build tab.
 
+## Changes in 1.9.5 : ##
+
+- Fixed an issue that caused the following NotFoundException: The read session is not available for the input session token. This exception occurred in some cases when querying for the read-region of a geo-distributed account.
+- Exposed the ResponseStream property in the ResourceResponse class, which enables direct access to the underlying stream from a response. 
+
 ## Changes in 1.9.4 : ##
 
 - Modified the ResourceResponse, FeedResponse, StoredProcedureResponse and MediaResponse classes to implement the corresponding public interface so that they can be mocked for test driven deployment (TDD).
