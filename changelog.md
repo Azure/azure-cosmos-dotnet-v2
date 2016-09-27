@@ -1,6 +1,13 @@
 **Important:**
 You may receive System.NotSupportedException when querying partitioned collections. To avoid this error, uncheck the "Prefer 32-bit" option in your project properties window, on the Build tab.
 
+## Changes in 1.10.0 : ##
+
+- Added direct connectivity support for partitioned collections.
+- Improved performance for the Bounded Staleness consistency level.
+- Added LINQ support for StringEnumConverter, IsoDateTimeConverter and UnixDateTimeConverter while translating predicates.
+- Various SDK bug fixes.
+
 ## Changes in 1.9.5 : ##
 
 - Fixed an issue that caused the following NotFoundException: The read session is not available for the input session token. This exception occurred in some cases when querying for the read-region of a geo-distributed account.
