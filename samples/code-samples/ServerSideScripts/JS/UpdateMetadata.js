@@ -1,6 +1,6 @@
 ﻿// Copyright (c) Microsoft Corporation.  All rights reserved.
 
-// Register DocDB JavaScript server API for intelisense: 
+// Register DocDB JavaScript server API for intellisense: 
 //   either add the file to Tools->Options->Text Editor->JavaScript->Intellisense->References and reference the group registered 
 //   or provide path to the file explicitly.
 /// <reference group="Generic" />
@@ -11,7 +11,7 @@
 * for each inserted document, look at document.size and update aggregate properties of metadata document: minSize, maxSize, totalSize.
 */
 function updateMetadata() {
-    // HTTP error codes sent to our callback funciton by DocDB server.
+    // HTTP error codes sent to our callback function by DocDB server.
     var ErrorCode = {
         RETRY_WITH: 449,
     }
