@@ -675,8 +675,8 @@
             // 0 maximum parallel tasks, effectively serial execution
             FeedOptions options = new FeedOptions
             {
-                //MaxDegreeOfParallelism = 0,
-                //MaxBufferedItemCount = 100,
+                MaxDegreeOfParallelism = 0,
+                MaxBufferedItemCount = 100,
                 EnableCrossPartitionQuery = true
             };
 
@@ -695,8 +695,8 @@
             List<Family> familiesParallel1 = new List<Family>();
             options = new FeedOptions
             {
-                //MaxDegreeOfParallelism = 1,
-                //MaxBufferedItemCount = 100,
+                MaxDegreeOfParallelism = 1,
+                MaxBufferedItemCount = 100,
                 EnableCrossPartitionQuery = true
             };
 
@@ -717,8 +717,8 @@
             List<Family> familiesParallel10 = new List<Family>();
             options = new FeedOptions
             {
-                //MaxDegreeOfParallelism = 10,
-                //MaxBufferedItemCount = 100,
+                MaxDegreeOfParallelism = 10,
+                MaxBufferedItemCount = 100,
                 EnableCrossPartitionQuery = true
             };
 
