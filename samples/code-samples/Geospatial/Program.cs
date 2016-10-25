@@ -43,9 +43,19 @@
         private static readonly string AuthorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
 
         /// <summary>
-        /// Gets an indexing policy with spatial enabled. You can also configure just certain paths for spatial indexing, e.g. Path = "/location/?"
+        /// Gets an indexing policy with spatial enabled on points. You can also configure just certain paths for spatial indexing, e.g. Path = "/location/?"
         /// </summary>
-        private static readonly IndexingPolicy IndexingPolicyWithSpatialEnabled = new IndexingPolicy(new SpatialIndex(DataType.Point), new RangeIndex(DataType.String) { Precision = -1 });
+        private static readonly IndexingPolicy IndexingPolicyWithSpatialEnabledOnPoints = new IndexingPolicy(new SpatialIndex(DataType.Point), new RangeIndex(DataType.String) { Precision = -1 });
+
+        /// <summary>
+        /// Gets an indexing policy with spatial enabled on points and polygons. You can also configure just certain paths for spatial indexing, e.g. Path = "/location/?"
+        /// </summary>
+        private static readonly IndexingPolicy IndexingPolicyWithSpatialEnabledOnPointsAndPolygons = new IndexingPolicy(new SpatialIndex(DataType.Point), new SpatialIndex(DataType.Polygon), new RangeIndex(DataType.String) { Precision = -1 });
+
+        /// <summary>
+        /// Gets an indexing policy with spatial enabled on all spatial types (points, polygons, and linestrings). You can also configure just certain paths for spatial indexing, e.g. Path = "/location/?"
+        /// </summary>
+        private static readonly IndexingPolicy IndexingPolicyWithSpatialEnabledOnAllTypes = new IndexingPolicy(new SpatialIndex(DataType.Point), new SpatialIndex(DataType.Polygon), new SpatialIndex(DataType.LineString), new RangeIndex(DataType.String) { Precision = -1 });
 
         /// <summary>
         /// Gets the client to use.
@@ -98,9 +108,9 @@
             Animal dragon2 = new Animal { Name = "dragon2", Species = "Dragon", Location = new Point(32.33, -4.66) };
 
             // Insert documents with GeoJSON spatial data.
-            await client.CreateDocumentAsync(collection.SelfLink, you);
-            await client.CreateDocumentAsync(collection.SelfLink, dragon1);
-            await client.CreateDocumentAsync(collection.SelfLink, dragon2);
+            await client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(DatabaseName, CollectionName), you);
+            await client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(DatabaseName, CollectionName), dragon1);
+            await client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(DatabaseName, CollectionName), dragon2);
 
             // Check for points within a circle/radius relative to another point. Common for "What's near me?" queries.
             RunDistanceQuery(you.Location);
@@ -110,6 +120,21 @@
 
             // How to check for valid geospatial objects. Checks for valid latitude/longtiudes and if polygons are well-formed, etc.
             CheckIfPointOrPolygonIsValid();
+
+            // Now demonstrate how to implement "geo-fencing", i.e. index polygons and query if a point lies within the polygon
+            // For example, you can identify when the user of your mobile app enters a new country by storing the polygons representing each country
+            // To do this, we first enable spatial indexing of polygons.
+            await ModifyCollectionWithSpatialIndexing(collection, IndexingPolicyWithSpatialEnabledOnPointsAndPolygons);
+
+            Area dragonPit = new Area();
+            dragonPit.Name = "DragonPit";
+            dragonPit.Boundary = new Polygon(new List<LinearRing>() { new LinearRing(new Position[] { new Position(31.8, -5), new Position(32, -5), new Position(32, -4.7), new Position(31.8, -4.7), new Position(31.8, -5) }) });
+
+            // Insert a document with GeoJSON polygon data
+            await client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(DatabaseName, CollectionName), dragonPit);
+
+            // Check for points within a polygon. Now, we store polygons, and query for polygons that cover a specified point.
+            RunInverseWithinPolygonQuery();
         }
 
         /// <summary>
@@ -121,7 +146,7 @@
             Console.WriteLine("Cleaning up");
             foreach (Document d in await client.ReadDocumentFeedAsync(UriFactory.CreateDocumentCollectionUri(DatabaseName, CollectionName)))
             {
-                await client.DeleteDocumentAsync(d.SelfLink);
+                await client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(DatabaseName, CollectionName, d.Id));
             }
         }
 
@@ -201,6 +226,62 @@
         }
 
         /// <summary>
+        /// Run a within query (get points within a box/polygon) using SQL and LINQ.
+        /// </summary>
+        private static void RunInverseWithinPolygonQuery()
+        {
+            Console.WriteLine("Performing an inverse ST_WITHIN proximity query in SQL (polygons indexed by DocumentDB, point supplied as argument)");
+
+            foreach (Area area in client.CreateDocumentQuery<Area>(
+                UriFactory.CreateDocumentCollectionUri(DatabaseName, CollectionName),
+                "SELECT * FROM everything e WHERE ST_WITHIN({'type':'Point', 'coordinates': [31.9, -4.9]}, e.boundary)",
+                new FeedOptions { EnableCrossPartitionQuery = true }))
+            {
+                Console.WriteLine("\t" + area);
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("Performing an inverse ST_WITHIN proximity query in LINQ (polygons indexed by DocumentDB, point supplied as argument)");
+
+            foreach (Area area in client.CreateDocumentQuery<Area>(
+                UriFactory.CreateDocumentCollectionUri(DatabaseName, CollectionName), new FeedOptions { EnableCrossPartitionQuery = true })
+                .Where(a => new Point(31.9, -4.9).Within(a.Boundary)))
+            {
+                Console.WriteLine("\t" + area);
+            }
+
+            Console.WriteLine();
+        }
+
+        /// <summary>
+        /// Run a within query (get points within a box/polygon) using SQL and LINQ.
+        /// </summary>
+        private static void RunInverseWithinLineStringQuery()
+        {
+            Console.WriteLine("Performing an inverse ST_WITHIN proximity query in SQL (linestrings indexed by DocumentDB, point supplied as argument)");
+
+            foreach (Area area in client.CreateDocumentQuery<Area>(
+                UriFactory.CreateDocumentCollectionUri(DatabaseName, CollectionName),
+                "SELECT * FROM everything e WHERE ST_WITHIN({'type':'Point', 'coordinates': [31.9, -4.9]}, e.boundary)",
+                new FeedOptions { EnableCrossPartitionQuery = true }))
+            {
+                Console.WriteLine("\t" + area);
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("Performing an inverse ST_WITHIN proximity query in LINQ (linestrings indexed by DocumentDB, point supplied as argument)");
+
+            foreach (Area area in client.CreateDocumentQuery<Area>(
+                UriFactory.CreateDocumentCollectionUri(DatabaseName, CollectionName), new FeedOptions { EnableCrossPartitionQuery = true })
+                .Where(a => new Point(31.9, -4.9).Within(a.Boundary)))
+            {
+                Console.WriteLine("\t" + area);
+            }
+
+            Console.WriteLine();
+        }
+
+        /// <summary>
         /// Check if a point or polygon is valid using built-in functions. An important thing to note is that since DocumentDB's query is designed to handle heterogeneous types, 
         /// bad input parameters will evaluate to "undefined" and get skipped over instead of returning an error. For debugging and fixing malformed geospatial objects, please 
         /// use the built-in functions shown below.
@@ -239,6 +320,8 @@
                          }
                      })
                 });
+
+            Console.WriteLine();
         }
 
         /// <summary>
@@ -275,7 +358,7 @@
             {
                 DocumentCollection collectionDefinition = new DocumentCollection();
                 collectionDefinition.Id = CollectionName;
-                collectionDefinition.IndexingPolicy = IndexingPolicyWithSpatialEnabled;
+                collectionDefinition.IndexingPolicy = IndexingPolicyWithSpatialEnabledOnPoints;
                 collectionDefinition.PartitionKey.Paths.Add("/name");
 
                 Console.WriteLine("Creating new collection...");
@@ -286,7 +369,7 @@
             }
             else
             {
-                await ModifyCollectionWithSpatialIndexing(collection, IndexingPolicyWithSpatialEnabled);
+                await ModifyCollectionWithSpatialIndexing(collection, IndexingPolicyWithSpatialEnabledOnPoints);
             }
 
             return collection;
@@ -329,16 +412,16 @@
         /// </summary>
         /// <param name="collection">The DocumentDB collection.</param>
         /// <returns>The Task for asynchronous execution.</returns>
-        private static async Task RegisterAreaUserDefinedFunction(DocumentCollection collection)
+        private static async Task RegisterAreaUserDefinedFunction()
         {
             string areaJavaScriptBody = File.ReadAllText(@"STArea.js");
          
-            UserDefinedFunction areaUserDefinedFunction = client.CreateUserDefinedFunctionQuery(collection.SelfLink).Where(u => u.Id == "ST_AREA").AsEnumerable().FirstOrDefault();
+            UserDefinedFunction areaUserDefinedFunction = client.CreateUserDefinedFunctionQuery(UriFactory.CreateDocumentCollectionUri(DatabaseName,CollectionName)).Where(u => u.Id == "ST_AREA").AsEnumerable().FirstOrDefault();
 
             if (areaUserDefinedFunction == null)
             {
                 await client.CreateUserDefinedFunctionAsync(
-                    collection.SelfLink,
+                    UriFactory.CreateDocumentCollectionUri(DatabaseName, CollectionName),
                     new UserDefinedFunction
                     {
                         Id = "ST_AREA",
@@ -397,6 +480,33 @@
             /// </summary>
             [JsonProperty("location")]
             public Point Location { get; set; }
+
+            /// <summary>
+            /// Returns the JSON string representation.
+            /// </summary>
+            /// <returns>The string representation.</returns>
+            public override string ToString()
+            {
+                return JsonConvert.SerializeObject(this, Formatting.None);
+            }
+        }
+
+        /// <summary>
+        /// Describes an area.
+        /// </summary>
+        internal class Area
+        {
+            /// <summary>
+            /// Gets or sets the name of the animal.
+            /// </summary>
+            [JsonProperty("name")]
+            public string Name { get; set; }
+
+            /// <summary>
+            /// Gets or sets the location of the animal.
+            /// </summary>
+            [JsonProperty("boundary")]
+            public Polygon Boundary { get; set; }
 
             /// <summary>
             /// Returns the JSON string representation.
