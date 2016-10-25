@@ -3,23 +3,16 @@
     using System;
     using System.Collections.Generic;
     using System.Collections.Concurrent;
-    using System.ComponentModel;
     using System.Configuration;
     using System.Diagnostics;
-    using System.Dynamic;
     using System.Net;
     using System.IO;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using System.Text.RegularExpressions;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
-    using Microsoft.Azure.Documents.Linq;
-    using Microsoft.Azure.Documents.Partitioning;
-    using Newtonsoft;
     using Newtonsoft.Json;
-    using Newtonsoft.Json.Linq;
 
     /// <summary>
     /// This sample demonstrates how to achieve high performance writes using DocumentDB.
@@ -38,7 +31,7 @@
             MaxConnectionLimit = 1000, 
             RetryOptions = new RetryOptions 
             { 
-                MaxRetryAttemptsOnThrottledRequests = 100,
+                MaxRetryAttemptsOnThrottledRequests = 10,
                 MaxRetryWaitTimeInSeconds = 60
             } 
         };
@@ -152,6 +145,10 @@
             {
                 // set TaskCount = 10 for each 10k RUs
                 taskCount = currentCollectionThroughput / 1000;
+                if (taskCount >= 250)
+                {
+                    taskCount = 250;
+                }
             }
             else
             {
@@ -204,7 +201,18 @@
                 }
                 catch (Exception e)
                 {
-                    Trace.TraceError("Failed to write {0}. Exception was {1}", JsonConvert.SerializeObject(newDictionary), e);
+                    if (e is DocumentClientException)
+                    {
+                        DocumentClientException de = (DocumentClientException)e;
+                        if (de.StatusCode != HttpStatusCode.Forbidden)
+                        {
+                            Trace.TraceError("Failed to write {0}. Exception was {1}", JsonConvert.SerializeObject(newDictionary), e);
+                        }
+                        else
+                        {
+                            Interlocked.Increment(ref this.documentsInserted);
+                        }
+                    }
                 }
             }
 
