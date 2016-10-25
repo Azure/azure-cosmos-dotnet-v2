@@ -792,8 +792,8 @@
             List<Family> familiesParallel10 = new List<Family>();
             options = new FeedOptions
             {
-                //MaxDegreeOfParallelism = 10,
-                //MaxBufferedItemCount = 100,
+                MaxDegreeOfParallelism = 10,
+                MaxBufferedItemCount = 100,
                 EnableCrossPartitionQuery = true
             };
 
