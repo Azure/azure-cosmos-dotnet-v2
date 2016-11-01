@@ -433,7 +433,7 @@
             // SQL
             var childrenSqlQuery = client.CreateDocumentQuery<Child>(
                 collectionUri,
-                "SELECT c FROM c IN f.Children",
+                "SELECT VALUE c FROM c IN f.Children",
                 DefaultOptions).ToList();
 
             foreach (var child in childrenSqlQuery)
