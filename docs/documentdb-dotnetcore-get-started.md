@@ -36,10 +36,10 @@ Let's create a DocumentDB account. If you already have an account you want to us
 1. Open **Visual Studio 2015** on your computer.
 2. On the **File** menu, select **New**, and then choose **Project**.
 3. In the **New Project** dialog, select **Templates** / **Visual C#** / **.NET Core**/**Console Application (.NET Core)**, name your project, and then click **OK**.
-   ![Screen shot of the New Project window](./media/documentdb-get-started/nosql-tutorial-new-project-2.png)
+   ![Screen shot of the New Project window](./media/nosql-tutorial-new-project-2.png)
 4. In the **Solution Explorer**, right click on your new console application, which is under your Visual Studio solution.
 5. Then without leaving the menu, click on **Manage NuGet Packages...**
-   ![Screen shot of the Right Clicked Menu for the Project](./media/documentdb-get-started/nosql-tutorial-manage-nuget-pacakges.png)
+   ![Screen shot of the Right Clicked Menu for the Project](./media/nosql-tutorial-manage-nuget-pacakges.png)
 6. In the **Nuget** tab, click **Browse**, and type **azure documentdb** in the search box.
 7. Within the results, find **Microsoft.Azure.DocumentDB.Core** and click **Install**.
    The package ID for the DocumentDB Client Library is [Microsoft.Azure.DocumentDB.Core](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB.Core)
@@ -395,7 +395,7 @@ Press **F5** to run your application.
 
 Congratulations! You have successfully created two DocumentDB documents.  
 
-![Diagram illustrating the hierarchical relationship between the account, the online database, the collection, and the documents used by the NoSQL tutorial to create a C# console application](./media/documentdb-get-started/nosql-tutorial-account-database.png)
+![Diagram illustrating the hierarchical relationship between the account, the online database, the collection, and the documents used by the NoSQL tutorial to create a C# console application](./media/nosql-tutorial-account-database.png)
 
 ## <a id="Query"></a>Step 7: Query DocumentDB resources
 DocumentDB supports rich [queries](https://docs.microsoft.com/en-us/azure/documentdb/documentdb-sql-query) against JSON documents stored in each collection.  The following sample code shows various queries - using both DocumentDB SQL syntax as well as LINQ - that we can run against the documents we inserted in the previous step.
@@ -449,7 +449,7 @@ Congratulations! You have successfully queried against a DocumentDB collection.
 
 The following diagram illustrates how the DocumentDB SQL query syntax is called against the collection you created, and the same logic applies to the LINQ query as well.
 
-![Diagram illustrating the scope and meaning of the query used by the NoSQL tutorial to create a C# console application](./media/documentdb-get-started/nosql-tutorial-collection-documents.png)
+![Diagram illustrating the scope and meaning of the query used by the NoSQL tutorial to create a C# console application](./media/nosql-tutorial-collection-documents.png)
 
 The [FROM](https://docs.microsoft.com/en-us/azure/documentdb/documentdb-sql-query#from-clause) keyword is optional in the query because DocumentDB queries are already scoped to a single collection. Therefore, "FROM Families f" can be swapped with "FROM root r", or any other variable name you choose. DocumentDB will infer that Families, root, or the variable name you chose, reference the current collection by default.
 
@@ -585,4 +585,4 @@ To restore the references to the DocumentDB .NET Core SDK in Visual Studio, righ
 
 [documentdb-create-account]: documentdb-create-account.md
 [documentdb-manage]: documentdb-manage.md
-[keys]: media/documentdb-get-started/nosql-tutorial-keys.png
+[keys]: media/nosql-tutorial-keys.png
