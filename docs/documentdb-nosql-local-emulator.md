@@ -48,7 +48,7 @@ Once you have the DocumentDB Emulator running on your desktop, you can use any s
 
     // Connect to the DocumentDB Emulator running locally
     DocumentClient client = new DocumentClient(
-        new Uri("https://localhost:443"), 
+        new Uri("https://localhost:8081"), 
         "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==");
 
 You can use existing tools like [DocumentDB Studio](https://github.com/mingaliu/DocumentDBStudio) to connect to the DocumentDB Emulator. You can also migrate data between the DocumentDB Emulator and the Azure DocumentDB service using the [DocumentDB Data Migration Tool](https://github.com/azure/azure-documentdb-datamigrationtool).
@@ -95,7 +95,7 @@ To view the list of options, type `DocumentDB.LocalEmulator.exe /?` at the comma
 </tr>
 <tr>
   <td>Port</td>
-  <td>Specifies the port number to use for the emulator.  Default is 443</td>
+  <td>Specifies the port number to use for the emulator.  Default is 8081</td>
   <td>DocumentDB.LocalEmulator.exe /port=&lt;port&gt;</td>
   <td>&lt;port&gt;: Single port number</td>
 </tr>
