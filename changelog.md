@@ -1,5 +1,11 @@
-**Important:**
-You may receive System.NotSupportedException when querying partitioned collections. To avoid this error, uncheck the "Prefer 32-bit" option in your project properties window, on the Build tab.
+## Changes in 1.11.0 : ##
+
+- Support for new classes and methods to process the change feed of documents within a collection. 
+- Support for cross-partition query continuation and some perf improvements for cross-partition queries.
+- Addition of CreateDatabaseIfNotExistsAsync and CreateDocumentCollectionIfNotExistsAsync methods.
+- LINQ support for system functions: IsDefined, IsNull and IsPrimitive.
+- Fix for automatic binplacing of Microsoft.Azure.Documents.ServiceInterop.dll and DocumentDB.Spatial.Sql.dll assemblies to application’s bin folder when using the Nuget package with projects that have project.json tooling.
+- Support for emitting client side ETW traces which could be helpful in debugging scenarios.
 
 ## Changes in 1.10.0 : ##
 
