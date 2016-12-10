@@ -1,7 +1,6 @@
 ﻿namespace DocumentDB.Samples.Queries
 {
-    using DocumentDB.Samples.Shared.Twitter;
-    using DocumentDB.Samples.Shared.Util;
+    using Shared.Util;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using Microsoft.Azure.Documents.Linq;
