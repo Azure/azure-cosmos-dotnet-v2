@@ -1,6 +1,6 @@
 ## Changes in 1.11.0 : ##
 
-- Support for new classes and methods to process the change feed of documents within a collection. 
+- Support for new classes and methods to process the [change feed](https://docs.microsoft.com/en-us/azure/documentdb/documentdb-change-feed) of documents within a collection. 
 - Support for cross-partition query continuation and some perf improvements for cross-partition queries.
 - Addition of CreateDatabaseIfNotExistsAsync and CreateDocumentCollectionIfNotExistsAsync methods.
 - LINQ support for system functions: IsDefined, IsNull and IsPrimitive.
