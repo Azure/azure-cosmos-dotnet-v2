@@ -1,3 +1,8 @@
+## Changes in 1.11.1 : ##
+
+- Minor performance fix for the CreateDocumentCollectionIfNotExistsAsync API introduced in 1.11.0. 
+- Peformance fix in the SDK for scenarios that involve high degree of concurrent requests.
+
 ## Changes in 1.11.0 : ##
 
 - Support for new classes and methods to process the [change feed](https://docs.microsoft.com/en-us/azure/documentdb/documentdb-change-feed) of documents within a collection. 
@@ -143,11 +148,3 @@
 
 ## Changes in 1.0.0 : ##
 - GA SDK.
-
-
-**Note:** 
-	There was a change of NuGet package name between preview and GA. We moved from **Microsoft.Azure.Documents.Client** to **Microsoft.Azure.DocumentDB**.
-
-
-## Changes in 0.9.x-preview : ##
-- Preview SDKs. **[Obsolete]**
