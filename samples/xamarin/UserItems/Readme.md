@@ -1,4 +1,5 @@
-This contains a TodoList sample with support for logging in users and creating per-user lists.  
+This sample illustrates how to use DocumentDB built-in authorization engine to implement per-user data scenario for a Xamarin mobile app.
+The sample is a simple ToDo list app with support for logging in users using Facebook Auth and managing user's to do list.   
 
 ## Overview
 This sample consists of:
@@ -7,8 +8,9 @@ This sample consists of:
 
 The authentication and data flow is illustrated in the diagram below.
 - DocumentDB collection is created with partition key '/userid'. Specifying partition key for collection allows DocumentDB to scale infinitely as the number of users and lists grows.
-- Xamarin app upon launch requires the user to log in with Facebook credentials
-- Xamarin app uses Facebook access token to authenticate with ResourceTokenBroker API, a simple Web API that authenticates logged in Facebook user and requests from DocumentDB short lived resource tokens for the user, with access limited to documents within that user's partition. Once the app receives back the resource token, it accesses users documents in UserItems collection.
+- Xamarin app allows users to login with Facebook credentials.
+- Xamarin app uses Facebook access token to authenticate with ResourceTokenBroker API, a simple Web API that authenticates logged in Facebook user, and requests from DocumentDB short lived resource tokens for the user, with access limited to documents within that user's partition. 
+Once the app receives back the resource token, it accesses users documents in UserItems collection.
 
 
 ![Diagram](tokenbroker.png)
