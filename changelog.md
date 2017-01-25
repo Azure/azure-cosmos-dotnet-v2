@@ -1,5 +1,22 @@
-**Important:**
-You may receive System.NotSupportedException when querying partitioned collections. To avoid this error, uncheck the "Prefer 32-bit" option in your project properties window, on the Build tab.
+## Changes in 1.11.2 : ##
+
+- Fix for an issue wherein the session container was not being updated with the token for failed requests. 
+- Added support for the SDK to work in a 32-bit host process. Note that if you use cross partition queries, 64-bit host processing is recommended for improved performance.
+- Improved performance for scenarios involving queries with a large number of partition key values in an IN expression.
+
+## Changes in 1.11.1 : ##
+
+- Minor performance fix for the CreateDocumentCollectionIfNotExistsAsync API introduced in 1.11.0. 
+- Peformance fix in the SDK for scenarios that involve high degree of concurrent requests.
+
+## Changes in 1.11.0 : ##
+
+- Support for new classes and methods to process the [change feed](https://docs.microsoft.com/en-us/azure/documentdb/documentdb-change-feed) of documents within a collection. 
+- Support for cross-partition query continuation and some perf improvements for cross-partition queries.
+- Addition of CreateDatabaseIfNotExistsAsync and CreateDocumentCollectionIfNotExistsAsync methods.
+- LINQ support for system functions: IsDefined, IsNull and IsPrimitive.
+- Fix for automatic binplacing of Microsoft.Azure.Documents.ServiceInterop.dll and DocumentDB.Spatial.Sql.dll assemblies to application’s bin folder when using the Nuget package with projects that have project.json tooling.
+- Support for emitting client side ETW traces which could be helpful in debugging scenarios.
 
 ## Changes in 1.10.0 : ##
 
@@ -137,11 +154,3 @@ You may receive System.NotSupportedException when querying partitioned collectio
 
 ## Changes in 1.0.0 : ##
 - GA SDK.
-
-
-**Note:** 
-	There was a change of NuGet package name between preview and GA. We moved from **Microsoft.Azure.Documents.Client** to **Microsoft.Azure.DocumentDB**.
-
-
-## Changes in 0.9.x-preview : ##
-- Preview SDKs. **[Obsolete]**
