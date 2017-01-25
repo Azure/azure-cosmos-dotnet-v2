@@ -103,15 +103,19 @@
             Dictionary<string, string> checkpoints)
         {
             int numChangesRead = 0;
+            string pkRangesResponseContinuation = null;
             List<PartitionKeyRange> partitionKeyRanges = new List<PartitionKeyRange>();
-            FeedResponse<PartitionKeyRange> pkRangesResponse;
 
             do
             {
-                pkRangesResponse = await client.ReadPartitionKeyRangeFeedAsync(collectionUri);
+                FeedResponse<PartitionKeyRange> pkRangesResponse = await client.ReadPartitionKeyRangeFeedAsync(
+                    collectionUri, 
+                    new FeedOptions { RequestContinuation = pkRangesResponseContinuation });
+
                 partitionKeyRanges.AddRange(pkRangesResponse);
+                pkRangesResponseContinuation = pkRangesResponse.ResponseContinuation;
             }
-            while (pkRangesResponse.ResponseContinuation != null);
+            while (pkRangesResponseContinuation != null);
 
             foreach (PartitionKeyRange pkRange in partitionKeyRanges)
             {
@@ -187,7 +191,7 @@
                     client,
                     databaseId,
                     collectionDefinition,
-                    400);
+                    10100);
             }
 
             return collection;
