@@ -33,6 +33,7 @@
         public decimal TotalDue { get; set; }
         public SalesOrderDetail[] Items { get; set; }
     }
+
     public class SalesOrderDetail
     {
         public int OrderQty { get; set; }
@@ -40,6 +41,7 @@
         public decimal UnitPrice { get; set; }
         public decimal LineTotal { get; set; }
     }
+
     public class SalesOrder2
     {
         [JsonProperty(PropertyName = "id")]
