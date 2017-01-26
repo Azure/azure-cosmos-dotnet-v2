@@ -95,6 +95,8 @@
             // Querying using range operators against strings. Needs a different indexing policy or the EnableScanInQuery directive.
             QueryWithRangeOperatorsOnStrings(collectionUri);
 
+            QueryWithRangeOperatorsDateTimes(collectionUri);
+
             // Querying with order by
             QueryWithOrderBy(collectionUri);
 
@@ -354,11 +356,29 @@
 
         private static void QueryWithRangeOperatorsOnStrings(Uri collectionUri)
         {
-            // SQL Query (can't do this in LINQ)
-            var families = client.CreateDocumentQuery<Family>(
+            // LINQ
+            var families = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+                .Where(f => f.Address.State.CompareTo("NY") > 0);
+
+            // SQL Query
+            families = client.CreateDocumentQuery<Family>(
                 collectionUri,
                 "SELECT * FROM Families f WHERE f.Address.State > 'NY'",
-                new FeedOptions { EnableScanInQuery = true, EnableCrossPartitionQuery = true });
+                DefaultOptions);
+
+            Assert("Expected only 1 family", families.ToList().Count == 1);
+        }
+
+        private static void QueryWithRangeOperatorsDateTimes(Uri collectionUri)
+        {
+            var families = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+                .Where(f => f.RegistrationDate >= DateTime.UtcNow.AddDays(-3));
+
+            Assert("Expected only 1 family", families.ToList().Count == 1);
+
+            families = client.CreateDocumentQuery<Family>(collectionUri, 
+                string.Format("SELECT * FROM c WHERE c.RegistrationDate >= '{0}'", 
+                DateTime.UtcNow.AddDays(-3).ToString("o")), DefaultOptions);
 
             Assert("Expected only 1 family", families.ToList().Count == 1);
         }
@@ -893,7 +913,8 @@
                     } 
                 },
                 Address = new Address { State = "WA", County = "King", City = "Seattle" },
-                IsRegistered = true
+                IsRegistered = true,
+                RegistrationDate = DateTime.UtcNow.AddDays(-1)
             };
 
             await client.CreateDocumentAsync(collectionUri, AndersonFamily);
@@ -926,7 +947,8 @@
                     }
                 },
                 Address = new Address { State = "NY", County = "Manhattan", City = "NY" },
-                IsRegistered = false
+                IsRegistered = false,
+                RegistrationDate = DateTime.UtcNow.AddDays(-30)
             };
 
             await client.CreateDocumentAsync(collectionUri, WakefieldFamily);
@@ -1049,11 +1071,18 @@
         {
             [JsonProperty(PropertyName = "id")]
             public string Id { get; set; }
+
             public string LastName { get; set; }
+
             public Parent[] Parents { get; set; }
+
             public Child[] Children { get; set; }
+
             public Address Address { get; set; }
+
             public bool IsRegistered { get; set; }
+
+            public DateTime RegistrationDate { get; set;  }
         }
     }
 }

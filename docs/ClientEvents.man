@@ -1,0 +1,80 @@
+<!-- <?xml version="1.0" encoding="UTF-16"?> -->
+<instrumentationManifest
+            xmlns="http://schemas.microsoft.com/win/2004/08/events"
+            xmlns:win="http://manifests.microsoft.com/win/2004/08/windows/events"
+            xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+    <instrumentation>
+
+        <events>
+            <!-- Publisher Info -->
+            <provider name="ClientEvents"
+                guid="{B30ABF1C-6A50-4F2B-85C4-61823ED6CF24}"
+                symbol="REDDOG_SAMPLE_PUBLISHER"
+                resourceFileName="TestEtwWriter.exe"
+                messageFileName="TestEtwWriter.exe">
+
+                <!--Channel to which this Publisher can publish -->
+                <channels>
+
+                    <importChannel chid="C1" name="Application"/>
+
+                    <channel chid="REDDOG-SAMPLE-CHANNEL"
+                        name="Reddog-Monitoring-Test-EventPublisher/Admin"
+                        type="Admin"
+                        symbol="SAMPLE_PUBLISHER"
+                        isolation="Application"
+                        enabled="true"/>
+
+                </channels>
+
+                <!--Event Templates -->
+                <templates>
+
+                   <template tid="GenericEventTemplate">
+                        <data name="Message" inType="win:UnicodeString" />
+                        <UserData>
+                          <MyEvent2 xmlns="myNs">
+                              <Message>%1</Message>
+                          </MyEvent2>
+                        </UserData>
+                    </template>
+
+                </templates>
+
+                <events>
+                    <event value="0"
+                        level="win:Informational"
+                        template="GenericEventTemplate"
+                        opcode="win:Info"
+                        channel="C1"
+                        symbol="DocumentDBClient"
+                        message="$(string.Publisher.EventMessage)"/>
+                </events>
+
+        <tasks>
+          <task
+              message="$(string._task_Generic)"
+              name="Generic"
+              value="0"
+              symbol="_task_Generic"
+              />
+</tasks>
+            </provider>
+
+        </events>
+
+    </instrumentation>
+
+    <localization>
+        <resources culture="en-US">
+            <stringTable>
+                <!--This is how event data can be used as part of Message String -->
+                <string id="Publisher.EventMessage" value="%1" />
+               <string id="Event.Description1" value="Something happened"  />
+               <string id="_task_Generic" value="Generic"  />
+            </stringTable>
+        </resources>
+    </localization>
+
+</instrumentationManifest>
