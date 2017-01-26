@@ -98,6 +98,9 @@
             // Querying with order by
             QueryWithOrderBy(collectionUri);
 
+            // Query with aggregate operators - Sum, Min, Max, Average, and Count
+            QueryWithAggregates(collectionUri);
+
             // Work with subdocuments
             QueryWithSubdocuments(collectionUri);
 
@@ -349,16 +352,6 @@
             Assert("Expected only 1 family", families.ToList().Count == 1);
         }
 
-
-        private static void QueryWithOrderBy(Uri collectionUri)
-        {
-            // Order by with numbers. Works with default IndexingPolicy
-            QueryWithOrderByNumbers(collectionUri);
-
-            // Order by with strings. Needs custom indexing policy. See GetOrCreateCollectionAsync
-            QueryWithOrderByStrings(collectionUri);
-        }
-
         private static void QueryWithRangeOperatorsOnStrings(Uri collectionUri)
         {
             // SQL Query (can't do this in LINQ)
@@ -368,6 +361,15 @@
                 new FeedOptions { EnableScanInQuery = true, EnableCrossPartitionQuery = true });
 
             Assert("Expected only 1 family", families.ToList().Count == 1);
+        }
+
+        private static void QueryWithOrderBy(Uri collectionUri)
+        {
+            // Order by with numbers. Works with default IndexingPolicy
+            QueryWithOrderByNumbers(collectionUri);
+
+            // Order by with strings. Needs custom indexing policy. See GetOrCreateCollectionAsync
+            QueryWithOrderByStrings(collectionUri);
         }
 
         private static void QueryWithOrderByNumbers(Uri collectionUri)
@@ -421,6 +423,58 @@
                 DefaultOptions);
 
             Assert("Expected only 1 family", familiesSqlQuery.ToList().Count == 1);
+        }
+
+        private static void QueryWithAggregates(Uri collectionUri)
+        {
+            // LINQ
+            //int count = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            //           .Where(f => f.LastName == "Andersen")
+            //           .Count();
+
+            //Assert("Expected only 1 family", count == 1);
+
+            // SQL
+            int count = client.CreateDocumentQuery<int>(
+                collectionUri,
+                "SELECT VALUE COUNT(f) FROM Families f WHERE f.LastName = 'Andersen'",
+                DefaultOptions)
+                .AsEnumerable().First();
+
+            Assert("Expected only 1 family", count == 1);
+
+            //// LINQ over an array within documents
+            //count = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            //            .SelectMany(f => f.Children)
+            //           .Count();
+
+            //Assert("Expected 3 children", count == 1);
+
+            // SQL over an array within documents
+            count = client.CreateDocumentQuery<int>(
+                collectionUri,
+                "SELECT VALUE COUNT(child) FROM child IN f.children",
+                DefaultOptions)
+                .AsEnumerable().First();
+
+            Assert("Expected 3 children", count == 2);
+
+            //// LINQ with Max
+            //int maxGrade = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            //            .SelectMany(f => f.Children.Select(c => c.Grade))
+            //            .Max();
+
+            //Assert("Expected 8th grade", maxGrade == 8);
+
+            // SQL over an array within documents
+            int maxGrade = client.CreateDocumentQuery<int>(
+                collectionUri,
+                "SELECT VALUE MAX(child.grade) FROM child IN f.children",
+                DefaultOptions)
+                .AsEnumerable().First();
+
+            Assert("Expected 8th grade", maxGrade == 8);
+
         }
 
         private static void QueryWithSubdocuments(Uri collectionUri)
@@ -820,17 +874,20 @@
             {
                 Id = "AndersenFamily",
                 LastName = "Andersen",
-                Parents = new Parent[] {
+                Parents = new Parent[] 
+                {
                     new Parent { FirstName = "Thomas" },
                     new Parent { FirstName = "Mary Kay"}
                 },
-                Children = new Child[] {
+                Children = new Child[] 
+                {
                     new Child
                     { 
                         FirstName = "Henriette Thaulow", 
                         Gender = "female", 
                         Grade = 5, 
-                        Pets = new [] {
+                        Pets = new [] 
+                        {
                             new Pet { GivenName = "Fluffy" } 
                         }
                     } 
