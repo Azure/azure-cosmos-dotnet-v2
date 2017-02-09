@@ -60,8 +60,8 @@
             //--------------------------------------------------------------------------------------------------
 
             // Get, or Create, the Database
-            Database db = await GetNewDatabaseAsync(databaseId);
-            Database db2 = await GetNewDatabaseAsync("Test");
+            Database db = await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseId });
+            Database db2 = await client.CreateDatabaseIfNotExistsAsync(new Database { Id = "Test" });
 
             // Get, or Create, two seperate Collections
             DocumentCollection col1 = await GetOrCreateCollectionAsync(db.SelfLink, "COL1");
@@ -108,9 +108,9 @@
             //Attempt to read across multiple collections
             await AttemptReadFromTwoCollections(new List<string> { col1.SelfLink, col2.SelfLink }, user1Permissions);
             
-            // Cleanup 
-            await client.DeleteDatabaseAsync(db.SelfLink);
-            await client.DeleteDatabaseAsync(db2.SelfLink);
+            // Uncomment to Cleanup 
+            // await client.DeleteDatabaseAsync(db.SelfLink);
+            // await client.DeleteDatabaseAsync(db2.SelfLink);
         }
         
         private static async Task<Permission> CreatePermissionAsync(string resourceLink, string userLink, PermissionMode mode, string resourcePartitionKey = null)
@@ -256,23 +256,6 @@
             return collection;
         }
         
-        /// <summary>
-        /// Get a Database by id, or create a new one if one with the id provided doesn't exist.
-        /// </summary>
-        /// <param id="id">The id of the Database to search for, or create.</param>
-        /// <returns>The matched, or created, Database object</returns>
-        private static async Task<Database> GetNewDatabaseAsync(string id)
-        {
-            var database = client.CreateDatabaseQuery().Where(d => d.Id == id).ToArray().FirstOrDefault();
-            if (database != null)
-            {
-                await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(id));
-            }
-
-            database = await client.CreateDatabaseAsync(new Database { Id = id });
-            return database;
-        }
-
         /// <summary>
         /// Log exception error message to the console
         /// </summary>

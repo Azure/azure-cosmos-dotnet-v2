@@ -62,7 +62,7 @@
             {
                 using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey, connectionPolicy))
                 {
-                    CreateNewDatabaseAsync().Wait();
+                    client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseName }).Wait();
                     RunCollectionDemo().Wait();
                 }
             }            
@@ -75,29 +75,6 @@
                 Console.WriteLine("End of demo, press any key to exit.");
                 Console.ReadKey();
             }
-        }
-
-        /// <summary>
-        /// Create database if it does not exist
-        /// </summary>
-        /// <returns></returns>
-        private static async Task CreateNewDatabaseAsync()
-        {
-            try
-            {
-                await client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
-                await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
-            }
-            catch (DocumentClientException e)
-            {
-                // If we receive an error other than database not found, fail
-                if (e.StatusCode != System.Net.HttpStatusCode.NotFound)
-                {
-                    throw;
-                }
-            }
-
-            await client.CreateDatabaseAsync(new Database { Id = databaseName });
         }
 
         /// <summary>
@@ -127,7 +104,7 @@
         private static async Task<DocumentCollection> CreateCollection()
         {
             // Set throughput to the minimum value of 400 RU/s
-            DocumentCollection simpleCollection = await client.CreateDocumentCollectionAsync(
+            DocumentCollection simpleCollection = await client.CreateDocumentCollectionIfNotExistsAsync(
                 UriFactory.CreateDatabaseUri(databaseName),
                 new DocumentCollection { Id = collectionName }, 
                 new RequestOptions { OfferThroughput = 400 });
@@ -145,7 +122,7 @@
             collectionDefinition.Id = "PartitionedCollection";
             collectionDefinition.PartitionKey.Paths.Add("/deviceId");
 
-            DocumentCollection partitionedCollection = await client.CreateDocumentCollectionAsync(
+            DocumentCollection partitionedCollection = await client.CreateDocumentCollectionIfNotExistsAsync(
                 UriFactory.CreateDatabaseUri(databaseName),
                 collectionDefinition,
                 new RequestOptions { OfferThroughput = 10100 });
@@ -163,7 +140,7 @@
             collectionDefinition.Id = "SampleCollectionWithCustomIndexPolicy";
             collectionDefinition.IndexingPolicy.IndexingMode = IndexingMode.Lazy;
 
-            DocumentCollection collectionWithLazyIndexing = await client.CreateDocumentCollectionAsync(
+            DocumentCollection collectionWithLazyIndexing = await client.CreateDocumentCollectionIfNotExistsAsync(
                 UriFactory.CreateDatabaseUri(databaseName),
                 collectionDefinition,
                 new RequestOptions { OfferThroughput = 400 });
@@ -177,7 +154,7 @@
             collectionDefinition.Id = "TtlExpiryCollection";
             collectionDefinition.DefaultTimeToLive = 60 * 60 * 24; //expire in 1 day
 
-            DocumentCollection ttlEnabledCollection = await client.CreateDocumentCollectionAsync(
+            DocumentCollection ttlEnabledCollection = await client.CreateDocumentCollectionIfNotExistsAsync(
                 UriFactory.CreateDatabaseUri(databaseName),
                 collectionDefinition,
                 new RequestOptions { OfferThroughput = 400 });

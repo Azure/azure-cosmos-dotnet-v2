@@ -58,11 +58,18 @@
         private static async Task RunDemoAsync(string databaseId, string collectionId)
         {
             //Get, or Create, the Database
-            Database database = await GetNewDatabaseAsync(databaseId);
+            Database database = await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseId });
 
             //Get, or Create, the Document Collection
-            DocumentCollection collection = await CreateCollectionAsync(database.SelfLink, collectionId);
-            
+            DocumentCollection collectionDefinition = new DocumentCollection { Id = collectionId };
+            collectionDefinition.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
+            collectionDefinition.PartitionKey.Paths.Add("/LastName");
+
+            DocumentCollection collection = await client.CreateDocumentCollectionIfNotExistsAsync(
+                UriFactory.CreateDatabaseUri(database.Id),
+                collectionDefinition,
+                new RequestOptions { OfferThroughput = 1000 });
+
             //Run a simple script
             await RunSimpleScript(collection.SelfLink);
 
@@ -81,8 +88,8 @@
             //Run UDF
             await RunUDF(collection.SelfLink);
 
-            //Cleanup
-            await client.DeleteDatabaseAsync(database.SelfLink);
+            // Uncomment to Cleanup
+            // await client.DeleteDatabaseAsync(database.SelfLink);
         }
 
         /// <summary>
@@ -545,39 +552,6 @@
             {
                 await client.DeleteUserDefinedFunctionAsync(udf.SelfLink);
             }
-        }
-                
-        /// <summary>
-        /// Get a DocumentCollection by id, or create a new one if one with the id provided doesn't exist.
-        /// </summary>
-        /// <param name="id">The id of the DocumentCollection to search for, or create.</param>
-        /// <returns>The matched, or created, DocumentCollection object</returns>
-        private static async Task<DocumentCollection> CreateCollectionAsync(string dbLink, string id)
-        {
-            DocumentCollection collectionDefinition = new DocumentCollection { Id = id };
-            collectionDefinition.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
-            collectionDefinition.PartitionKey.Paths.Add("/LastName");
-
-            return await client.CreateDocumentCollectionAsync(
-                dbLink, 
-                collectionDefinition, 
-                new RequestOptions { OfferThroughput = 1000 });
-        }
-
-        /// <summary>
-        /// Create a new database for this ID
-        /// </summary>
-        /// <param name="id">The id of the Database to search for, or create.</param>
-        /// <returns>The matched, or created, Database object</returns>
-        private static async Task<Database> GetNewDatabaseAsync(string id)
-        {
-            Database database = client.CreateDatabaseQuery().Where(db => db.Id == id).ToArray().FirstOrDefault();
-            if (database != null)
-            {
-                database = await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(id));
-            }
-
-            return await client.CreateDatabaseAsync(new Database { Id = id });
         }
 
         /// <summary>

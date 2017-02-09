@@ -73,7 +73,7 @@
         /// <returns></returns>
         private static async Task RunDatabaseDemo()
         {
-            await CreateDatabaseIfNotExists();
+            await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseName });
 
             Database database = await client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
             Console.WriteLine("\n3. Read a database resource: {0}", database);
@@ -84,25 +84,9 @@
                 Console.WriteLine(db);
             }
 
-            await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
-            Console.WriteLine("\n5. Database {0} deleted.", database.Id);
-        }
-
-        /// <summary>
-        /// Create a database if it doesn't exist.
-        /// </summary>
-        /// <returns></returns>
-        private static async Task CreateDatabaseIfNotExists()
-        {
-            Database database = client.CreateDatabaseQuery().Where(db => db.Id == databaseName).AsEnumerable().FirstOrDefault();
-            Console.WriteLine("1. Query for a database returned: {0}", database == null ? "no results" : database.Id);
-
-            //check if a database was returned
-            if (database == null)
-            {
-                database = await client.CreateDatabaseAsync(new Database { Id = databaseName });
-                Console.WriteLine("\n2. Created Database: id - {0}", database.Id);
-            }
+            // Uncomment to delete database!
+            // await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
+            // Console.WriteLine("\n5. Database {0} deleted.", database.Id);
         }
     }
 }

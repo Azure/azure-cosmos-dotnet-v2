@@ -63,7 +63,7 @@
 
         private static async Task RunDemoAsync(string databaseId, string collectionId)
         {
-            Database database = await GetNewDatabaseAsync(databaseId);
+            Database database = await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseId });
             DocumentCollection collection = await GetOrCreateCollectionAsync(databaseId, collectionId);
 
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);
@@ -124,8 +124,8 @@
             // Query using order by across multiple partitions
             await QueryWithOrderByForPartitionedCollectionAsync(collectionUri);
 
-            // Cleanup
-            await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
+            // Uncomment to Cleanup
+            // await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
         }
 
         private static void QueryAllDocuments(Uri collectionUri)
@@ -961,43 +961,15 @@
         /// <returns>The matched, or created, DocumentCollection object</returns>
         private static async Task<DocumentCollection> GetOrCreateCollectionAsync(string databaseId, string collectionId)
         {
-            DocumentCollection collection = client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(databaseId))
-                .Where(c => c.Id == collectionId)
-                .ToArray()
-                .SingleOrDefault();
+            DocumentCollection collectionDefinition = new DocumentCollection();
+            collectionDefinition.Id = collectionId;
+            collectionDefinition.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
+            collectionDefinition.PartitionKey.Paths.Add("/LastName");
 
-            if (collection == null)
-            {
-                DocumentCollection collectionDefinition = new DocumentCollection();
-                collectionDefinition.Id = collectionId;
-                collectionDefinition.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
-                collectionDefinition.PartitionKey.Paths.Add("/LastName");
-
-                collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(
-                    client,
-                    databaseId,
-                    collectionDefinition,
-                    400);
-            }
-
-            return collection;
-        }
-
-        /// <summary>
-        /// Get a Database for this id. Delete if it already exists.
-        /// </summary>
-        /// <param id="id">The id of the Database to create.</param>
-        /// <returns>The created Database object</returns>
-        private static async Task<Database> GetNewDatabaseAsync(string id)
-        {
-            Database database = client.CreateDatabaseQuery().Where(c => c.Id == id).ToArray().FirstOrDefault();
-            if (database != null)
-            {
-                await client.DeleteDatabaseAsync(database.SelfLink);
-            }
-
-            database = await client.CreateDatabaseAsync(new Database { Id = id });
-            return database;
+            return await client.CreateDocumentCollectionIfNotExistsAsync(
+                UriFactory.CreateDatabaseUri(databaseId),
+                collectionDefinition,
+                new RequestOptions { OfferThroughput = 400 });
         }
 
         /// <summary>

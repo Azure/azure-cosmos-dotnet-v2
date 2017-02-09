@@ -82,7 +82,7 @@
         private static async Task RunIndexDemo()
         {
             // Init
-            var database = await GetNewDatabaseAsync(databaseId);
+            var database = await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseId });
 
             // 1. Exclude a document from the index
             await ExplicitlyExcludeFromIndex();
@@ -105,8 +105,8 @@
             // 7. Perform an index transform
             await PerformIndexTransformations();
 
-            // Cleanup
-            await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
+            // Uncomment to Cleanup
+            // await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
         }
 
         /// <summary>
@@ -478,23 +478,6 @@
             }
 
             return false;
-        }
-
-        /// <summary>
-        /// Get a Database for this id. Delete if it already exists.
-        /// </summary>
-        /// <param id="id">The id of the Database to create.</param>
-        /// <returns>The created Database object</returns>
-        private static async Task<Database> GetNewDatabaseAsync(string id)
-        {
-            Database database = client.CreateDatabaseQuery().Where(c => c.Id == id).ToArray().SingleOrDefault();
-            if (database != null)
-            {
-                await client.DeleteDatabaseAsync(database.SelfLink);
-            }
-
-            database = await client.CreateDatabaseAsync(new Database { Id = id });
-            return database;
         }
 
         /// <summary>
