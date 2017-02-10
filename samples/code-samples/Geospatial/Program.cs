@@ -25,12 +25,12 @@
         /// <summary>
         /// Gets the database ID to use for the demo.
         /// </summary>
-        private static readonly string DatabaseName = ConfigurationManager.AppSettings["DatabaseId"];
+        private static readonly string DatabaseName = "samples";
 
         /// <summary>
         /// Gets the collection ID to use for the demo.
         /// </summary>
-        private static readonly string CollectionName = ConfigurationManager.AppSettings["CollectionId"];
+        private static readonly string CollectionName = "spatial-samples";
 
         /// <summary>
         /// Gets the DocumentDB endpoint to use for the demo.

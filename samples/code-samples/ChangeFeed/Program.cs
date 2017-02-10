@@ -22,8 +22,8 @@
         private static DocumentClient client;
 
         // Assign an id for your database & collection 
-        private static readonly string DatabaseName = ConfigurationManager.AppSettings["DatabaseId"];
-        private static readonly string CollectionName = ConfigurationManager.AppSettings["CollectionId"];
+        private static readonly string DatabaseName = "samples";
+        private static readonly string CollectionName = "changefeed-samples";
 
         // Read the DocumentDB endpointUrl and authorizationKeys from config
         private static readonly string endpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
@@ -55,7 +55,8 @@
 
         private static async Task RunDemoAsync(string databaseId, string collectionId)
         {
-            Database database = await GetNewDatabaseAsync(databaseId);
+            Database database = await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseId });
+
             DocumentCollection collection = await GetOrCreateCollectionAsync(databaseId, collectionId);
 
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);
@@ -152,49 +153,21 @@
         }
 
         /// <summary>
-        /// Get a Database for this id. Delete if it already exists.
-        /// </summary>
-        /// <param id="id">The id of the Database to create.</param>
-        /// <returns>The created Database object</returns>
-        private static async Task<Database> GetNewDatabaseAsync(string id)
-        {
-            Database database = client.CreateDatabaseQuery().Where(c => c.Id == id).ToArray().FirstOrDefault();
-            if (database != null)
-            {
-                await client.DeleteDatabaseAsync(database.SelfLink);
-            }
-
-            database = await client.CreateDatabaseAsync(new Database { Id = id });
-            return database;
-        }
-
-        /// <summary>
         /// Get a DocuemntCollection by id, or create a new one if one with the id provided doesn't exist.
         /// </summary>
         /// <param name="id">The id of the DocumentCollection to search for, or create.</param>
         /// <returns>The matched, or created, DocumentCollection object</returns>
         private static async Task<DocumentCollection> GetOrCreateCollectionAsync(string databaseId, string collectionId)
         {
-            DocumentCollection collection = client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(databaseId))
-                .Where(c => c.Id == collectionId)
-                .ToArray()
-                .SingleOrDefault();
+            DocumentCollection collectionDefinition = new DocumentCollection();
+            collectionDefinition.Id = collectionId;
+            collectionDefinition.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
+            collectionDefinition.PartitionKey.Paths.Add("/deviceId");
 
-            if (collection == null)
-            {
-                DocumentCollection collectionDefinition = new DocumentCollection();
-                collectionDefinition.Id = collectionId;
-                collectionDefinition.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
-                collectionDefinition.PartitionKey.Paths.Add("/deviceId");
-
-                collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(
-                    client,
-                    databaseId,
-                    collectionDefinition,
-                    10100);
-            }
-
-            return collection;
+            return await client.CreateDocumentCollectionIfNotExistsAsync(
+                UriFactory.CreateDatabaseUri(databaseId),
+                collectionDefinition,
+                new RequestOptions { OfferThroughput = 10100 });
         }
 
         /// <summary>

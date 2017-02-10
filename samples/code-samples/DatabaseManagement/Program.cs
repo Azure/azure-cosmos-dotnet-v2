@@ -33,7 +33,8 @@
     public class Program
     {
         //Read config
-        private static readonly string databaseName = ConfigurationManager.AppSettings["DatabaseId"];
+        private static readonly string databaseName = "samples";
+
         private static readonly string endpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
         private static readonly string authorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
         private static readonly ConnectionPolicy connectionPolicy = new ConnectionPolicy { UserAgentSuffix = " samples-net/3" };
@@ -84,8 +85,9 @@
                 Console.WriteLine(db);
             }
 
-            await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
-            Console.WriteLine("\n5. Database {0} deleted.", database.Id);
+            //// Uncomment to delete database
+            //await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
+            //Console.WriteLine("\n5. Database {0} deleted.", database.Id);
         }
 
         /// <summary>

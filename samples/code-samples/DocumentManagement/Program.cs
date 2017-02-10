@@ -50,11 +50,12 @@
     
     public class Program
     {
+        private static readonly string databaseName = "samples";
+        private static readonly string collectionName = "document-samples";
+
         // Read config
         private static readonly string endpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
         private static readonly string authorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
-        private static readonly string databaseName = ConfigurationManager.AppSettings["DatabaseId"];
-        private static readonly string collectionName = ConfigurationManager.AppSettings["CollectionId"];
 
         //Reusable instance of DocumentClient which represents the connection to a DocumentDB endpoint
         private static DocumentClient client;
@@ -79,7 +80,8 @@
 
                     RunDocumentsDemo().Wait();
 
-                    Cleanup();
+                    //// Uncomment to delete database!
+                    //Cleanup();
                 }
             }
 #if !DEBUG
@@ -497,9 +499,7 @@
 
         private static async Task Initialize()
         {
-            await DeleteDatabaseIfExists(databaseName);
-
-            await client.CreateDatabaseAsync(new Database { Id = databaseName });
+            await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseName });
 
 
             // We create a partitioned collection here which needs a partition key. Partitioned collections
@@ -518,7 +518,7 @@
             collectionDefinition.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
 
             // Create with a throughput of 1000 RU/s
-            await client.CreateDocumentCollectionAsync(
+            await client.CreateDocumentCollectionIfNotExistsAsync(
                 UriFactory.CreateDatabaseUri(databaseName),
                 collectionDefinition,
                 new RequestOptions { OfferThroughput = 1000 });
