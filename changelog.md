@@ -1,9 +1,14 @@
+## Changes in 1.11.4 : ##
+
+- Fix for an issue wherein some of the cross-partition queries were failing in the 32-bit host process.
+- Fix for an issue wherein the session container was not being updated with the token for failed requests in Gateway mode.
+- Fix for an issue wherein a query with UDF calls in projection was failing in some cases.
+
 ## Changes in 1.11.3 : ##
 
 - Fix for an issue wherein the session container was not being updated with the token for failed requests. 
 - Added support for the SDK to work in a 32-bit host process. Note that if you use cross partition queries, 64-bit host processing is recommended for improved performance.
 - Improved performance for scenarios involving queries with a large number of partition key values in an IN expression.
-- Populated various resource quota stats in the resource response for document collection read requests when PopulateQuotaInfo request option is set.
 
 ## Changes in 1.11.1 : ##
 
