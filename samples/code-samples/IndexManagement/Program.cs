@@ -49,11 +49,11 @@
 
     public class Program
     {
-        //Read config
+        private static readonly string databaseId = "samples";
+        private static readonly string collectionId = "index-samples";
+
         private static readonly string endpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
         private static readonly string authorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
-        private static readonly string databaseId = ConfigurationManager.AppSettings["DatabaseId"];
-        private static readonly string collectionId = ConfigurationManager.AppSettings["CollectionId"];
         private static readonly ConnectionPolicy connectionPolicy = new ConnectionPolicy { UserAgentSuffix = " samples-net/3" };
 
         //Reusable instance of DocumentClient which represents the connection to a DocumentDB endpoint
@@ -82,7 +82,7 @@
         private static async Task RunIndexDemo()
         {
             // Init
-            var database = await GetNewDatabaseAsync(databaseId);
+            var database = await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseId });
 
             // 1. Exclude a document from the index
             await ExplicitlyExcludeFromIndex();
@@ -105,8 +105,8 @@
             // 7. Perform an index transform
             await PerformIndexTransformations();
 
-            // Cleanup
-            await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
+            // Uncomment to Cleanup
+            // await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
         }
 
         /// <summary>
@@ -478,23 +478,6 @@
             }
 
             return false;
-        }
-
-        /// <summary>
-        /// Get a Database for this id. Delete if it already exists.
-        /// </summary>
-        /// <param id="id">The id of the Database to create.</param>
-        /// <returns>The created Database object</returns>
-        private static async Task<Database> GetNewDatabaseAsync(string id)
-        {
-            Database database = client.CreateDatabaseQuery().Where(c => c.Id == id).ToArray().SingleOrDefault();
-            if (database != null)
-            {
-                await client.DeleteDatabaseAsync(database.SelfLink);
-            }
-
-            database = await client.CreateDatabaseAsync(new Database { Id = id });
-            return database;
         }
 
         /// <summary>

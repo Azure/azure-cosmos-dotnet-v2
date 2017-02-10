@@ -20,8 +20,8 @@
         private static DocumentClient client;
 
         //Assign a id for your database & collection 
-        private static readonly string DatabaseName = ConfigurationManager.AppSettings["DatabaseId"];
-        private static readonly string CollectionName = ConfigurationManager.AppSettings["CollectionId"];
+        private static readonly string DatabaseName = "samples";
+        private static readonly string CollectionName = "auth-samples";
 
         //Read the DocumentDB endpointUrl and authorisationKeys from config
         //These values are available from the Azure Management Portal on the DocumentDB Account Blade under "Keys"
@@ -60,35 +60,50 @@
             //--------------------------------------------------------------------------------------------------
 
             // Get, or Create, the Database
-            Database db = await GetNewDatabaseAsync(databaseId);
-            Database db2 = await GetNewDatabaseAsync("Test");
+            Database db = await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseId });
+            Database db2 = await client.CreateDatabaseIfNotExistsAsync(new Database { Id = "auth-samples-2" });
 
             // Get, or Create, two seperate Collections
-            DocumentCollection col1 = await GetOrCreateCollectionAsync(db.SelfLink, "COL1");
-            DocumentCollection col2 = await GetOrCreateCollectionAsync(db.SelfLink, "COL2");
+            DocumentCollection collection1 = new DocumentCollection();
+            collection1.Id = "COL1";
+            collection1.PartitionKey.Paths.Add("/partitionKey");
+
+            collection1 = await client.CreateDocumentCollectionAsync(
+                UriFactory.CreateDatabaseUri(databaseId),
+                collection1,
+                new RequestOptions { OfferThroughput = 400 });
+
+            DocumentCollection collection2 = new DocumentCollection();
+            collection2.Id = "COL2";
+            collection2.PartitionKey.Paths.Add("/partitionKey");
+
+            collection2 = await client.CreateDocumentCollectionAsync(
+                UriFactory.CreateDatabaseUri(databaseId),
+                collection2,
+                new RequestOptions { OfferThroughput = 400 });
 
             // Insert two documents in to col1
-            Document doc1 = await client.CreateDocumentAsync(col1.DocumentsLink, new { id = "doc1", partitionKey = "partitionKey1" });
-            Document doc2 = await client.CreateDocumentAsync(col1.DocumentsLink, new { id = "doc2", partitionKey = "pk2" });
+            Document doc1 = await client.CreateDocumentAsync(collection1.DocumentsLink, new { id = "doc1", partitionKey = "partitionKey1" });
+            Document doc2 = await client.CreateDocumentAsync(collection1.DocumentsLink, new { id = "doc2", partitionKey = "pk2" });
 
             // Insert one document in to col2
-            Document doc3 = await client.CreateDocumentAsync(col2.DocumentsLink, new { id = "doc3" });
+            Document doc3 = await client.CreateDocumentAsync(collection2.DocumentsLink, new { id = "doc3" });
 
             // Create two users
             User user1 = await client.CreateUserAsync(db.UsersLink, new User { Id = "Thomas Andersen" });
             User user2 = await client.CreateUserAsync(db.UsersLink, new User { Id = "Robin Wakefield" });
 
             // Read Permission on col1 for user1
-            Permission permissionUser1Col1 = await CreatePermissionAsync(col1.SelfLink, user1.SelfLink, PermissionMode.Read);
+            Permission permissionUser1Col1 = await CreatePermissionAsync(collection1.SelfLink, user1.SelfLink, PermissionMode.Read);
 
             // All Permissions on Doc1 for user1
             Permission permissionUser1Doc1 = await CreatePermissionAsync(doc1.SelfLink, user1.SelfLink, PermissionMode.All, "partitionKey1");
 
             // Read Permissions on col2 for user1
-            Permission permissionUser1Col2 = await CreatePermissionAsync(col2.SelfLink, user1.SelfLink, PermissionMode.Read);
+            Permission permissionUser1Col2 = await CreatePermissionAsync(collection2.SelfLink, user1.SelfLink, PermissionMode.Read);
 
             // All Permissions on col2 for user2
-            Permission permissionUser2Col2 = await CreatePermissionAsync(col2.SelfLink, user2.SelfLink, PermissionMode.All);
+            Permission permissionUser2Col2 = await CreatePermissionAsync(collection2.SelfLink, user2.SelfLink, PermissionMode.All);
             
             // All user1's permissions in a List
             List<Permission> user1Permissions = await GetUserPermissionsAsync(user1.SelfLink);
@@ -100,17 +115,17 @@
             //----------------------------------------------------------------------------------------------------
 
             //Attempt to do admin operations when user only has Read on a collection
-            await AttemptAdminOperationsAsync(col1.SelfLink, permissionUser1Col1);
+            await AttemptAdminOperationsAsync(collection1.SelfLink, permissionUser1Col1);
 
             //Attempt a write Document with read-only Collection permission
-            await AttemptWriteWithReadPermissionAsync(col1.SelfLink, permissionUser1Col1);
+            await AttemptWriteWithReadPermissionAsync(collection1.SelfLink, permissionUser1Col1);
 
             //Attempt to read across multiple collections
-            await AttemptReadFromTwoCollections(new List<string> { col1.SelfLink, col2.SelfLink }, user1Permissions);
+            await AttemptReadFromTwoCollections(new List<string> { collection1.SelfLink, collection2.SelfLink }, user1Permissions);
             
-            // Cleanup 
-            await client.DeleteDatabaseAsync(db.SelfLink);
-            await client.DeleteDatabaseAsync(db2.SelfLink);
+            // Uncomment to Cleanup 
+            // await client.DeleteDatabaseAsync(db.SelfLink);
+            // await client.DeleteDatabaseAsync(db2.SelfLink);
         }
         
         private static async Task<Permission> CreatePermissionAsync(string resourceLink, string userLink, PermissionMode mode, string resourcePartitionKey = null)
@@ -230,47 +245,6 @@
             }
 
             return listOfPermissions;
-        }
-        
-        /// <summary>
-        /// Get a DocumentCollection by id, or create a new one if one with the id provided doesn't exist.
-        /// </summary>
-        /// <param id="dbLink">The Database SelfLink property where this DocumentCollection exists / will be created</param>
-        /// <param id="id">The id of the DocumentCollection to search for, or create.</param>
-        /// <returns>The matched, or created, DocumentCollection object</returns>
-        private static async Task<DocumentCollection> GetOrCreateCollectionAsync(string dbLink, string id)
-        {
-            var collection = client.CreateDocumentCollectionQuery(dbLink).Where(c => c.Id == id).ToArray().FirstOrDefault();
-            if (collection == null)
-            {
-                DocumentCollection collectionDefinition = new DocumentCollection();
-                collectionDefinition.Id = id;
-                collectionDefinition.PartitionKey.Paths.Add("/partitionKey");
-
-                collection = await client.CreateDocumentCollectionAsync(
-                    dbLink,
-                    collectionDefinition,
-                    new RequestOptions { OfferThroughput = 400 });
-            }
-
-            return collection;
-        }
-        
-        /// <summary>
-        /// Get a Database by id, or create a new one if one with the id provided doesn't exist.
-        /// </summary>
-        /// <param id="id">The id of the Database to search for, or create.</param>
-        /// <returns>The matched, or created, Database object</returns>
-        private static async Task<Database> GetNewDatabaseAsync(string id)
-        {
-            var database = client.CreateDatabaseQuery().Where(d => d.Id == id).ToArray().FirstOrDefault();
-            if (database != null)
-            {
-                await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(id));
-            }
-
-            database = await client.CreateDatabaseAsync(new Database { Id = id });
-            return database;
         }
 
         /// <summary>

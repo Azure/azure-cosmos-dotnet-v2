@@ -49,10 +49,12 @@
 
     public class Program
     {
+        private static readonly string DatabaseName = "samples";
+        private static readonly string CollectionName = "collection-samples";
+
         private static readonly string endpointUrl = ConfigurationManager.AppSettings["EndPointUrl"];
         private static readonly string authorizationKey = ConfigurationManager.AppSettings["AuthorizationKey"];
-        private static readonly string databaseName = ConfigurationManager.AppSettings["DatabaseId"];
-        private static readonly string collectionName = ConfigurationManager.AppSettings["CollectionId"];
+
         private static readonly ConnectionPolicy connectionPolicy = new ConnectionPolicy { UserAgentSuffix = " samples-net/3" };
 
         private static DocumentClient client;
@@ -62,7 +64,7 @@
             {
                 using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey, connectionPolicy))
                 {
-                    CreateNewDatabaseAsync().Wait();
+                    client.CreateDatabaseIfNotExistsAsync(new Database { Id = DatabaseName }).Wait();
                     RunCollectionDemo().Wait();
                 }
             }            
@@ -75,29 +77,6 @@
                 Console.WriteLine("End of demo, press any key to exit.");
                 Console.ReadKey();
             }
-        }
-
-        /// <summary>
-        /// Create database if it does not exist
-        /// </summary>
-        /// <returns></returns>
-        private static async Task CreateNewDatabaseAsync()
-        {
-            try
-            {
-                await client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
-                await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
-            }
-            catch (DocumentClientException e)
-            {
-                // If we receive an error other than database not found, fail
-                if (e.StatusCode != System.Net.HttpStatusCode.NotFound)
-                {
-                    throw;
-                }
-            }
-
-            await client.CreateDatabaseAsync(new Database { Id = databaseName });
         }
 
         /// <summary>
@@ -120,16 +99,16 @@
 
             await ListCollectionsInDatabase();
 
-            await DeleteCollection();
-
-            await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseName));
+            // Uncomment to delete collection!
+            // await DeleteCollection();
         }
+
         private static async Task<DocumentCollection> CreateCollection()
         {
             // Set throughput to the minimum value of 400 RU/s
-            DocumentCollection simpleCollection = await client.CreateDocumentCollectionAsync(
-                UriFactory.CreateDatabaseUri(databaseName),
-                new DocumentCollection { Id = collectionName }, 
+            DocumentCollection simpleCollection = await client.CreateDocumentCollectionIfNotExistsAsync(
+                UriFactory.CreateDatabaseUri(DatabaseName),
+                new DocumentCollection { Id = CollectionName }, 
                 new RequestOptions { OfferThroughput = 400 });
 
             Console.WriteLine("\n1.1. Created Collection \n{0}", simpleCollection);
@@ -145,8 +124,8 @@
             collectionDefinition.Id = "PartitionedCollection";
             collectionDefinition.PartitionKey.Paths.Add("/deviceId");
 
-            DocumentCollection partitionedCollection = await client.CreateDocumentCollectionAsync(
-                UriFactory.CreateDatabaseUri(databaseName),
+            DocumentCollection partitionedCollection = await client.CreateDocumentCollectionIfNotExistsAsync(
+                UriFactory.CreateDatabaseUri(DatabaseName),
                 collectionDefinition,
                 new RequestOptions { OfferThroughput = 10100 });
 
@@ -163,8 +142,8 @@
             collectionDefinition.Id = "SampleCollectionWithCustomIndexPolicy";
             collectionDefinition.IndexingPolicy.IndexingMode = IndexingMode.Lazy;
 
-            DocumentCollection collectionWithLazyIndexing = await client.CreateDocumentCollectionAsync(
-                UriFactory.CreateDatabaseUri(databaseName),
+            DocumentCollection collectionWithLazyIndexing = await client.CreateDocumentCollectionIfNotExistsAsync(
+                UriFactory.CreateDatabaseUri(DatabaseName),
                 collectionDefinition,
                 new RequestOptions { OfferThroughput = 400 });
 
@@ -177,8 +156,8 @@
             collectionDefinition.Id = "TtlExpiryCollection";
             collectionDefinition.DefaultTimeToLive = 60 * 60 * 24; //expire in 1 day
 
-            DocumentCollection ttlEnabledCollection = await client.CreateDocumentCollectionAsync(
-                UriFactory.CreateDatabaseUri(databaseName),
+            DocumentCollection ttlEnabledCollection = await client.CreateDocumentCollectionIfNotExistsAsync(
+                UriFactory.CreateDatabaseUri(DatabaseName),
                 collectionDefinition,
                 new RequestOptions { OfferThroughput = 400 });
 
@@ -220,7 +199,7 @@
             //*************************************************
             // Get a DocumentCollection by its Id property
             //*************************************************
-            DocumentCollection collection = await client.ReadDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(databaseName, collectionName));
+            DocumentCollection collection = await client.ReadDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(DatabaseName, CollectionName));
 
             Console.WriteLine("\n4. Found Collection \n{0}\n", collection);
         }
@@ -233,7 +212,7 @@
         {
             Console.WriteLine("\n5. Reading all DocumentCollection resources for a database");
 
-            foreach (var collection in await client.ReadDocumentCollectionFeedAsync(UriFactory.CreateDatabaseUri(databaseName)))
+            foreach (var collection in await client.ReadDocumentCollectionFeedAsync(UriFactory.CreateDatabaseUri(DatabaseName)))
             {
                 Console.WriteLine(collection);
             }
@@ -246,7 +225,7 @@
         /// <returns></returns>
         private static async Task DeleteCollection()
         {
-            await client.DeleteDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(databaseName, collectionName));
+            await client.DeleteDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(DatabaseName, CollectionName));
             Console.WriteLine("\n6. Deleted Collection\n");
         }
 

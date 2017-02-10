@@ -25,8 +25,8 @@
         private static DocumentClient client;
 
         // Assign an id for your database & collection 
-        private static readonly string DatabaseName = ConfigurationManager.AppSettings["DatabaseId"];
-        private static readonly string CollectionName = ConfigurationManager.AppSettings["CollectionId"];
+        private static readonly string DatabaseName = "samples";
+        private static readonly string CollectionName = "query-samples";
 
         // Read the DocumentDB endpointUrl and authorizationKeys from config
         // These values are available from the Azure Management Portal on the DocumentDB Account Blade under "Keys"
@@ -63,7 +63,7 @@
 
         private static async Task RunDemoAsync(string databaseId, string collectionId)
         {
-            Database database = await GetNewDatabaseAsync(databaseId);
+            Database database = await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseId });
             DocumentCollection collection = await GetOrCreateCollectionAsync(databaseId, collectionId);
 
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);
@@ -100,6 +100,9 @@
             // Querying with order by
             QueryWithOrderBy(collectionUri);
 
+            // Query with aggregate operators - Sum, Min, Max, Average, and Count
+            QueryWithAggregates(collectionUri);
+
             // Work with subdocuments
             QueryWithSubdocuments(collectionUri);
 
@@ -121,8 +124,8 @@
             // Query using order by across multiple partitions
             await QueryWithOrderByForPartitionedCollectionAsync(collectionUri);
 
-            // Cleanup
-            await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
+            // Uncomment to Cleanup
+            // await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
         }
 
         private static void QueryAllDocuments(Uri collectionUri)
@@ -351,16 +354,6 @@
             Assert("Expected only 1 family", families.ToList().Count == 1);
         }
 
-
-        private static void QueryWithOrderBy(Uri collectionUri)
-        {
-            // Order by with numbers. Works with default IndexingPolicy
-            QueryWithOrderByNumbers(collectionUri);
-
-            // Order by with strings. Needs custom indexing policy. See GetOrCreateCollectionAsync
-            QueryWithOrderByStrings(collectionUri);
-        }
-
         private static void QueryWithRangeOperatorsOnStrings(Uri collectionUri)
         {
             // LINQ
@@ -388,6 +381,15 @@
                 DateTime.UtcNow.AddDays(-3).ToString("o")), DefaultOptions);
 
             Assert("Expected only 1 family", families.ToList().Count == 1);
+        }
+
+        private static void QueryWithOrderBy(Uri collectionUri)
+        {
+            // Order by with numbers. Works with default IndexingPolicy
+            QueryWithOrderByNumbers(collectionUri);
+
+            // Order by with strings. Needs custom indexing policy. See GetOrCreateCollectionAsync
+            QueryWithOrderByStrings(collectionUri);
         }
 
         private static void QueryWithOrderByNumbers(Uri collectionUri)
@@ -441,6 +443,58 @@
                 DefaultOptions);
 
             Assert("Expected only 1 family", familiesSqlQuery.ToList().Count == 1);
+        }
+
+        private static void QueryWithAggregates(Uri collectionUri)
+        {
+            // LINQ
+            //int count = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            //           .Where(f => f.LastName == "Andersen")
+            //           .Count();
+
+            //Assert("Expected only 1 family", count == 1);
+
+            // SQL
+            int count = client.CreateDocumentQuery<int>(
+                collectionUri,
+                "SELECT VALUE COUNT(f) FROM Families f WHERE f.LastName = 'Andersen'",
+                DefaultOptions)
+                .AsEnumerable().First();
+
+            Assert("Expected only 1 family", count == 1);
+
+            //// LINQ over an array within documents
+            //count = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            //            .SelectMany(f => f.Children)
+            //           .Count();
+
+            //Assert("Expected 3 children", count == 1);
+
+            // SQL over an array within documents
+            count = client.CreateDocumentQuery<int>(
+                collectionUri,
+                "SELECT VALUE COUNT(child) FROM child IN f.children",
+                DefaultOptions)
+                .AsEnumerable().First();
+
+            Assert("Expected 3 children", count == 2);
+
+            //// LINQ with Max
+            //int maxGrade = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            //            .SelectMany(f => f.Children.Select(c => c.Grade))
+            //            .Max();
+
+            //Assert("Expected 8th grade", maxGrade == 8);
+
+            // SQL over an array within documents
+            int maxGrade = client.CreateDocumentQuery<int>(
+                collectionUri,
+                "SELECT VALUE MAX(child.grade) FROM child IN f.children",
+                DefaultOptions)
+                .AsEnumerable().First();
+
+            Assert("Expected 8th grade", maxGrade == 8);
+
         }
 
         private static void QueryWithSubdocuments(Uri collectionUri)
@@ -840,17 +894,20 @@
             {
                 Id = "AndersenFamily",
                 LastName = "Andersen",
-                Parents = new Parent[] {
+                Parents = new Parent[] 
+                {
                     new Parent { FirstName = "Thomas" },
                     new Parent { FirstName = "Mary Kay"}
                 },
-                Children = new Child[] {
+                Children = new Child[] 
+                {
                     new Child
                     { 
                         FirstName = "Henriette Thaulow", 
                         Gender = "female", 
                         Grade = 5, 
-                        Pets = new [] {
+                        Pets = new [] 
+                        {
                             new Pet { GivenName = "Fluffy" } 
                         }
                     } 
@@ -904,43 +961,15 @@
         /// <returns>The matched, or created, DocumentCollection object</returns>
         private static async Task<DocumentCollection> GetOrCreateCollectionAsync(string databaseId, string collectionId)
         {
-            DocumentCollection collection = client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(databaseId))
-                .Where(c => c.Id == collectionId)
-                .ToArray()
-                .SingleOrDefault();
+            DocumentCollection collectionDefinition = new DocumentCollection();
+            collectionDefinition.Id = collectionId;
+            collectionDefinition.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
+            collectionDefinition.PartitionKey.Paths.Add("/LastName");
 
-            if (collection == null)
-            {
-                DocumentCollection collectionDefinition = new DocumentCollection();
-                collectionDefinition.Id = collectionId;
-                collectionDefinition.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
-                collectionDefinition.PartitionKey.Paths.Add("/LastName");
-
-                collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(
-                    client,
-                    databaseId,
-                    collectionDefinition,
-                    400);
-            }
-
-            return collection;
-        }
-
-        /// <summary>
-        /// Get a Database for this id. Delete if it already exists.
-        /// </summary>
-        /// <param id="id">The id of the Database to create.</param>
-        /// <returns>The created Database object</returns>
-        private static async Task<Database> GetNewDatabaseAsync(string id)
-        {
-            Database database = client.CreateDatabaseQuery().Where(c => c.Id == id).ToArray().FirstOrDefault();
-            if (database != null)
-            {
-                await client.DeleteDatabaseAsync(database.SelfLink);
-            }
-
-            database = await client.CreateDatabaseAsync(new Database { Id = id });
-            return database;
+            return await client.CreateDocumentCollectionIfNotExistsAsync(
+                UriFactory.CreateDatabaseUri(databaseId),
+                collectionDefinition,
+                new RequestOptions { OfferThroughput = 400 });
         }
 
         /// <summary>
