@@ -98,7 +98,8 @@
             // Create a new collection, or modify an existing one to enable spatial indexing.
             DocumentCollection collection = await GetCollectionWithSpatialIndexingAsync();
 
-            await Cleanup();
+            // Uncomment to delete database
+            // await Cleanup();
 
             // NOTE: In GeoJSON, longitude comes before latitude.
             // DocumentDB uses the WGS-84 coordinate reference standard. Longitudes are between -180 and 180 degrees, and latitudes between -90 and 90 degrees.
@@ -365,7 +366,7 @@
                 collection = await client.CreateDocumentCollectionAsync(
                     UriFactory.CreateDatabaseUri(DatabaseName), 
                     collectionDefinition, 
-                    new RequestOptions { OfferThroughput = 10000 });
+                    new RequestOptions { OfferThroughput = 1000 });
             }
             else
             {

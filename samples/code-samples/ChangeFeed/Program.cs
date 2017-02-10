@@ -1,6 +1,5 @@
 ﻿namespace DocumentDB.Samples.Queries
 {
-    using Shared.Util;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using Microsoft.Azure.Documents.Linq;
@@ -9,7 +8,6 @@
     using System;
     using System.Collections.Generic;
     using System.Configuration;
-    using System.Linq;
     using System.Threading.Tasks;
     using Newtonsoft.Json.Converters;
 
@@ -55,9 +53,17 @@
 
         private static async Task RunDemoAsync(string databaseId, string collectionId)
         {
-            Database database = await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseId });
+            await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseId });
 
-            DocumentCollection collection = await GetOrCreateCollectionAsync(databaseId, collectionId);
+            DocumentCollection collectionDefinition = new DocumentCollection();
+            collectionDefinition.Id = collectionId;
+            collectionDefinition.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
+            collectionDefinition.PartitionKey.Paths.Add("/deviceId");
+
+            await client.CreateDocumentCollectionIfNotExistsAsync(
+                UriFactory.CreateDocumentCollectionUri(databaseId, collectionId),
+                collectionDefinition,
+                new RequestOptions { OfferThroughput = 2500 });
 
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);
 
@@ -150,24 +156,6 @@
             Console.WriteLine("Read {0} documents from the change feed", numChangesRead);
 
             return checkpoints;
-        }
-
-        /// <summary>
-        /// Get a DocuemntCollection by id, or create a new one if one with the id provided doesn't exist.
-        /// </summary>
-        /// <param name="id">The id of the DocumentCollection to search for, or create.</param>
-        /// <returns>The matched, or created, DocumentCollection object</returns>
-        private static async Task<DocumentCollection> GetOrCreateCollectionAsync(string databaseId, string collectionId)
-        {
-            DocumentCollection collectionDefinition = new DocumentCollection();
-            collectionDefinition.Id = collectionId;
-            collectionDefinition.IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) { Precision = -1 });
-            collectionDefinition.PartitionKey.Paths.Add("/deviceId");
-
-            return await client.CreateDocumentCollectionIfNotExistsAsync(
-                UriFactory.CreateDatabaseUri(databaseId),
-                collectionDefinition,
-                new RequestOptions { OfferThroughput = 10100 });
         }
 
         /// <summary>

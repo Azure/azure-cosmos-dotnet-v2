@@ -63,7 +63,7 @@
 
         private static async Task RunDemoAsync(string databaseId, string collectionId)
         {
-            Database database = await client.CreateDatabaseIfNotExistsAsync(new Database { Id = DatabaseName });
+            Database database = await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseId });
             DocumentCollection collection = await GetOrCreateCollectionAsync(databaseId, collectionId);
 
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);
@@ -100,6 +100,9 @@
             // Querying with order by
             QueryWithOrderBy(collectionUri);
 
+            // Query with aggregate operators - Sum, Min, Max, Average, and Count
+            QueryWithAggregates(collectionUri);
+
             // Work with subdocuments
             QueryWithSubdocuments(collectionUri);
 
@@ -121,8 +124,8 @@
             // Query using order by across multiple partitions
             await QueryWithOrderByForPartitionedCollectionAsync(collectionUri);
 
-            // Cleanup
-            await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
+            // Uncomment to Cleanup
+            // await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
         }
 
         private static void QueryAllDocuments(Uri collectionUri)
@@ -351,16 +354,6 @@
             Assert("Expected only 1 family", families.ToList().Count == 1);
         }
 
-
-        private static void QueryWithOrderBy(Uri collectionUri)
-        {
-            // Order by with numbers. Works with default IndexingPolicy
-            QueryWithOrderByNumbers(collectionUri);
-
-            // Order by with strings. Needs custom indexing policy. See GetOrCreateCollectionAsync
-            QueryWithOrderByStrings(collectionUri);
-        }
-
         private static void QueryWithRangeOperatorsOnStrings(Uri collectionUri)
         {
             // LINQ
@@ -388,6 +381,15 @@
                 DateTime.UtcNow.AddDays(-3).ToString("o")), DefaultOptions);
 
             Assert("Expected only 1 family", families.ToList().Count == 1);
+        }
+
+        private static void QueryWithOrderBy(Uri collectionUri)
+        {
+            // Order by with numbers. Works with default IndexingPolicy
+            QueryWithOrderByNumbers(collectionUri);
+
+            // Order by with strings. Needs custom indexing policy. See GetOrCreateCollectionAsync
+            QueryWithOrderByStrings(collectionUri);
         }
 
         private static void QueryWithOrderByNumbers(Uri collectionUri)
@@ -441,6 +443,58 @@
                 DefaultOptions);
 
             Assert("Expected only 1 family", familiesSqlQuery.ToList().Count == 1);
+        }
+
+        private static void QueryWithAggregates(Uri collectionUri)
+        {
+            // LINQ
+            //int count = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            //           .Where(f => f.LastName == "Andersen")
+            //           .Count();
+
+            //Assert("Expected only 1 family", count == 1);
+
+            // SQL
+            int count = client.CreateDocumentQuery<int>(
+                collectionUri,
+                "SELECT VALUE COUNT(f) FROM Families f WHERE f.LastName = 'Andersen'",
+                DefaultOptions)
+                .AsEnumerable().First();
+
+            Assert("Expected only 1 family", count == 1);
+
+            //// LINQ over an array within documents
+            //count = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            //            .SelectMany(f => f.Children)
+            //           .Count();
+
+            //Assert("Expected 3 children", count == 1);
+
+            // SQL over an array within documents
+            count = client.CreateDocumentQuery<int>(
+                collectionUri,
+                "SELECT VALUE COUNT(child) FROM child IN f.children",
+                DefaultOptions)
+                .AsEnumerable().First();
+
+            Assert("Expected 3 children", count == 2);
+
+            //// LINQ with Max
+            //int maxGrade = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            //            .SelectMany(f => f.Children.Select(c => c.Grade))
+            //            .Max();
+
+            //Assert("Expected 8th grade", maxGrade == 8);
+
+            // SQL over an array within documents
+            int maxGrade = client.CreateDocumentQuery<int>(
+                collectionUri,
+                "SELECT VALUE MAX(child.grade) FROM child IN f.children",
+                DefaultOptions)
+                .AsEnumerable().First();
+
+            Assert("Expected 8th grade", maxGrade == 8);
+
         }
 
         private static void QueryWithSubdocuments(Uri collectionUri)
@@ -840,17 +894,20 @@
             {
                 Id = "AndersenFamily",
                 LastName = "Andersen",
-                Parents = new Parent[] {
+                Parents = new Parent[] 
+                {
                     new Parent { FirstName = "Thomas" },
                     new Parent { FirstName = "Mary Kay"}
                 },
-                Children = new Child[] {
+                Children = new Child[] 
+                {
                     new Child
                     { 
                         FirstName = "Henriette Thaulow", 
                         Gender = "female", 
                         Grade = 5, 
-                        Pets = new [] {
+                        Pets = new [] 
+                        {
                             new Pet { GivenName = "Fluffy" } 
                         }
                     } 
@@ -910,7 +967,7 @@
             collectionDefinition.PartitionKey.Paths.Add("/LastName");
 
             return await client.CreateDocumentCollectionIfNotExistsAsync(
-                UriFactory.CreateDatabaseUri(DatabaseName),
+                UriFactory.CreateDatabaseUri(databaseId),
                 collectionDefinition,
                 new RequestOptions { OfferThroughput = 400 });
         }

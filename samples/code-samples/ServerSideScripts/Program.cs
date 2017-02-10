@@ -64,11 +64,11 @@
             collectionDefinition.PartitionKey.Paths.Add("/LastName");
 
             DocumentCollection collection = await client.CreateDocumentCollectionIfNotExistsAsync(
-                UriFactory.CreateDatabaseUri(databaseId),
+                UriFactory.CreateDatabaseUri(database.Id),
                 collectionDefinition,
                 new RequestOptions { OfferThroughput = 1000 });
 
-            // Run a simple script
+            //Run a simple script
             await RunSimpleScript(collection.SelfLink);
 
             // Run Bulk Import
@@ -551,23 +551,7 @@
                 await client.DeleteUserDefinedFunctionAsync(udf.SelfLink);
             }
         }
-
-        /// <summary>
-        /// Create a new database for this ID
-        /// </summary>
-        /// <param name="id">The id of the Database to search for, or create.</param>
-        /// <returns>The matched, or created, Database object</returns>
-        private static async Task<Database> GetNewDatabaseAsync(string id)
-        {
-            Database database = client.CreateDatabaseQuery().Where(db => db.Id == id).ToArray().FirstOrDefault();
-            if (database != null)
-            {
-                database = await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(id));
-            }
-
-            return await client.CreateDatabaseAsync(new Database { Id = id });
-        }
-
+        
         /// <summary>
         /// Log exception error message to the console
         /// </summary>

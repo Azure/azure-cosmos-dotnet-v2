@@ -105,8 +105,8 @@
             // 7. Perform an index transform
             await PerformIndexTransformations();
 
-            //// Uncomment to delete database
-            //await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
+            // Uncomment to Cleanup
+            // await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
         }
 
         /// <summary>

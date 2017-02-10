@@ -123,9 +123,9 @@
             //Attempt to read across multiple collections
             await AttemptReadFromTwoCollections(new List<string> { collection1.SelfLink, collection2.SelfLink }, user1Permissions);
             
-            // Cleanup 
-            await client.DeleteDatabaseAsync(db.SelfLink);
-            await client.DeleteDatabaseAsync(db2.SelfLink);
+            // Uncomment to Cleanup 
+            // await client.DeleteDatabaseAsync(db.SelfLink);
+            // await client.DeleteDatabaseAsync(db2.SelfLink);
         }
         
         private static async Task<Permission> CreatePermissionAsync(string resourceLink, string userLink, PermissionMode mode, string resourcePartitionKey = null)

@@ -65,7 +65,6 @@
                 using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey, connectionPolicy))
                 {
                     client.CreateDatabaseIfNotExistsAsync(new Database { Id = DatabaseName }).Wait();
-
                     RunCollectionDemo().Wait();
                 }
             }            

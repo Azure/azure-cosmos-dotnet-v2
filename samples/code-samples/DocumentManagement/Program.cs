@@ -80,8 +80,8 @@
 
                     RunDocumentsDemo().Wait();
 
-                    //// Uncomment to delete database!
-                    //Cleanup();
+                    // Uncomment to delete database!
+                    // Cleanup();
                 }
             }
 #if !DEBUG
@@ -501,7 +501,6 @@
         {
             await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseName });
 
-
             // We create a partitioned collection here which needs a partition key. Partitioned collections
             // can be created with very high values of provisioned throughput (up to OfferThroughput = 250,000)
             // and used to store up to 250 GB of data. You can also skip specifying a partition key to create
@@ -522,23 +521,6 @@
                 UriFactory.CreateDatabaseUri(databaseName),
                 collectionDefinition,
                 new RequestOptions { OfferThroughput = 1000 });
-        }
-
-        private static async Task<Database> DeleteDatabaseIfExists(string databaseId)
-        {
-            var databaseUri = UriFactory.CreateDatabaseUri(databaseId);
-
-            Database database = client.CreateDatabaseQuery()
-                .Where(db => db.Id == databaseId)
-                .ToArray()
-                .FirstOrDefault();
-
-            if (database != null)
-            {
-                await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
-            }
-
-            return database;
         }
     }
 }
