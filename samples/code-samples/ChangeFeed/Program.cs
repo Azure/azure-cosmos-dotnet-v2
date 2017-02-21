@@ -61,7 +61,7 @@
             collectionDefinition.PartitionKey.Paths.Add("/deviceId");
 
             await client.CreateDocumentCollectionIfNotExistsAsync(
-                UriFactory.CreateDocumentCollectionUri(databaseId, collectionId),
+                UriFactory.CreateDatabaseUri(databaseId),
                 collectionDefinition,
                 new RequestOptions { OfferThroughput = 2500 });
 
