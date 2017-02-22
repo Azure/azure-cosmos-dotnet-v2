@@ -1,3 +1,7 @@
+## Changes in 1.12.0 : ##
+
+- Lowered minimum throughput on partitioned collections from 10,100 RU/s to 2500 RU/s.
+
 ## Changes in 1.11.4 : ##
 
 - Fix for an issue wherein some of the cross-partition queries were failing in the 32-bit host process.
