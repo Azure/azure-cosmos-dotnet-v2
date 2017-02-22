@@ -447,13 +447,6 @@
 
         private static void QueryWithAggregates(Uri collectionUri)
         {
-            // LINQ
-            //int count = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
-            //           .Where(f => f.LastName == "Andersen")
-            //           .Count();
-
-            //Assert("Expected only 1 family", count == 1);
-
             // SQL
             int count = client.CreateDocumentQuery<int>(
                 collectionUri,
@@ -463,38 +456,23 @@
 
             Assert("Expected only 1 family", count == 1);
 
-            //// LINQ over an array within documents
-            //count = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
-            //            .SelectMany(f => f.Children)
-            //           .Count();
-
-            //Assert("Expected 3 children", count == 1);
-
             // SQL over an array within documents
             count = client.CreateDocumentQuery<int>(
                 collectionUri,
-                "SELECT VALUE COUNT(child) FROM child IN f.children",
+                "SELECT VALUE COUNT(child) FROM child IN f.Children",
                 DefaultOptions)
                 .AsEnumerable().First();
 
-            Assert("Expected 3 children", count == 2);
-
-            //// LINQ with Max
-            //int maxGrade = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
-            //            .SelectMany(f => f.Children.Select(c => c.Grade))
-            //            .Max();
-
-            //Assert("Expected 8th grade", maxGrade == 8);
+            Assert("Expected 3 children", count == 3);
 
             // SQL over an array within documents
             int maxGrade = client.CreateDocumentQuery<int>(
                 collectionUri,
-                "SELECT VALUE MAX(child.grade) FROM child IN f.children",
+                "SELECT VALUE MAX(child.Grade) FROM child IN f.Children",
                 DefaultOptions)
                 .AsEnumerable().First();
 
             Assert("Expected 8th grade", maxGrade == 8);
-
         }
 
         private static void QueryWithSubdocuments(Uri collectionUri)
@@ -917,7 +895,7 @@
                 RegistrationDate = DateTime.UtcNow.AddDays(-1)
             };
 
-            await client.CreateDocumentAsync(collectionUri, AndersonFamily);
+            await client.UpsertDocumentAsync(collectionUri, AndersonFamily);
 
             Family WakefieldFamily = new Family
             {
@@ -951,7 +929,7 @@
                 RegistrationDate = DateTime.UtcNow.AddDays(-30)
             };
 
-            await client.CreateDocumentAsync(collectionUri, WakefieldFamily);
+            await client.UpsertDocumentAsync(collectionUri, WakefieldFamily);
         }
 
         /// <summary>
