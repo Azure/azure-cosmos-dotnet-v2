@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("DocumentDB.ChangeFeedProcessor")]
-[assembly: AssemblyCopyright("Copyright ©Microsoft  2016")]
+[assembly: AssemblyCopyright("Copyright ©  2017")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("95e51eb3-d8e2-4acb-8316-b39869d5d8bd")]
+[assembly: Guid("43b55c4c-377c-49ef-9165-337542f4319e")]
 
 // Version information for an assembly consists of the following four values:
 //
