@@ -4,6 +4,8 @@ This library provides a host for distributing change feed events in partitioned 
 ## Design highlights
 For illustration, let's assume we are processign the change feed from **Monitored collection**, which is partitioned by **city**. The arrows in the preceding diagram indicate the current position (continuation) in the change feed.
 
+![Change Feed Processor](changefeedprocessor.png)
+
 * For coordinating the processing of change feed across multiple workers, we use a leasing mechanism. To store leases, we use a separate collection (**Lease collection** in the diagram).
     * There is one lease per partition.
     * A Lease object/document has the following attributes: 
