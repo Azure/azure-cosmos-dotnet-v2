@@ -98,7 +98,7 @@ namespace PartitionStats
                     case "collectionSize":
                         break;
                     case "documentsSize":
-                        Console.WriteLine("\t{0}: {1} GB", metricName, Math.Round(int.Parse(metricValue) / (1024 * 1024.0), 2));
+                        Console.WriteLine("\t{0}: {1} GB", metricName, Math.Round(int.Parse(metricValue) / (1024 * 1024.0), 3));
                         break;
                     case "documentsCount":
                         Console.WriteLine("\t{0}: {1:n0}", metricName, int.Parse(metricValue));
@@ -145,7 +145,7 @@ namespace PartitionStats
                 switch (metricName)
                 {
                     case "documentsSize":
-                        Console.WriteLine("\tPartition.{0} {1}: {2} GB", pkRange.Id, metricName, Math.Round(int.Parse(metricValue) / (1024 * 1024.0), 2));
+                        Console.WriteLine("\tPartition.{0} {1}: {2} GB", pkRange.Id, metricName, Math.Round(int.Parse(metricValue) / (1024 * 1024.0), 3));
                         break;
                     default:
                         break;
