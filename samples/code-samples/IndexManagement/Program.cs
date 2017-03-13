@@ -217,7 +217,7 @@
 
             Console.WriteLine("\n3. Use lazy (instead of consistent) indexing");
 
-            var collDefinition = new DocumentCollection { Id = ConfigurationManager.AppSettings["CollectionId"] };
+            var collDefinition = new DocumentCollection { Id = collectionId };
             collDefinition.IndexingPolicy.IndexingMode = IndexingMode.Lazy;
 
             var collection = await DocumentClientHelper.CreateDocumentCollectionWithRetriesAsync(client, databaseId, collDefinition);
