@@ -1,5 +1,11 @@
-## Changes in 1.12.0 : ##
+## Changes in 1.12.1 : ##
+- Added LINQ support for aggregation queries (COUNT, MIN, MAX, SUM, and AVG).
+- Fix for a memory leak issue for the ConnectionPolicy object caused by the use of event handler.
+- Fix for an issue wherein UpsertAttachmentAsync was not working when ETag was used.
+- Fix for an issue wherein cross partition order-by query continuation was not working when sorting on string field.
 
+## Changes in 1.12.0 : ##
+- Added support for aggregation queries (COUNT, MIN, MAX, SUM, and AVG). See [Aggregation support](https://docs.microsoft.com/en-us/azure/documentdb/documentdb-sql-query#Aggregates).
 - Lowered minimum throughput on partitioned collections from 10,100 RU/s to 2500 RU/s.
 
 ## Changes in 1.11.4 : ##
