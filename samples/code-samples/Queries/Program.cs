@@ -456,6 +456,13 @@
 
             Assert("Expected only 1 family", count == 1);
 
+            // LINQ
+            count = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+                .Where(f => f.LastName == "Andersen")
+                .Count();
+
+            Assert("Expected only 1 family", count == 1);
+
             // SQL over an array within documents
             count = client.CreateDocumentQuery<int>(
                 collectionUri,
@@ -465,12 +472,25 @@
 
             Assert("Expected 3 children", count == 3);
 
+            // LINQ
+            count = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+                .SelectMany(f => f.Children)
+                .Count();
+
+            Assert("Expected 3 children", count == 3);
+
             // SQL over an array within documents
             int maxGrade = client.CreateDocumentQuery<int>(
                 collectionUri,
                 "SELECT VALUE MAX(child.Grade) FROM child IN f.Children",
                 DefaultOptions)
                 .AsEnumerable().First();
+
+            Assert("Expected 8th grade", maxGrade == 8);
+
+            maxGrade = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+                .SelectMany(f => f.Children)
+                .Max(c => c.Grade);
 
             Assert("Expected 8th grade", maxGrade == 8);
         }
