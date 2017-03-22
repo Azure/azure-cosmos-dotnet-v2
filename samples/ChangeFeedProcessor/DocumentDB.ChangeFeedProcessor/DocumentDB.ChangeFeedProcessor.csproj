@@ -48,12 +48,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ChangeFeedEventHost.cs" />
@@ -62,12 +57,12 @@
     <Compile Include="ChangeFeedObserverContext.cs" />
     <Compile Include="DocumentCollectionInfo.cs" />
     <Compile Include="IChangeFeedObserver.cs" />
-    <Compile Include="Internal\DocumentFeedObserverFactory.cs" />
+    <Compile Include="IChangeFeedObserverFactory.cs" />
+    <Compile Include="Internal\ChangeFeedObserverFactory.cs" />
     <Compile Include="Internal\DocumentLeaseStore\DocumentServiceLease.cs" />
     <Compile Include="Internal\DocumentLeaseStore\DocumentServiceLeaseManager.cs" />
     <Compile Include="Internal\DocumentLeaseStore\LeaseState.cs" />
     <Compile Include="Internal\ICheckpointManager.cs" />
-    <Compile Include="Internal\IDocumentFeedObserverFactory.cs" />
     <Compile Include="Internal\ILeaseManager.cs" />
     <Compile Include="Internal\IPartitionManager.cs" />
     <Compile Include="Internal\IPartitionObserver.cs" />

@@ -90,7 +90,7 @@ namespace DocumentDB.ChangeFeedProcessor
         ICheckpointManager checkpointManager;
         DocumentCollectionInfo auxCollectionLocation;
 
-        IDocumentFeedObserverFactory observerFactory;
+        IChangeFeedObserverFactory observerFactory;
         ConcurrentDictionary<string, WorkerData> partitionKeyRangeIdToWorkerMap;
         int isShutdown = 0;
 
@@ -148,7 +148,19 @@ namespace DocumentDB.ChangeFeedProcessor
         /// <returns>A task indicating that the <see cref="DocumentDB.ChangeFeedProcessor.ChangeFeedEventHost" /> instance has started.</returns>
         public async Task RegisterObserverAsync<T>() where T : IChangeFeedObserver, new()
         {
-            this.observerFactory = new DocumentFeedObserverFactory<T>();
+            this.observerFactory = new ChangeFeedObserverFactory<T>();
+            await this.StartAsync();
+        }
+
+        /// <summary>
+        /// Asynchronously registers the observer factory implementation with the host.
+        /// This method also starts the host and enables it to start participating in the partition distribution process.
+        /// </summary>
+        /// <param name="factory">Implementation of your application-specific event observer factory.</typeparam>
+        /// <returns>A task indicating that the <see cref="DocumentDB.ChangeFeedProcessor.ChangeFeedEventHost" /> instance has started.</returns>
+        public async Task RegisterObserverAsync(IChangeFeedObserverFactory factory)
+        {
+            this.observerFactory = factory;
             await this.StartAsync();
         }
 
@@ -263,6 +275,7 @@ namespace DocumentDB.ChangeFeedProcessor
 
                                         try
                                         {
+                                            context.FeedResponse = response; 
                                             await observer.ProcessChangesAsync(context, docs);
                                         }
                                         catch (Exception ex)
@@ -270,6 +283,10 @@ namespace DocumentDB.ChangeFeedProcessor
                                             TraceLog.Error(string.Format("IChangeFeedObserver.ProcessChangesAsync exception: {0}", ex));
                                             closeReason = ChangeFeedObserverCloseReason.ObserverError;
                                             throw;
+                                        }
+                                        finally
+                                        {
+                                            context.FeedResponse = null;
                                         }
 
                                         // Checkpoint after every successful delivery to the client.
@@ -289,6 +306,8 @@ namespace DocumentDB.ChangeFeedProcessor
                                 await Task.Delay(this.options.FeedPollDelay, cancellation.Token);
                             }
                         } // Outer while (this.isShutdown == 0) loop.
+
+                        closeReason = ChangeFeedObserverCloseReason.Shutdown;
                     }
                     catch (TaskCanceledException)
                     {
@@ -428,6 +447,7 @@ namespace DocumentDB.ChangeFeedProcessor
             await this.leaseManager.CreateLeaseStoreIfNotExistsAsync();
 
             string[] rangeIds = await this.EnumPartitionKeyRangeIds(this.collectionSelfLink);
+
             Parallel.ForEach(rangeIds, async rangeId => await this.leaseManager.CreateLeaseIfNotExistAsync(rangeId));
 
             this.partitionManager = new PartitionManager<DocumentServiceLease>(this.HostName, this.leaseManager, this.options);
@@ -445,7 +465,8 @@ namespace DocumentDB.ChangeFeedProcessor
             List<string> ids = new List<string>();
             do
             {
-                response = await this.documentClient.ReadPartitionKeyRangeFeedAsync(partitionkeyRangesPath, new FeedOptions { MaxItemCount = 1000 });
+                FeedOptions feedOptions = new FeedOptions { MaxItemCount = 1000, RequestContinuation = response != null ? response.ResponseContinuation : null };
+                response = await this.documentClient.ReadPartitionKeyRangeFeedAsync(partitionkeyRangesPath, feedOptions);
                 foreach (var item in response)
                 {
                     ids.Add(item.Id);

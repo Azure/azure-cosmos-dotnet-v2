@@ -194,7 +194,7 @@
                     }
 
                     // Trigger shutdown of all partitions we failed to renew leases
-                    Parallel.ForEach(failedToRenewLeases, async (lease) => await this.RemoveLeaseAsync(lease, false));
+                    Parallel.ForEach(failedToRenewLeases, async (lease) => await this.RemoveLeaseAsync(lease, false, ChangeFeedObserverCloseReason.LeaseLost));
 
                     // Now remove all failed renewals of shutdown leases from further renewals
                     foreach (T failedToRenewShutdownLease in failedToRenewShutdownLeases)
@@ -499,7 +499,7 @@
                 // We need to release the lease if we fail to initialize the processor, so some other node can pick up the parition
                 if (failedToInitialize)
                 {
-                    await this.RemoveLeaseAsync(lease, true);
+                    await this.RemoveLeaseAsync(lease, true, ChangeFeedObserverCloseReason.ObserverError);
                 }
             }
             else
@@ -527,12 +527,8 @@
             }
         }
 
-        async Task RemoveLeaseAsync(T lease, bool hasOwnership, ChangeFeedObserverCloseReason closeReason = ChangeFeedObserverCloseReason.Unknown)
+        async Task RemoveLeaseAsync(T lease, bool hasOwnership, ChangeFeedObserverCloseReason closeReason)
         {
-            ChangeFeedObserverCloseReason reason = 
-                closeReason != ChangeFeedObserverCloseReason.Unknown ? closeReason :
-                hasOwnership ? ChangeFeedObserverCloseReason.Shutdown : ChangeFeedObserverCloseReason.LeaseLost;
-
             if (lease != null && this.currentlyOwnedPartitions != null && this.currentlyOwnedPartitions.TryRemove(lease.PartitionId, out lease))
             {
                 TraceLog.Informational(string.Format("Host '{0}' successfully removed PartitionId '{1}' with lease token '{2}' from currently owned partitions.", this.workerName, lease.PartitionId, lease.ConcurrencyToken));
@@ -544,12 +540,12 @@
                         this.keepRenewingDuringClose.TryAdd(lease.PartitionId, lease);
                     }
 
-                    TraceLog.Informational(string.Format("Host '{0}' closing event processor for PartitionId '{1}' and lease token '{2}' with reason '{3}'", this.workerName, lease.PartitionId, lease.ConcurrencyToken, reason));
+                    TraceLog.Informational(string.Format("Host '{0}' closing event processor for PartitionId '{1}' and lease token '{2}' with reason '{3}'", this.workerName, lease.PartitionId, lease.ConcurrencyToken, closeReason));
 
                     // Notify the host that we lost partition so shutdown can be triggered on the host
-                    await this.partitionObserverManager.NotifyPartitionReleasedAsync(lease, reason);
+                    await this.partitionObserverManager.NotifyPartitionReleasedAsync(lease, closeReason);
 
-                    TraceLog.Informational(string.Format("Host '{0}' closed event processor for PartitionId '{1}' and lease token '{2}' with reason '{3}'", this.workerName, lease.PartitionId, lease.ConcurrencyToken, reason));
+                    TraceLog.Informational(string.Format("Host '{0}' closed event processor for PartitionId '{1}' and lease token '{2}' with reason '{3}'", this.workerName, lease.PartitionId, lease.ConcurrencyToken, closeReason));
                 }
                 catch (Exception ex)
                 {
