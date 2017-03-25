@@ -1,3 +1,10 @@
+## Changes in 1.13.0 : ##
+- Fixes to make SDK more resilient to automatic failover under certain conditions.
+
+## Changes in 1.12.2 : ##
+- Fix for an issue that occasionally causes a WebException: The remote name could not be resolved.
+- Added the support for directly reading a typed document by adding new overloads to ReadDocumentAsync API.
+
 ## Changes in 1.12.1 : ##
 - Added LINQ support for aggregation queries (COUNT, MIN, MAX, SUM, and AVG).
 - Fix for a memory leak issue for the ConnectionPolicy object caused by the use of event handler.
