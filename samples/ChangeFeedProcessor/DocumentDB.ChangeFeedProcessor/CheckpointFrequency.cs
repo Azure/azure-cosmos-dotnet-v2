@@ -10,7 +10,7 @@
         /// <summary>
         /// Gets or set the value that specifies to checkpoint every speficied number of docs.
         /// </summary>
-        public uint? ProcessedDocCount { get; set; }
+        public int? ProcessedDocumentCount { get; set; }
 
         /// <summary>
         /// Gets or set the value that specifies to checkpoint every specified time interval.

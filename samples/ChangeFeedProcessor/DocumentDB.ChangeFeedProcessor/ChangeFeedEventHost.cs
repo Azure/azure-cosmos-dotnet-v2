@@ -298,9 +298,8 @@ namespace DocumentDB.ChangeFeedProcessor
                                     }
 
                                     checkpointStats.ProcessedDocCount += (uint)response.Count;
-                                    checkpointStats.LastResponseContinuation = response.ResponseContinuation;
 
-                                    if (checkpointStats.ProcessedDocCount > 0 && IsCheckpointNeeded(lease, checkpointStats, (uint)response.Count))
+                                    if (IsCheckpointNeeded(lease, checkpointStats))
                                     {
                                         lease = await CheckpointAsync(lease, response.ResponseContinuation, context);
                                         checkpointStats.Reset();
@@ -316,12 +315,6 @@ namespace DocumentDB.ChangeFeedProcessor
                             if (this.isShutdown == 0)
                             {
                                 await Task.Delay(this.options.FeedPollDelay, cancellation.Token);
-
-                                if (checkpointStats.ProcessedDocCount > 0 && IsCheckpointNeeded(lease, checkpointStats, checkpointStats.ProcessedDocCount))
-                                {
-                                    lease = await CheckpointAsync(lease, checkpointStats.LastResponseContinuation, context);
-                                    checkpointStats.Reset();
-                                }
                             }
                         } // Outer while (this.isShutdown == 0) loop.
 
@@ -563,22 +556,26 @@ namespace DocumentDB.ChangeFeedProcessor
             return -1;
         }
 
-        private bool IsCheckpointNeeded(DocumentServiceLease lease, CheckpointStats checkpointStats, uint docCount)
+        private bool IsCheckpointNeeded(DocumentServiceLease lease, CheckpointStats checkpointStats)
         {
             Debug.Assert(lease != null);
             Debug.Assert(checkpointStats != null);
-            Debug.Assert(docCount >= 0);
+
+            if (checkpointStats.ProcessedDocCount == 0)
+            {
+                return false;
+            }
 
             bool isCheckpointNeeded = true;
 
             if (this.options.CheckpointFrequency != null &&
-                (this.options.CheckpointFrequency.ProcessedDocCount.HasValue || this.options.CheckpointFrequency.TimeInterval.HasValue))
+                (this.options.CheckpointFrequency.ProcessedDocumentCount.HasValue || this.options.CheckpointFrequency.TimeInterval.HasValue))
             {
                 // Note: if either condition is satisfied, we checkpoint.
                 isCheckpointNeeded = false;
-                if (this.options.CheckpointFrequency.ProcessedDocCount.HasValue)
+                if (this.options.CheckpointFrequency.ProcessedDocumentCount.HasValue)
                 {
-                    isCheckpointNeeded = checkpointStats.ProcessedDocCount >= this.options.CheckpointFrequency.ProcessedDocCount.Value;
+                    isCheckpointNeeded = checkpointStats.ProcessedDocCount >= this.options.CheckpointFrequency.ProcessedDocumentCount.Value;
                 }
 
                 if (this.options.CheckpointFrequency.TimeInterval.HasValue)
@@ -619,13 +616,10 @@ namespace DocumentDB.ChangeFeedProcessor
 
             internal DateTime LastCheckpointTime { get; set; }
 
-            internal string LastResponseContinuation { get; set; }
-
             internal void Reset()
             {
                 this.ProcessedDocCount = 0;
                 this.LastCheckpointTime = DateTime.Now;
-                this.LastResponseContinuation = null;
             }
         }
     }
