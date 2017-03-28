@@ -90,6 +90,7 @@ namespace DocumentDB.ChangeFeedProcessor
         ICheckpointManager checkpointManager;
         DocumentCollectionInfo auxCollectionLocation;
 
+        ConcurrentDictionary<string, CheckpointStats> statsSinceLastCheckpoint = new ConcurrentDictionary<string, CheckpointStats>();
         IChangeFeedObserverFactory observerFactory;
         ConcurrentDictionary<string, WorkerData> partitionKeyRangeIdToWorkerMap;
         int isShutdown = 0;
@@ -158,7 +159,7 @@ namespace DocumentDB.ChangeFeedProcessor
         /// </summary>
         /// <param name="factory">Implementation of your application-specific event observer factory.</typeparam>
         /// <returns>A task indicating that the <see cref="DocumentDB.ChangeFeedProcessor.ChangeFeedEventHost" /> instance has started.</returns>
-        public async Task RegisterObserverAsync(IChangeFeedObserverFactory factory)
+        public async Task RegisterObserverFactoryAsync(IChangeFeedObserverFactory factory)
         {
             this.observerFactory = factory;
             await this.StartAsync();
@@ -218,6 +219,12 @@ namespace DocumentDB.ChangeFeedProcessor
                         options.RequestContinuation = lease.ContinuationToken;
                     }
 
+                    CheckpointStats checkpointStats = null;
+                    if (!this.statsSinceLastCheckpoint.TryGetValue(lease.PartitionId, out checkpointStats) || checkpointStats == null)
+                    {
+                        throw new Exception(string.Format(CultureInfo.InvariantCulture, "Failed to get checkpoint stats for partition {0}", lease.PartitionId));
+                    }
+
                     IDocumentQuery<Document> query = this.documentClient.CreateDocumentChangeFeedQuery(this.collectionSelfLink, options);
 
                     TraceLog.Verbose(string.Format("Worker start: partition '{0}', continuation '{1}'", lease.PartitionId, lease.ContinuationToken));
@@ -275,7 +282,7 @@ namespace DocumentDB.ChangeFeedProcessor
 
                                         try
                                         {
-                                            context.FeedResponse = response; 
+                                            context.FeedResponse = response;
                                             await observer.ProcessChangesAsync(context, docs);
                                         }
                                         catch (Exception ex)
@@ -288,14 +295,18 @@ namespace DocumentDB.ChangeFeedProcessor
                                         {
                                             context.FeedResponse = null;
                                         }
-
-                                        // Checkpoint after every successful delivery to the client.
-                                        lease = await CheckpointAsync(lease, response.ResponseContinuation, context);
                                     }
-                                    else if (string.IsNullOrEmpty(lease.ContinuationToken))
+
+                                    checkpointStats.ProcessedDocCount += (uint)response.Count;
+
+                                    if (IsCheckpointNeeded(lease, checkpointStats))
                                     {
-                                        // Checkpoint if we've never done that for this lease.
                                         lease = await CheckpointAsync(lease, response.ResponseContinuation, context);
+                                        checkpointStats.Reset();
+                                    }
+                                    else if (response.Count > 0)
+                                    {
+                                        TraceLog.Informational(string.Format("Checkpoint: not checkpointing for partition {0}, {1} docs, new continuation {2} as frequency condition is not met", lease.PartitionId, response.Count, response.ResponseContinuation));
                                     }
                                 }
                             }
@@ -395,7 +406,7 @@ namespace DocumentDB.ChangeFeedProcessor
                 result = (DocumentServiceLease)await this.checkpointManager.CheckpointAsync(lease, continuation, lease.SequenceNumber + 1);
 
                 Debug.Assert(result.ContinuationToken == continuation, "ContinuationToken was not updated!");
-                TraceLog.Verbose(string.Format("Checkpoint: partition {0}, new continuation '{1}'", lease.PartitionId, continuation));
+                TraceLog.Informational(string.Format("Checkpoint: partition {0}, new continuation '{1}'", lease.PartitionId, continuation));
             }
             catch (LeaseLostException)
             {
@@ -408,6 +419,7 @@ namespace DocumentDB.ChangeFeedProcessor
                 throw;
             }
 
+            Debug.Assert(result != null);
             return await Task.FromResult<DocumentServiceLease>(result);
         }
 
@@ -448,7 +460,14 @@ namespace DocumentDB.ChangeFeedProcessor
 
             string[] rangeIds = await this.EnumPartitionKeyRangeIds(this.collectionSelfLink);
 
-            Parallel.ForEach(rangeIds, async rangeId => await this.leaseManager.CreateLeaseIfNotExistAsync(rangeId));
+            Parallel.ForEach(rangeIds, async rangeId => {
+                this.statsSinceLastCheckpoint.AddOrUpdate(
+                    rangeId,
+                    new CheckpointStats(),
+                    (partitionId, existingStats) => existingStats);
+
+                await this.leaseManager.CreateLeaseIfNotExistAsync(rangeId);
+            });
 
             this.partitionManager = new PartitionManager<DocumentServiceLease>(this.HostName, this.leaseManager, this.options);
             await this.partitionManager.SubscribeAsync(this);
@@ -537,6 +556,38 @@ namespace DocumentDB.ChangeFeedProcessor
             return -1;
         }
 
+        private bool IsCheckpointNeeded(DocumentServiceLease lease, CheckpointStats checkpointStats)
+        {
+            Debug.Assert(lease != null);
+            Debug.Assert(checkpointStats != null);
+
+            if (checkpointStats.ProcessedDocCount == 0)
+            {
+                return false;
+            }
+
+            bool isCheckpointNeeded = true;
+
+            if (this.options.CheckpointFrequency != null &&
+                (this.options.CheckpointFrequency.ProcessedDocumentCount.HasValue || this.options.CheckpointFrequency.TimeInterval.HasValue))
+            {
+                // Note: if either condition is satisfied, we checkpoint.
+                isCheckpointNeeded = false;
+                if (this.options.CheckpointFrequency.ProcessedDocumentCount.HasValue)
+                {
+                    isCheckpointNeeded = checkpointStats.ProcessedDocCount >= this.options.CheckpointFrequency.ProcessedDocumentCount.Value;
+                }
+
+                if (this.options.CheckpointFrequency.TimeInterval.HasValue)
+                {
+                    isCheckpointNeeded = isCheckpointNeeded ||
+                        DateTime.Now - checkpointStats.LastCheckpointTime >= this.options.CheckpointFrequency.TimeInterval.Value;
+                }
+            }
+
+            return isCheckpointNeeded;
+        }
+
         private class WorkerData
         {
             public WorkerData(Task task, IChangeFeedObserver observer, ChangeFeedObserverContext context, CancellationTokenSource cancellation)
@@ -554,6 +605,22 @@ namespace DocumentDB.ChangeFeedProcessor
             public ChangeFeedObserverContext Context { get; private set; }
 
             public CancellationTokenSource Cancellation { get; private set; }
+        }
+
+        /// <summary>
+        /// Stats since last checkpoint.
+        /// </summary>
+        private class CheckpointStats
+        {
+            internal uint ProcessedDocCount { get; set; }
+
+            internal DateTime LastCheckpointTime { get; set; }
+
+            internal void Reset()
+            {
+                this.ProcessedDocCount = 0;
+                this.LastCheckpointTime = DateTime.Now;
+            }
         }
     }
 }

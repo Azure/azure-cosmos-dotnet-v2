@@ -43,6 +43,11 @@ namespace DocumentDB.ChangeFeedProcessor
         public TimeSpan FeedPollDelay { get; set; }
 
         /// <summary>
+        /// Gets or sets the the frequency how often to checkpoint leases.
+        /// </summary>
+        public CheckpointFrequency CheckpointFrequency { get; set; }
+
+        /// <summary>
         /// Gets or set the minimum partition count for the host.
         /// This can be used to increase the number of partitions for the host and thus override equal distribution (which is the default) of leases between hosts.
         /// </summary>

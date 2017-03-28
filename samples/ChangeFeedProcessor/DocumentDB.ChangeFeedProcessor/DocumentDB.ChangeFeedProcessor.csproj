@@ -55,6 +55,7 @@
     <Compile Include="ChangeFeedHostOptions.cs" />
     <Compile Include="ChangeFeedObserverCloseReason.cs" />
     <Compile Include="ChangeFeedObserverContext.cs" />
+    <Compile Include="CheckpointFrequency.cs" />
     <Compile Include="DocumentCollectionInfo.cs" />
     <Compile Include="IChangeFeedObserver.cs" />
     <Compile Include="IChangeFeedObserverFactory.cs" />

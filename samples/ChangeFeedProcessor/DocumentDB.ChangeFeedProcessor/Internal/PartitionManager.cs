@@ -124,7 +124,7 @@
             return this.partitionObserverManager.SubscribeAsync(observer);
         }
 
-        public async Task TryReleasePartitionAsync(string partitionId, bool hasOwnership, ChangeFeedObserverCloseReason closeReason = ChangeFeedObserverCloseReason.Unknown)
+        public async Task TryReleasePartitionAsync(string partitionId, bool hasOwnership, ChangeFeedObserverCloseReason closeReason)
         {
             T lease;
             if (this.currentlyOwnedPartitions.TryGetValue(partitionId, out lease))
