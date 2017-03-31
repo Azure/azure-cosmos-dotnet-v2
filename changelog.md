@@ -1,3 +1,6 @@
+## Changes in 1.13.1 : ##
+- Fixed an issue which caused deadlocks in some of the async APIs when used inside ASP.NET context.
+
 ## Changes in 1.13.0 : ##
 - Fixes to make SDK more resilient to automatic failover under certain conditions.
 
