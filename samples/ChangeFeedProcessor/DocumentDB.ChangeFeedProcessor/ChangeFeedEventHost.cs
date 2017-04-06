@@ -601,7 +601,7 @@ namespace DocumentDB.ChangeFeedProcessor
             await gonePartitionIds.ForEachAsync(
                 async goneRangeId =>
                 {
-                    await this.leaseManager.DeleteAsync(existingLeases[goneRangeId], false);
+                    await this.leaseManager.DeleteAsync(existingLeases[goneRangeId]);
                     TraceLog.Informational(string.Format("Deleted lease for gone (splitted) partition '{0}', continuation '{1}'", goneRangeId, existingLeases[goneRangeId].ContinuationToken));
 
                     CheckpointStats removedStatsUnused;
@@ -710,7 +710,7 @@ namespace DocumentDB.ChangeFeedProcessor
             }
 
             await Task.WhenAll(tasks);
-            await this.leaseManager.DeleteAsync(new DocumentServiceLease { Id = leaseId }, false);
+            await this.leaseManager.DeleteAsync(new DocumentServiceLease { Id = leaseId });
 
             TraceLog.Informational(string.Format("Deleted lease for gone (splitted) partition '{0}' continuation '{1}'", partitionKeyRangeId, continuationToken));
 

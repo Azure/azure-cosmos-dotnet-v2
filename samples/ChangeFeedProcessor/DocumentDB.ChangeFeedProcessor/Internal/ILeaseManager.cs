@@ -29,7 +29,7 @@
 
         Task<bool> ReleaseAsync(T lease);
 
-        Task<T> DeleteAsync(T lease, bool enableIfMatchCheck);
+        Task DeleteAsync(T lease);
 
         Task DeleteAllAsync();
 

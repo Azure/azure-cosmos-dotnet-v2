@@ -219,47 +219,24 @@
             }
         }
 
-        public async Task<DocumentServiceLease> DeleteAsync(DocumentServiceLease lease, bool enableIfMatchCheck)
+
+        public async Task DeleteAsync(DocumentServiceLease lease)
         {
             if (lease == null || lease.Id == null)
             {
                 throw new ArgumentException("lease");
             }
 
-            var retryCount = RetryCountOnConflict;
             Uri leaseUri = UriFactory.CreateDocumentUri(this.leaseStoreCollectionInfo.DatabaseName, this.leaseStoreCollectionInfo.CollectionName, lease.Id);
-
-            while (true)
+            try
             {
-                try
+                await this.client.DeleteDocumentAsync(leaseUri);
+            }
+            catch (DocumentClientException ex)
+            {
+                if (StatusCode.NotFound != (StatusCode)ex.StatusCode)
                 {
-                    RequestOptions options = enableIfMatchCheck ? CreateIfMatchOptions(lease) : null;
-                    await this.client.DeleteDocumentAsync(leaseUri, options);
-                    return lease;
-                }
-                catch (DocumentClientException ex)
-                {
-                    if (StatusCode.PreconditionFailed == (StatusCode)ex.StatusCode)
-                    {
-                        if (retryCount-- > 0)
-                        {
-                            var leaseDocument = await this.client.ReadDocumentAsync(leaseUri);
-                            var serverLease = new DocumentServiceLease(leaseDocument);
-                            TraceLog.Informational(string.Format("Partition '{0}' delete failed because the lease with token '{1}' was updated by somewith token '{2}'. Will retry, {3} retry(s) left.", lease.PartitionId, lease.ConcurrencyToken, serverLease.ConcurrencyToken, retryCount));
-                            lease = serverLease;
-                        }
-                        else
-                        {
-                            throw new LeaseLostException(lease);
-                        }
-                    }
-                    else if (StatusCode.NotFound != (StatusCode)ex.StatusCode)
-                    {
-                        this.HandleLeaseOperationException(lease, ExceptionDispatchInfo.Capture(ex));
-
-                        Debug.Assert(false, "DeleteAsync: should never reach this!");
-                        throw new LeaseLostException(lease);
-                    }
+                    this.HandleLeaseOperationException(lease, ExceptionDispatchInfo.Capture(ex));
                 }
             }
         }
@@ -270,7 +247,7 @@
             foreach (var doc in docs)
             {
                 DocumentServiceLease lease = new DocumentServiceLease(doc);
-                await this.DeleteAsync(lease, false);
+                await this.DeleteAsync(lease);
             }
         }
 
