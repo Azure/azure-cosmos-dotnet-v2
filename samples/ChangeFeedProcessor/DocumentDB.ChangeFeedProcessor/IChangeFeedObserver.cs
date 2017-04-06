@@ -17,7 +17,7 @@
         Task OpenAsync(ChangeFeedObserverContext context);
 
         /// <summary>
-        /// This is called when change feed observer is opened.
+        /// This is called when change feed observer is closed.
         /// </summary>
         /// <param name="context">The context specifying partition for this observer, etc.</param>
         /// <param name="reason">Specifies the reason the observer is closed.</param>
