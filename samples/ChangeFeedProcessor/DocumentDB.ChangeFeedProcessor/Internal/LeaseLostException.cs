@@ -16,10 +16,11 @@
             this.Lease = lease;
         }
 
-        public LeaseLostException(Lease lease, Exception innerException)
+        public LeaseLostException(Lease lease, Exception innerException, bool isGone = false)
             : base(null, innerException)
         {
             this.Lease = lease;
+            this.IsGone = isGone;
         }
 
         public LeaseLostException(string message)
@@ -39,6 +40,8 @@
         }
 
         public Lease Lease { get; private set; }
+
+        public bool IsGone { get; private set; }
 
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {

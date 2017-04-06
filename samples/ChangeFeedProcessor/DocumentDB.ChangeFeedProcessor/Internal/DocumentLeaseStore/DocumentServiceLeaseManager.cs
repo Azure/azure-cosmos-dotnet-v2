@@ -102,14 +102,22 @@
             return this.ListDocuments(this.GetPartitionLeasePrefix());
         }
 
-        public async Task CreateLeaseIfNotExistAsync(string partitionId)
+        /// <summary>
+        /// Checks whether lease exists and creates if does not exist.
+        /// </summary>
+        /// <returns>true if created, false otherwise.</returns>
+        public async Task<bool> CreateLeaseIfNotExistAsync(string partitionId, string continuationToken)
         {
+            bool wasCreated = false;
             var leaseDocId = this.GetDocumentId(partitionId);
             if (await this.TryGetLease(leaseDocId) == null)
             {
                 try 
                 {
-                    await this.client.CreateDocumentAsync(this.leaseStoreCollectionLink, new DocumentServiceLease { Id = leaseDocId, PartitionId = partitionId });
+                    await this.client.CreateDocumentAsync(
+                        this.leaseStoreCollectionLink, 
+                        new DocumentServiceLease { Id = leaseDocId, PartitionId = partitionId, ContinuationToken = continuationToken });
+                    wasCreated = true;
                 }
                 catch (DocumentClientException ex)
                 {
@@ -119,6 +127,8 @@
                     }
                 }
             }
+
+            return wasCreated;
         }
 
         public async Task<DocumentServiceLease> GetLeaseAsync(string partitionId)
@@ -168,12 +178,7 @@
                 throw new LeaseLostException(lease);
             }
 
-            return await this.UpdateInternalAsync(
-                refreshedLease,
-                (DocumentServiceLease serverLease) =>
-                {
-                    return serverLease;
-                });
+            return await this.UpdateInternalAsync(refreshedLease, serverLease => serverLease);
         }
 
         public async Task<bool> ReleaseAsync(DocumentServiceLease lease)
@@ -214,23 +219,47 @@
             }
         }
 
-        public async Task DeleteAsync(DocumentServiceLease lease)
+        public async Task<DocumentServiceLease> DeleteAsync(DocumentServiceLease lease, bool enableIfMatchCheck)
         {
             if (lease == null || lease.Id == null)
             {
                 throw new ArgumentException("lease");
             }
 
+            var retryCount = RetryCountOnConflict;
             Uri leaseUri = UriFactory.CreateDocumentUri(this.leaseStoreCollectionInfo.DatabaseName, this.leaseStoreCollectionInfo.CollectionName, lease.Id);
-            try
+
+            while (true)
             {
-                await this.client.DeleteDocumentAsync(leaseUri);
-            }
-            catch (DocumentClientException ex)
-            {
-                if (StatusCode.NotFound != (StatusCode)ex.StatusCode)
+                try
                 {
-                    this.HandleLeaseOperationException(lease, ExceptionDispatchInfo.Capture(ex));
+                    RequestOptions options = enableIfMatchCheck ? CreateIfMatchOptions(lease) : null;
+                    await this.client.DeleteDocumentAsync(leaseUri, options);
+                    return lease;
+                }
+                catch (DocumentClientException ex)
+                {
+                    if (StatusCode.PreconditionFailed == (StatusCode)ex.StatusCode)
+                    {
+                        if (retryCount-- > 0)
+                        {
+                            var leaseDocument = await this.client.ReadDocumentAsync(leaseUri);
+                            var serverLease = new DocumentServiceLease(leaseDocument);
+                            TraceLog.Informational(string.Format("Partition '{0}' delete failed because the lease with token '{1}' was updated by somewith token '{2}'. Will retry, {3} retry(s) left.", lease.PartitionId, lease.ConcurrencyToken, serverLease.ConcurrencyToken, retryCount));
+                            lease = serverLease;
+                        }
+                        else
+                        {
+                            throw new LeaseLostException(lease);
+                        }
+                    }
+                    else if (StatusCode.NotFound != (StatusCode)ex.StatusCode)
+                    {
+                        this.HandleLeaseOperationException(lease, ExceptionDispatchInfo.Capture(ex));
+
+                        Debug.Assert(false, "DeleteAsync: should never reach this!");
+                        throw new LeaseLostException(lease);
+                    }
                 }
             }
         }
@@ -241,7 +270,7 @@
             foreach (var doc in docs)
             {
                 DocumentServiceLease lease = new DocumentServiceLease(doc);
-                await this.DeleteAsync(lease);
+                await this.DeleteAsync(lease, false);
             }
         }
 
@@ -272,7 +301,10 @@
             return result;
         }
 
-        private async Task<DocumentServiceLease> UpdateInternalAsync(DocumentServiceLease lease, LeaseConflictResolver conflictResolver, string owner = null)
+        private async Task<DocumentServiceLease> UpdateInternalAsync(
+            DocumentServiceLease lease, 
+            LeaseConflictResolver conflictResolver, 
+            string owner = null)
         {
             Debug.Assert(lease != null, "lease");
             Debug.Assert(!string.IsNullOrEmpty(lease.Id), "lease.Id");
@@ -298,7 +330,7 @@
                         ExceptionDispatchInfo.Capture(ex);
                         this.HandleLeaseOperationException(lease, ExceptionDispatchInfo.Capture(ex));
 
-                        Debug.Assert(false, "Should never reach this!");
+                        Debug.Assert(false, "UpdateInternalAsync: should never reach this!");
                         throw new LeaseLostException(lease);
                     }
                 }
@@ -406,9 +438,13 @@
             Debug.Assert(dispatchInfo != null, "dispatchInfo");
 
             DocumentClientException dcex = (DocumentClientException)dispatchInfo.SourceException;
-            if (StatusCode.PreconditionFailed == (StatusCode)dcex.StatusCode || StatusCode.Conflict == (StatusCode)dcex.StatusCode)
+            TraceLog.Warning(string.Format("Lease operation exception, status code: ", dcex.StatusCode));
+
+            if (StatusCode.PreconditionFailed == (StatusCode)dcex.StatusCode || 
+                StatusCode.Conflict == (StatusCode)dcex.StatusCode ||
+                StatusCode.NotFound == (StatusCode)dcex.StatusCode)
             {
-                throw new LeaseLostException(lease, dcex);
+                throw new LeaseLostException(lease, dcex, StatusCode.NotFound == (StatusCode)dcex.StatusCode);
             }
             else
             {

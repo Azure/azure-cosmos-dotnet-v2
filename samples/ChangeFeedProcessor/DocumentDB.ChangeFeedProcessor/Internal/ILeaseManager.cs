@@ -8,14 +8,18 @@
         Task<bool> LeaseStoreExistsAsync();
 
         /// <summary>
-        /// Checks whether exists and creates if does not exist.
+        /// Checks whether lease store exists and creates if does not exist.
         /// </summary>
         /// <returns>true if created, false otherwise.</returns>
         Task<bool> CreateLeaseStoreIfNotExistsAsync();
 
         Task<IEnumerable<T>> ListLeases();
 
-        Task CreateLeaseIfNotExistAsync(string partitionId);
+        /// <summary>
+        /// Checks whether lease exists and creates if does not exist.
+        /// </summary>
+        /// <returns>true if created, false otherwise.</returns>
+        Task<bool> CreateLeaseIfNotExistAsync(string partitionId, string continuationToken);
 
         Task<T> GetLeaseAsync(string partitionId);
 
@@ -25,7 +29,7 @@
 
         Task<bool> ReleaseAsync(T lease);
 
-        Task DeleteAsync(T lease);
+        Task<T> DeleteAsync(T lease, bool enableIfMatchCheck);
 
         Task DeleteAllAsync();
 
