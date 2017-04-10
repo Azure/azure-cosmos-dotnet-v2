@@ -19,7 +19,6 @@ namespace DocumentDB.ChangeFeedProcessor
             this.LeaseAcquireInterval = DefaultAcquireInterval;
             this.LeaseExpirationInterval = DefaultExpirationInterval;
             this.FeedPollDelay = DefaultFeedPollDelay;
-            this.RetryOnSplitInProgressCount = 100;
         }
 
         /// <summary>
@@ -76,12 +75,5 @@ namespace DocumentDB.ChangeFeedProcessor
                 return this.MaxPartitionCount > 0 ? this.MaxPartitionCount : 25;
             }
         }
-
-        /// <summary>
-        /// Gets or sets the number of times to retry for "split in progress error" for one partition.
-        /// After each retry, there is a delay of FeedPollDelay. 
-        /// When all retries are over, and partition is still splitting, the host is taken down.
-        /// </summary>
-        internal int RetryOnSplitInProgressCount { get; set; }
     }
 }

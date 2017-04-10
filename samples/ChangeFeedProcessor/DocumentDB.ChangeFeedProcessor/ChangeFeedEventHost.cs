@@ -9,6 +9,7 @@ namespace DocumentDB.ChangeFeedProcessor
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Globalization;
+    using System.Linq;
     using System.Runtime.ExceptionServices;
     using System.Threading;
     using System.Threading.Tasks;
@@ -235,7 +236,6 @@ namespace DocumentDB.ChangeFeedProcessor
 
                     TraceLog.Verbose(string.Format("Worker start: partition '{0}', continuation '{1}'", lease.PartitionId, lease.ContinuationToken));
 
-                    int retriesOnSpitInProgressLeft = this.options.RetryOnSplitInProgressCount;
                     string lastContinuation = options.RequestContinuation;
 
                     try
@@ -288,31 +288,24 @@ namespace DocumentDB.ChangeFeedProcessor
                                         }
                                         else if (SubStatusCode.Splitting == subStatusCode)
                                         {
-                                            if (retriesOnSpitInProgressLeft-- <= 0)
-                                            {
-                                                TraceLog.Error(string.Format("Partition {0} is still splitting after all retries are over, giving up, launch a new instance of the host. Aborting", context.PartitionKeyRangeId));
-                                                await Task.Factory.StartNew(() => this.StopAsync(ChangeFeedObserverCloseReason.ResourceGone));
-                                                break;
-                                            }
-
-                                            TraceLog.Warning(string.Format("Partition {0} is splitting. Will retry to read changes until split finishes, {1} retries left.", context.PartitionKeyRangeId, retriesOnSpitInProgressLeft));
-                                            break;
+                                            TraceLog.Warning(string.Format("Partition {0} is splitting. Will retry to read changes until split finishes. {1}", context.PartitionKeyRangeId, dcex.Message));
                                         }
                                         else
                                         {
                                             exceptionDispatchInfo.Throw();
                                         }
                                     }
-                                    else if (!(StatusCode.TooManyRequests == (StatusCode)dcex.StatusCode ||
-                                        StatusCode.ServiceUnavailable == (StatusCode)dcex.StatusCode))
+                                    else if (StatusCode.TooManyRequests == (StatusCode)dcex.StatusCode ||
+                                        StatusCode.ServiceUnavailable == (StatusCode)dcex.StatusCode)
                                     {
                                         TraceLog.Warning(string.Format("Partition {0}: retriable exception : {1}", context.PartitionKeyRangeId, dcex.Message));
-                                        await Task.Delay(dcex.RetryAfter != TimeSpan.Zero ? dcex.RetryAfter : this.options.FeedPollDelay, cancellation.Token);
                                     }
                                     else
                                     {
                                         exceptionDispatchInfo.Throw();
                                     }
+
+                                    await Task.Delay(dcex.RetryAfter != TimeSpan.Zero ? dcex.RetryAfter : this.options.FeedPollDelay, cancellation.Token);
                                 }
 
                                 if (response != null)
@@ -564,15 +557,10 @@ namespace DocumentDB.ChangeFeedProcessor
                                 parentIds += parentIds.Length == 0 ? parentRangeId : "," + parentRangeId;
                                 if (continuationToken != null)
                                 {
-                                    string oldContinuation = continuationToken;
-                                    string newContinuation = existingLeases[parentRangeId].ContinuationToken;
-                                    continuationToken = GetMaxContinuation(oldContinuation, newContinuation);
-                                    TraceLog.Warning(string.Format("Partition {0}: found more than one parent, new continuation '{1}', current '{2}', will use '{3}'", addedRangeId, oldContinuation, newContinuation, continuationToken));
+                                    TraceLog.Warning(string.Format("Partition {0}: found more than one parent, new continuation '{1}', current '{2}', will use '{3}'", addedRangeId, existingLeases[parentRangeId].ContinuationToken, existingLeases[parentRangeId].ContinuationToken));
                                 }
-                                else
-                                {
-                                    continuationToken = existingLeases[parentRangeId].ContinuationToken;
-                                }
+
+                                continuationToken = existingLeases[parentRangeId].ContinuationToken;
                             }
                         }
                     }
@@ -687,15 +675,7 @@ namespace DocumentDB.ChangeFeedProcessor
 
             List<PartitionKeyRange> allRanges = await this.EnumPartitionKeyRangesAsync(this.collectionSelfLink);
 
-            var childRanges = new List<PartitionKeyRange>();
-            foreach (var range in allRanges)
-            {
-                if (range.Parents.Contains(partitionKeyRangeId))
-                {
-                    childRanges.Add(range);
-                }
-            }
-
+            var childRanges = new List<PartitionKeyRange>(allRanges.Where(range => range.Parents.Contains(partitionKeyRangeId)));
             if (childRanges.Count < 2)
             {
                 TraceLog.Error(string.Format("Partition {0} had split but we failed to find at least 2 child paritions."));
@@ -766,19 +746,6 @@ namespace DocumentDB.ChangeFeedProcessor
             }
 
             return isCheckpointNeeded;
-        }
-
-        string GetMaxContinuation(string continuation1, string continuation2)
-        {
-            Debug.Assert(continuation1 != null);
-            Debug.Assert(continuation2 != null);
-
-            if (continuation1.Length != continuation2.Length)
-            {
-                return continuation1.Length > continuation2.Length ? continuation1 : continuation2;
-            }
-
-            return string.Compare(continuation1, continuation2, StringComparison.Ordinal) > 0 ? continuation1 : continuation2;
         }
 
         private class WorkerData
