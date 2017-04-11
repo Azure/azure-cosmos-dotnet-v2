@@ -1,7 +1,5 @@
 ﻿namespace DocumentDB.ChangeFeedProcessor
 {
-    using System.Net;
-
     enum StatusCode
     {
         /// <summary>
@@ -15,6 +13,11 @@
         /// </summary>
         Conflict = 409,
 
+        /// <summary>
+        /// The resource is gone.
+        /// </summary>
+        Gone = 410,
+        
         /// <summary>
         /// The operation specified an eTag that is different from the version available at the server, i.e., an optimistic concurrency error. 
         /// Retry the request after reading the latest version of the resource and updating the eTag on the request.

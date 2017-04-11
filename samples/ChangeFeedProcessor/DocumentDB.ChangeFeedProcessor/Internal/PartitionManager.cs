@@ -194,7 +194,9 @@
                     }
 
                     // Trigger shutdown of all partitions we failed to renew leases
-                    Parallel.ForEach(failedToRenewLeases, async (lease) => await this.RemoveLeaseAsync(lease, false, ChangeFeedObserverCloseReason.LeaseLost));
+                    await failedToRenewLeases.ForEachAsync(
+                        async lease => await this.RemoveLeaseAsync(lease, false, ChangeFeedObserverCloseReason.LeaseLost),
+                        this.options.DegreeOfParallelism);
 
                     // Now remove all failed renewals of shutdown leases from further renewals
                     foreach (T failedToRenewShutdownLease in failedToRenewShutdownLeases)
@@ -228,7 +230,7 @@
                 {
                     TraceLog.Informational(string.Format("Host '{0}' starting to check for available leases.", this.workerName));
                     var availableLeases = await this.TakeLeasesAsync();
-                    TraceLog.Informational(string.Format("Host '{0}' adding {1} leases...", this.workerName, availableLeases.Count));
+                    if (availableLeases.Count > 0) TraceLog.Informational(string.Format("Host '{0}' adding {1} leases...", this.workerName, availableLeases.Count));
 
                     var addLeaseTasks = new List<Task>();
                     foreach (var kvp in availableLeases)

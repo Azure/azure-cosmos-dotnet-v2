@@ -9,6 +9,8 @@ namespace DocumentDB.ChangeFeedProcessor
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Globalization;
+    using System.Linq;
+    using System.Runtime.ExceptionServices;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -222,12 +224,19 @@ namespace DocumentDB.ChangeFeedProcessor
                     CheckpointStats checkpointStats = null;
                     if (!this.statsSinceLastCheckpoint.TryGetValue(lease.PartitionId, out checkpointStats) || checkpointStats == null)
                     {
-                        throw new Exception(string.Format(CultureInfo.InvariantCulture, "Failed to get checkpoint stats for partition {0}", lease.PartitionId));
+                        // It could be that the lease was created by different host and we picked it up.
+                        checkpointStats = this.statsSinceLastCheckpoint.AddOrUpdate(
+                            lease.PartitionId, 
+                            new CheckpointStats(), 
+                            (partitionId, existingStats) => existingStats);
+                        Trace.TraceWarning(string.Format("Added stats for partition '{0}' for which the lease was picked up after the host was started.", lease.PartitionId));
                     }
 
                     IDocumentQuery<Document> query = this.documentClient.CreateDocumentChangeFeedQuery(this.collectionSelfLink, options);
 
                     TraceLog.Verbose(string.Format("Worker start: partition '{0}', continuation '{1}'", lease.PartitionId, lease.ContinuationToken));
+
+                    string lastContinuation = options.RequestContinuation;
 
                     try
                     {
@@ -235,42 +244,68 @@ namespace DocumentDB.ChangeFeedProcessor
                         {
                             do
                             {
-                                DocumentClientException dcex = null;
+                                ExceptionDispatchInfo exceptionDispatchInfo = null;
                                 FeedResponse<Document> response = null;
 
                                 try
                                 {
                                     response = await query.ExecuteNextAsync<Document>();
+                                    lastContinuation = response.ResponseContinuation;
                                 }
                                 catch (DocumentClientException ex)
                                 {
-                                    if (StatusCode.NotFound != (StatusCode)ex.StatusCode &&
-                                        StatusCode.TooManyRequests != (StatusCode)ex.StatusCode &&
-                                        StatusCode.ServiceUnavailable != (StatusCode)ex.StatusCode)
-                                    {
-                                        throw;
-                                    }
-
-                                    dcex = ex;
+                                    exceptionDispatchInfo = ExceptionDispatchInfo.Capture(ex);
                                 }
 
-                                if (dcex != null)
+                                if (exceptionDispatchInfo != null)
                                 {
-                                    const int ReadSessionNotAvailable = 1002;
-                                    if (StatusCode.NotFound == (StatusCode)dcex.StatusCode && GetSubStatusCode(dcex) != ReadSessionNotAvailable)
+                                    DocumentClientException dcex = (DocumentClientException)exceptionDispatchInfo.SourceException;
+
+                                    if (StatusCode.NotFound == (StatusCode)dcex.StatusCode && SubStatusCode.ReadSessionNotAvailable != (SubStatusCode)GetSubStatusCode(dcex))
                                     {
                                         // Most likely, the database or collection was removed while we were enumerating.
                                         // Shut down. The user will need to start over.
                                         // Note: this has to be a new task, can't await for shutdown here, as shudown awaits for all worker tasks.
+                                        TraceLog.Error(string.Format("Partition {0}: resource gone (subStatus={1}). Aborting.", context.PartitionKeyRangeId, GetSubStatusCode(dcex)));
                                         await Task.Factory.StartNew(() => this.StopAsync(ChangeFeedObserverCloseReason.ResourceGone));
                                         break;
                                     }
+                                    else if (StatusCode.Gone == (StatusCode)dcex.StatusCode)
+                                    {
+                                        SubStatusCode subStatusCode = (SubStatusCode)GetSubStatusCode(dcex);
+                                        if (SubStatusCode.PartitionKeyRangeGone == subStatusCode)
+                                        {
+                                            bool isSuccess = await HandleSplitAsync(context.PartitionKeyRangeId, lastContinuation, lease.Id);
+                                            if (!isSuccess)
+                                            {
+                                                TraceLog.Error(string.Format("Partition {0}: HandleSplit failed! Aborting.", context.PartitionKeyRangeId));
+                                                await Task.Factory.StartNew(() => this.StopAsync(ChangeFeedObserverCloseReason.ResourceGone));
+                                                break;
+                                            }
+
+                                            // Throw LeaseLostException so that we take the lease down.
+                                            throw new LeaseLostException(lease, exceptionDispatchInfo.SourceException, true);
+                                        }
+                                        else if (SubStatusCode.Splitting == subStatusCode)
+                                        {
+                                            TraceLog.Warning(string.Format("Partition {0} is splitting. Will retry to read changes until split finishes. {1}", context.PartitionKeyRangeId, dcex.Message));
+                                        }
+                                        else
+                                        {
+                                            exceptionDispatchInfo.Throw();
+                                        }
+                                    }
+                                    else if (StatusCode.TooManyRequests == (StatusCode)dcex.StatusCode ||
+                                        StatusCode.ServiceUnavailable == (StatusCode)dcex.StatusCode)
+                                    {
+                                        TraceLog.Warning(string.Format("Partition {0}: retriable exception : {1}", context.PartitionKeyRangeId, dcex.Message));
+                                    }
                                     else
                                     {
-                                        Debug.Assert(StatusCode.TooManyRequests == (StatusCode)dcex.StatusCode || StatusCode.ServiceUnavailable == (StatusCode)dcex.StatusCode);
-                                        TraceLog.Warning(string.Format("Partition {0}: retriable exception : {1}", context.PartitionKeyRangeId, dcex.Message));
-                                        await Task.Delay(dcex.RetryAfter != TimeSpan.Zero ? dcex.RetryAfter : this.options.FeedPollDelay, cancellation.Token);
+                                        exceptionDispatchInfo.Throw();
                                     }
+
+                                    await Task.Delay(dcex.RetryAfter != TimeSpan.Zero ? dcex.RetryAfter : this.options.FeedPollDelay, cancellation.Token);
                                 }
 
                                 if (response != null)
@@ -306,7 +341,7 @@ namespace DocumentDB.ChangeFeedProcessor
                                     }
                                     else if (response.Count > 0)
                                     {
-                                        TraceLog.Informational(string.Format("Checkpoint: not checkpointing for partition {0}, {1} docs, new continuation {2} as frequency condition is not met", lease.PartitionId, response.Count, response.ResponseContinuation));
+                                        TraceLog.Informational(string.Format("Checkpoint: not checkpointing for partition {0}, {1} docs, new continuation '{2}' as frequency condition is not met", lease.PartitionId, response.Count, response.ResponseContinuation));
                                     }
                                 }
                             }
@@ -326,9 +361,9 @@ namespace DocumentDB.ChangeFeedProcessor
                         TraceLog.Informational(string.Format("Cancel signal received for partition {0} worker!", context.PartitionKeyRangeId));
                     }
                 }
-                catch (LeaseLostException)
+                catch (LeaseLostException ex)
                 {
-                    closeReason = ChangeFeedObserverCloseReason.LeaseLost;
+                    closeReason = ex.IsGone ? ChangeFeedObserverCloseReason.LeaseGone : ChangeFeedObserverCloseReason.LeaseLost;
                 }
                 catch (Exception ex)
                 {
@@ -458,42 +493,128 @@ namespace DocumentDB.ChangeFeedProcessor
             // If it's not deleted, it's not stale. If it's deleted, it's not stale as it doesn't exist.
             await this.leaseManager.CreateLeaseStoreIfNotExistsAsync();
 
-            string[] rangeIds = await this.EnumPartitionKeyRangeIds(this.collectionSelfLink);
-
-            Parallel.ForEach(rangeIds, async rangeId => {
-                this.statsSinceLastCheckpoint.AddOrUpdate(
-                    rangeId,
-                    new CheckpointStats(),
-                    (partitionId, existingStats) => existingStats);
-
-                await this.leaseManager.CreateLeaseIfNotExistAsync(rangeId);
-            });
+            await this.CreateLeases();
 
             this.partitionManager = new PartitionManager<DocumentServiceLease>(this.HostName, this.leaseManager, this.options);
             await this.partitionManager.SubscribeAsync(this);
             await this.partitionManager.InitializeAsync();
         }
 
-        async Task<string[]> EnumPartitionKeyRangeIds(string collectionSelfLink)
+        /// <summary>
+        /// Create leases for new partitions and take care of split partitions.
+        /// </summary>
+        private async Task CreateLeases()
+        {
+            var ranges = new Dictionary<string, PartitionKeyRange>();
+            foreach (var range in await this.EnumPartitionKeyRangesAsync(this.collectionSelfLink))
+            {
+                ranges.Add(range.Id, range);
+            }
+
+            TraceLog.Informational(string.Format("Source collection: '{0}', {1} partition(s)", this.collectionLocation.CollectionName, ranges.Count));
+
+            // Get leases after getting ranges, to make sure that no other hosts checked in continuation for split partition after we got leases.
+            var existingLeases = new Dictionary<string, DocumentServiceLease>();
+            foreach (var lease in await this.leaseManager.ListLeases())
+            {
+                existingLeases.Add(lease.PartitionId, lease);
+            }
+
+            var gonePartitionIds = new HashSet<string>();
+            foreach (var partitionId in existingLeases.Keys)
+            {
+                if (!ranges.ContainsKey(partitionId)) gonePartitionIds.Add(partitionId);
+            }
+
+            var addedPartitionIds = new List<string>();
+            foreach (var range in ranges)
+            {
+                if (!existingLeases.ContainsKey(range.Key)) addedPartitionIds.Add(range.Key);
+            }
+
+            // Create leases for new partitions, if there was split, use continuation from parent partition.
+            var parentIdToChildLeases = new ConcurrentDictionary<string, ConcurrentQueue<DocumentServiceLease>>();
+            await addedPartitionIds.ForEachAsync(
+                async addedRangeId =>
+                {
+                    this.statsSinceLastCheckpoint.AddOrUpdate(
+                        addedRangeId,
+                        new CheckpointStats(),
+                        (partitionId, existingStats) => existingStats);
+
+                    string continuationToken = null;
+                    string parentIds = string.Empty;
+                    var range = ranges[addedRangeId];
+                    if (range.Parents != null && range.Parents.Count > 0)   // Check for split.
+                    {
+                        foreach (var parentRangeId in range.Parents)
+                        {
+                            if (gonePartitionIds.Contains(parentRangeId))
+                            {
+                                // Transfer continiation from lease for gone parent to lease for its child partition.
+                                Debug.Assert(existingLeases[parentRangeId] != null);
+
+                                parentIds += parentIds.Length == 0 ? parentRangeId : "," + parentRangeId;
+                                if (continuationToken != null)
+                                {
+                                    TraceLog.Warning(string.Format("Partition {0}: found more than one parent, new continuation '{1}', current '{2}', will use '{3}'", addedRangeId, existingLeases[parentRangeId].ContinuationToken, existingLeases[parentRangeId].ContinuationToken));
+                                }
+
+                                continuationToken = existingLeases[parentRangeId].ContinuationToken;
+                            }
+                        }
+                    }
+
+                    bool wasCreated = await this.leaseManager.CreateLeaseIfNotExistAsync(addedRangeId, continuationToken);
+
+                    if (wasCreated)
+                    {
+                        if (parentIds.Length == 0)
+                        {
+                            TraceLog.Informational(string.Format("Created lease for partition '{0}', continuation '{1}'.", addedRangeId, continuationToken));
+                        }
+                        else
+                        {
+                            TraceLog.Informational(string.Format("Created lease for partition '{0}' as child of split partition(s) '{1}', continuation '{2}'.", addedRangeId, parentIds, continuationToken));
+                        }
+                    }
+                    else
+                    {
+                        TraceLog.Warning(string.Format("Some other host created lease for '{0}' as child of split partition(s) '{1}', continuation '{2}'.", addedRangeId, parentIds, continuationToken));
+                    }
+                },
+                this.options.DegreeOfParallelism);
+
+            // Remove leases for splitted (and thus gone partitions) and update continuation token.
+            await gonePartitionIds.ForEachAsync(
+                async goneRangeId =>
+                {
+                    await this.leaseManager.DeleteAsync(existingLeases[goneRangeId]);
+                    TraceLog.Informational(string.Format("Deleted lease for gone (splitted) partition '{0}', continuation '{1}'", goneRangeId, existingLeases[goneRangeId].ContinuationToken));
+
+                    CheckpointStats removedStatsUnused;
+                    this.statsSinceLastCheckpoint.TryRemove(goneRangeId, out removedStatsUnused);
+                },
+                this.options.DegreeOfParallelism);
+        }
+
+        async Task<List<PartitionKeyRange>> EnumPartitionKeyRangesAsync(string collectionSelfLink)
         {
             Debug.Assert(!string.IsNullOrWhiteSpace(collectionSelfLink), "collectionSelfLink");
 
             string partitionkeyRangesPath = string.Format(CultureInfo.InvariantCulture, "{0}/pkranges", collectionSelfLink);
 
             FeedResponse<PartitionKeyRange> response = null;
-            List<string> ids = new List<string>();
+            var partitionKeyRanges = new List<PartitionKeyRange>();
             do
             {
                 FeedOptions feedOptions = new FeedOptions { MaxItemCount = 1000, RequestContinuation = response != null ? response.ResponseContinuation : null };
                 response = await this.documentClient.ReadPartitionKeyRangeFeedAsync(partitionkeyRangesPath, feedOptions);
-                foreach (var item in response)
-                {
-                    ids.Add(item.Id);
-                }
+                partitionKeyRanges.AddRange(response);
             }
             while (!string.IsNullOrEmpty(response.ResponseContinuation));
 
-            return ids.ToArray();
+            return partitionKeyRanges;
         }
 
         async Task StartAsync()
@@ -536,6 +657,45 @@ namespace DocumentDB.ChangeFeedProcessor
             }
 
             TraceLog.Informational(string.Format("Host '{0}': stopped.", this.HostName));
+        }
+
+        /// <summary>
+        /// Handle split for given partition.
+        /// </summary>
+        /// <param name="partitionKeyRangeId">The id of the partition that was splitted, aka parent partition.</param>
+        /// <param name="continuationToken">Continuation token on split partition before split.</param>
+        /// <param name="leaseId">The id of the lease. This is needed to avoid extra call to ILeaseManager to get the lease by partitionId.</param>
+        /// <returns>True on success, false on failure.</returns>
+        private async Task<bool> HandleSplitAsync(string partitionKeyRangeId, string continuationToken, string leaseId)
+        {
+            Debug.Assert(!string.IsNullOrEmpty(partitionKeyRangeId));
+            Debug.Assert(!string.IsNullOrEmpty(leaseId));
+
+            TraceLog.Informational(string.Format("Partition {0} is gone due to split, continuation '{1}'", partitionKeyRangeId, continuationToken));
+
+            List<PartitionKeyRange> allRanges = await this.EnumPartitionKeyRangesAsync(this.collectionSelfLink);
+
+            var childRanges = new List<PartitionKeyRange>(allRanges.Where(range => range.Parents.Contains(partitionKeyRangeId)));
+            if (childRanges.Count < 2)
+            {
+                TraceLog.Error(string.Format("Partition {0} had split but we failed to find at least 2 child paritions."));
+                return false;
+            }
+
+            var tasks = new List<Task>();
+            foreach (var childRange in childRanges)
+            {
+                tasks.Add(this.leaseManager.CreateLeaseIfNotExistAsync(childRange.Id, continuationToken));
+                TraceLog.Informational(string.Format("Creating lease for partition '{0}' as child of partition '{1}', continuation '{2}'", childRange.Id, partitionKeyRangeId, continuationToken));
+            }
+
+            await Task.WhenAll(tasks);
+            await this.leaseManager.DeleteAsync(new DocumentServiceLease { Id = leaseId });
+
+            TraceLog.Informational(string.Format("Deleted lease for gone (splitted) partition '{0}' continuation '{1}'", partitionKeyRangeId, continuationToken));
+
+            // Note: the rest is up to lease taker, that after waking up would consume these new leases.
+            return true;
         }
 
         private int GetSubStatusCode(DocumentClientException exception)

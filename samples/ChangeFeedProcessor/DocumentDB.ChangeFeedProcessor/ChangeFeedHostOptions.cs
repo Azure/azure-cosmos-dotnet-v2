@@ -64,5 +64,16 @@ namespace DocumentDB.ChangeFeedProcessor
         /// Gets or sets whether on start of the host all existing leases should be deleted and the host should start from scratch.
         /// </summary>
         internal bool DiscardExistingLeases { get; set; }
+
+        /// <summary>
+        /// Gets maximum number of tasks to use for auxiliary calls.
+        /// </summary>
+        internal int DegreeOfParallelism
+        { 
+            get
+            {
+                return this.MaxPartitionCount > 0 ? this.MaxPartitionCount : 25;
+            }
+        }
     }
 }

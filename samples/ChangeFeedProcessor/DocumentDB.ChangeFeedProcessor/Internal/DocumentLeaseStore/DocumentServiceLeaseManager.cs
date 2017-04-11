@@ -102,14 +102,22 @@
             return this.ListDocuments(this.GetPartitionLeasePrefix());
         }
 
-        public async Task CreateLeaseIfNotExistAsync(string partitionId)
+        /// <summary>
+        /// Checks whether lease exists and creates if does not exist.
+        /// </summary>
+        /// <returns>true if created, false otherwise.</returns>
+        public async Task<bool> CreateLeaseIfNotExistAsync(string partitionId, string continuationToken)
         {
+            bool wasCreated = false;
             var leaseDocId = this.GetDocumentId(partitionId);
             if (await this.TryGetLease(leaseDocId) == null)
             {
                 try 
                 {
-                    await this.client.CreateDocumentAsync(this.leaseStoreCollectionLink, new DocumentServiceLease { Id = leaseDocId, PartitionId = partitionId });
+                    await this.client.CreateDocumentAsync(
+                        this.leaseStoreCollectionLink, 
+                        new DocumentServiceLease { Id = leaseDocId, PartitionId = partitionId, ContinuationToken = continuationToken });
+                    wasCreated = true;
                 }
                 catch (DocumentClientException ex)
                 {
@@ -119,6 +127,8 @@
                     }
                 }
             }
+
+            return wasCreated;
         }
 
         public async Task<DocumentServiceLease> GetLeaseAsync(string partitionId)
@@ -168,12 +178,7 @@
                 throw new LeaseLostException(lease);
             }
 
-            return await this.UpdateInternalAsync(
-                refreshedLease,
-                (DocumentServiceLease serverLease) =>
-                {
-                    return serverLease;
-                });
+            return await this.UpdateInternalAsync(refreshedLease, serverLease => serverLease);
         }
 
         public async Task<bool> ReleaseAsync(DocumentServiceLease lease)
@@ -213,6 +218,7 @@
                 return false;
             }
         }
+
 
         public async Task DeleteAsync(DocumentServiceLease lease)
         {
@@ -272,7 +278,10 @@
             return result;
         }
 
-        private async Task<DocumentServiceLease> UpdateInternalAsync(DocumentServiceLease lease, LeaseConflictResolver conflictResolver, string owner = null)
+        private async Task<DocumentServiceLease> UpdateInternalAsync(
+            DocumentServiceLease lease, 
+            LeaseConflictResolver conflictResolver, 
+            string owner = null)
         {
             Debug.Assert(lease != null, "lease");
             Debug.Assert(!string.IsNullOrEmpty(lease.Id), "lease.Id");
@@ -298,7 +307,7 @@
                         ExceptionDispatchInfo.Capture(ex);
                         this.HandleLeaseOperationException(lease, ExceptionDispatchInfo.Capture(ex));
 
-                        Debug.Assert(false, "Should never reach this!");
+                        Debug.Assert(false, "UpdateInternalAsync: should never reach this!");
                         throw new LeaseLostException(lease);
                     }
                 }
@@ -406,9 +415,13 @@
             Debug.Assert(dispatchInfo != null, "dispatchInfo");
 
             DocumentClientException dcex = (DocumentClientException)dispatchInfo.SourceException;
-            if (StatusCode.PreconditionFailed == (StatusCode)dcex.StatusCode || StatusCode.Conflict == (StatusCode)dcex.StatusCode)
+            TraceLog.Warning(string.Format("Lease operation exception, status code: ", dcex.StatusCode));
+
+            if (StatusCode.PreconditionFailed == (StatusCode)dcex.StatusCode || 
+                StatusCode.Conflict == (StatusCode)dcex.StatusCode ||
+                StatusCode.NotFound == (StatusCode)dcex.StatusCode)
             {
-                throw new LeaseLostException(lease, dcex);
+                throw new LeaseLostException(lease, dcex, StatusCode.NotFound == (StatusCode)dcex.StatusCode);
             }
             else
             {

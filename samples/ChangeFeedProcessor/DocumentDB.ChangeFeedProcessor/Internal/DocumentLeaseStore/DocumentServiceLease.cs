@@ -58,7 +58,7 @@
         {
             return string.Format(
                 CultureInfo.InvariantCulture,
-                "{0} {1} Owner={2} Continuation={3} Timestamp(local)={4}",
+                "{0} {1} Owner='{2}' Continuation={3} Timestamp(local)={4}",
                 this.Id,
                 this.State,
                 this.Owner,

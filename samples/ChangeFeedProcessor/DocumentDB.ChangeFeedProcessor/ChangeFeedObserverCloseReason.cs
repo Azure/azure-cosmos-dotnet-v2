@@ -29,5 +29,10 @@
         /// IChangeFeedObserver threw an exception.
         /// </summary>
         ObserverError,
+
+        /// <summary>
+        /// The lease is gone. This can be due to partition split.
+        /// </summary>
+        LeaseGone,
     }
 }
