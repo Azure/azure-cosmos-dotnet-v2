@@ -1,3 +1,7 @@
+## Changes in 1.13.2 : ##
+- Fixed an issue that ignored the PartitionKey value provided in FeedOptions for aggregate queries.
+- Fixed an issue in transparent handling of partition management during mid-flight cross-partition Order By query execution.
+
 ## Changes in 1.13.1 : ##
 - Fixed an issue which caused deadlocks in some of the async APIs when used inside ASP.NET context.
 
