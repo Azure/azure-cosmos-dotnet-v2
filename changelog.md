@@ -1,3 +1,9 @@
+## Changes in 1.13.4 : ##
+- Functionally same as 1.13.3. Made some internal changes.
+
+## Changes in 1.13.3 : ##
+- Functionally same as 1.13.2. Made some internal changes.
+
 ## Changes in 1.13.2 : ##
 - Fixed an issue that ignored the PartitionKey value provided in FeedOptions for aggregate queries.
 - Fixed an issue in transparent handling of partition management during mid-flight cross-partition Order By query execution.
