@@ -1,9 +1,11 @@
-﻿namespace DocumentDB.ChangeFeedProcessor
+namespace DocumentDB.ChangeFeedProcessor
 {
     using System;
     using System.Runtime.Serialization;
 
+#if NETFX
     [Serializable]
+#endif
     class LeaseLostException : Exception
     {
         /// <summary>Initializes a new instance of the <see cref="DocumentDB.ChangeFeedProcessor.LeaseLostException" /> class using default values.</summary>
@@ -33,16 +35,19 @@
         {
         }
 
+#if NETFX
         protected LeaseLostException(SerializationInfo info, StreamingContext context) :
             base(info, context)
         {
             this.Lease = (Lease)info.GetValue("Lease", typeof(Lease));
         }
+#endif
 
         public Lease Lease { get; private set; }
 
         public bool IsGone { get; private set; }
 
+#if NETFX
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             base.GetObjectData(info, context);
@@ -52,5 +57,6 @@
                 info.AddValue("Lease", this.Lease);
             }
         }
+#endif
     }
 }

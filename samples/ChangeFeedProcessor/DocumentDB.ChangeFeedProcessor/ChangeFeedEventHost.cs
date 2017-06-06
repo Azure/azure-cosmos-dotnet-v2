@@ -46,39 +46,42 @@ namespace DocumentDB.ChangeFeedProcessor
     ///         Console.WriteLine("Worker closed, {0}", context.PartitionKeyRangeId);
     ///         return Task.CompletedTask;
     ///     }
-    ///     public Task ProcessEventsAsync(IReadOnlyList<Document> docs, ChangeFeedObserverContext context)
+    ///     public Task ProcessChangesAsync(ChangeFeedObserverContext context, IReadOnlyList<Document> docs)
     ///     {
     ///         Console.WriteLine("Change feed: total {0} doc(s)", Interlocked.Add(ref s_totalDocs, docs.Count));
     ///         return Task.CompletedTask;
     ///     }
     /// }
-    /// string hostName = Guid.NewGuid().ToString();
-    /// DocumentCollectionInfo documentCollectionLocation = new DocumentCollectionInfo
+    /// static async Task StartChangeFeedHost()
     /// {
-    ///     Uri = new Uri("https://YOUR_SERVICE.documents.azure.com:443/"),
-    ///     MasterKey = "YOUR_SECRET_KEY==",
-    ///     DatabaseName = "db1",
-    ///     CollectionName = "documents"
-    /// };
-    /// DocumentCollectionInfo leaseCollectionLocation = new DocumentCollectionInfo
-    /// {
-    ///     Uri = new Uri("https://YOUR_SERVICE.documents.azure.com:443/"),
-    ///     MasterKey = "YOUR_SECRET_KEY==",
-    ///     DatabaseName = "db1",
-    ///     CollectionName = "leases"
-    /// };
-    /// Console.WriteLine("Main program: Creating ChangeFeedEventHost...");
-    /// ChangeFeedEventHost host = new ChangeFeedEventHost(hostName, documentCollectionLocation, leaseCollectionLocation);
-    /// await host.RegisterObserverAsync<DocumentFeedObserver>();
-    /// Console.WriteLine("Main program: press Enter to stop...");
-    /// Console.ReadLine();
-    /// await host.UnregisterObserversAsync();
+    ///     string hostName = Guid.NewGuid().ToString();
+    ///     DocumentCollectionInfo documentCollectionLocation = new DocumentCollectionInfo
+    ///     {
+    ///         Uri = new Uri("https://YOUR_SERVICE.documents.azure.com:443/"),
+    ///         MasterKey = "YOUR_SECRET_KEY==",
+    ///         DatabaseName = "db1",
+    ///         CollectionName = "documents"
+    ///     };
+    ///     DocumentCollectionInfo leaseCollectionLocation = new DocumentCollectionInfo
+    ///     {
+    ///         Uri = new Uri("https://YOUR_SERVICE.documents.azure.com:443/"),
+    ///         MasterKey = "YOUR_SECRET_KEY==",
+    ///         DatabaseName = "db1",
+    ///         CollectionName = "leases"
+    ///     };
+    ///     Console.WriteLine("Main program: Creating ChangeFeedEventHost...");
+    ///     ChangeFeedEventHost host = new ChangeFeedEventHost(hostName, documentCollectionLocation, leaseCollectionLocation);
+    ///     await host.RegisterObserverAsync<DocumentFeedObserver>();
+    ///     Console.WriteLine("Main program: press Enter to stop...");
+    ///     Console.ReadLine();
+    ///     await host.UnregisterObserversAsync();
+    /// }
     /// ]]>
     /// </code>
     /// </example>
     public class ChangeFeedEventHost : IPartitionObserver<DocumentServiceLease>
     {
-        const string DefaultUserAgentSuffix = "changefeed-0.1";
+        const string DefaultUserAgentSuffix = "changefeed-0.2";
         const string LeaseContainerName = "docdb-changefeed";
         readonly DocumentCollectionInfo collectionLocation;
 
@@ -466,7 +469,10 @@ namespace DocumentDB.ChangeFeedProcessor
             Database database = await this.documentClient.ReadDatabaseAsync(databaseUri);
 
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri(this.collectionLocation.DatabaseName, this.collectionLocation.CollectionName);
-            DocumentCollection collection = await this.documentClient.ReadDocumentCollectionAsync(collectionUri);
+            ResourceResponse<DocumentCollection> collectionResponse = await this.documentClient.ReadDocumentCollectionAsync(
+                collectionUri, 
+                new RequestOptions { PopulateQuotaInfo = true });
+            DocumentCollection collection = collectionResponse.Resource;
             this.collectionSelfLink = collection.SelfLink;
 
             // Beyond this point all access to colleciton is done via this self link: if collection is removed, we won't access new one using same name by accident.
@@ -493,7 +499,15 @@ namespace DocumentDB.ChangeFeedProcessor
             // If it's not deleted, it's not stale. If it's deleted, it's not stale as it doesn't exist.
             await this.leaseManager.CreateLeaseStoreIfNotExistsAsync();
 
-            await this.CreateLeases();
+            var ranges = new Dictionary<string, PartitionKeyRange>();
+            foreach (var range in await this.EnumPartitionKeyRangesAsync(this.collectionSelfLink))
+            {
+                ranges.Add(range.Id, range);
+            }
+
+            TraceLog.Informational(string.Format("Source collection: '{0}', {1} partition(s), {2} document(s)", this.collectionLocation.CollectionName, ranges.Count, GetDocumentCount(collectionResponse)));
+
+            await this.CreateLeases(ranges);
 
             this.partitionManager = new PartitionManager<DocumentServiceLease>(this.HostName, this.leaseManager, this.options);
             await this.partitionManager.SubscribeAsync(this);
@@ -503,15 +517,9 @@ namespace DocumentDB.ChangeFeedProcessor
         /// <summary>
         /// Create leases for new partitions and take care of split partitions.
         /// </summary>
-        private async Task CreateLeases()
+        private async Task CreateLeases(IDictionary<string, PartitionKeyRange> ranges)
         {
-            var ranges = new Dictionary<string, PartitionKeyRange>();
-            foreach (var range in await this.EnumPartitionKeyRangesAsync(this.collectionSelfLink))
-            {
-                ranges.Add(range.Id, range);
-            }
-
-            TraceLog.Informational(string.Format("Source collection: '{0}', {1} partition(s)", this.collectionLocation.CollectionName, ranges.Count));
+            Debug.Assert(ranges != null);
 
             // Get leases after getting ranges, to make sure that no other hosts checked in continuation for split partition after we got leases.
             var existingLeases = new Dictionary<string, DocumentServiceLease>();
@@ -746,6 +754,27 @@ namespace DocumentDB.ChangeFeedProcessor
             }
 
             return isCheckpointNeeded;
+        }
+
+        private static int GetDocumentCount(ResourceResponse<DocumentCollection> response)
+        {
+            Debug.Assert(response != null);
+
+            var resourceUsage = response.ResponseHeaders["x-ms-resource-usage"];
+            if (resourceUsage != null)
+            {
+                var parts = resourceUsage.Split(';');
+                foreach (var part in parts)
+                {
+                    var name = part.Split('=');
+                    if (string.Equals(name[0], "documentsCount", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return int.Parse(name[1]);
+                    }
+                }
+            }
+
+            return -1;
         }
 
         private class WorkerData

@@ -13,7 +13,12 @@
         /// </summary>
         public DocumentCollectionInfo()
         {
-            this.ConnectionPolicy = new ConnectionPolicy { ConnectionProtocol = Protocol.Tcp, ConnectionMode = ConnectionMode.Direct };
+            this.ConnectionPolicy = new ConnectionPolicy
+            {
+#if NETFX
+                ConnectionProtocol = Protocol.Tcp, ConnectionMode = ConnectionMode.Direct
+#endif
+            };
         }
 
         /// <summary>
