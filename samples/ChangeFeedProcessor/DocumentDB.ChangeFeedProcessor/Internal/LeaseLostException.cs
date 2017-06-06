@@ -1,4 +1,4 @@
-﻿namespace DocumentDB.ChangeFeedProcessor
+namespace DocumentDB.ChangeFeedProcessor
 {
     using System;
     using System.Runtime.Serialization;

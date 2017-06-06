@@ -1,3 +1,21 @@
+## Changes in 1.14.0 : ##
+- Added support for Request Unit per Minute (RU/m) feature.
+- Added support for a new consistency level called ConsistentPrefix.
+- Added support for query metrics for individual partitions.
+- Added support for limiting the size of the continuation token for queries.
+- Added support for more detailed tracing for failed requests.
+- Made some performance improvements in the SDK.
+
+## Changes in 1.13.4 : ##
+- Functionally same as 1.13.3. Made some internal changes.
+
+## Changes in 1.13.3 : ##
+- Functionally same as 1.13.2. Made some internal changes.
+
+## Changes in 1.13.2 : ##
+- Fixed an issue that ignored the PartitionKey value provided in FeedOptions for aggregate queries.
+- Fixed an issue in transparent handling of partition management during mid-flight cross-partition Order By query execution.
+
 ## Changes in 1.13.1 : ##
 - Fixed an issue which caused deadlocks in some of the async APIs when used inside ASP.NET context.
 
