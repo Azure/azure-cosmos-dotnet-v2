@@ -53,6 +53,18 @@ namespace ChangefeedMigrationSample
     class DocumentFeedObserver : IChangeFeedObserver
     {
         private static int s_totalDocs = 0;
+        private DocumentCollectionInfo destCollInfo; 
+
+        public DocumentFeedObserver()
+        {
+            destCollInfo = new DocumentCollectionInfo
+            {
+                Uri = new Uri("httpsURI"),
+                MasterKey = "PrimaryKey",
+                DatabaseName = "DestDBname",
+                CollectionName = "DestCollName"
+            };
+        }
 
         public Task OpenAsync(ChangeFeedObserverContext context)
         {
@@ -68,26 +80,19 @@ namespace ChangefeedMigrationSample
 
         public Task ProcessChangesAsync(ChangeFeedObserverContext context, IReadOnlyList<Document> docs)
         {
-            DocumentCollectionInfo destCollectionLocation = new DocumentCollectionInfo
-            {
-                Uri = new Uri("httpsURI"),
-                MasterKey = "PrimaryKey",
-                DatabaseName = "DestDBname",
-                CollectionName = "DestCollName"
-            };
+            
+            DocumentClient newClient = new DocumentClient(this.destCollInfo.Uri, this.destCollInfo.MasterKey);
 
-            DocumentClient newClient = new DocumentClient(destCollectionLocation.Uri, destCollectionLocation.MasterKey);
-
-            newClient.CreateDatabaseIfNotExistsAsync(new Database { Id = destCollectionLocation.DatabaseName });
+            newClient.CreateDatabaseIfNotExistsAsync(new Database { Id = this.destCollInfo.DatabaseName });
 
             // create dest collection if it does not exist
             DocumentCollection destCollection = new DocumentCollection();
-            destCollection.Id = destCollectionLocation.CollectionName;
+            destCollection.Id = this.destCollInfo.CollectionName;
 
             //destCollection.PartitionKey.Paths.Add("add partition key if applicable");
 
             newClient.CreateDocumentCollectionIfNotExistsAsync(
-                UriFactory.CreateDatabaseUri(destCollectionLocation.DatabaseName),
+                UriFactory.CreateDatabaseUri(this.destCollInfo.DatabaseName),
                 destCollection,
                 new RequestOptions { OfferThroughput = 500 });
 
@@ -96,7 +101,7 @@ namespace ChangefeedMigrationSample
             {
                 Console.WriteLine(doc.ToString());
                 newClient.UpsertDocumentAsync(
-                    UriFactory.CreateDocumentCollectionUri(destCollectionLocation.DatabaseName, destCollectionLocation.CollectionName),
+                    UriFactory.CreateDocumentCollectionUri(this.destCollInfo.DatabaseName, this.destCollInfo.CollectionName),
                     doc);
             }
             return Task.CompletedTask;
@@ -106,11 +111,17 @@ namespace ChangefeedMigrationSample
     class Program
     {
         // Modify EndPointUrl and PrimaryKey to connect to your own subscription
-        private string uri = "https://URI";
-        private string secretKey = "primaryKey";
-
-        private string dbName = "yourdbName";
+        private string monitoredUri = "https://URI";
+        private string monitoredSecretKey = "primaryKey";
+        private string monitoredDbName = "yourdbName";
         private string monitoredCollectionName = "monitoredCollectionName";
+
+        // optional setting to store lease collection on different account
+        // set lease Uri, secretKey and DbName to same as monitored if both collections 
+        // are on the same account
+        private string leaseUri = "https://URI";
+        private string leaseSecretKey = "primaryKey";
+        private string leaseDbName = "yourdbName";
         private string leaseCollectionName = "leaseCollectionName";
 
         static void Main(string[] args)
@@ -126,25 +137,28 @@ namespace ChangefeedMigrationSample
 
         async void RunChangeFeedProcessor()
         {
-            // connect client 
-            DocumentClient client = new DocumentClient(new Uri(uri), this.secretKey);
-            await client.CreateDatabaseIfNotExistsAsync(new Database { Id = this.dbName });
+            // connect monitored client 
+            DocumentClient monitoredClient = new DocumentClient(new Uri(monitoredUri), this.monitoredSecretKey);
+            await monitoredClient.CreateDatabaseIfNotExistsAsync(new Database { Id = this.monitoredDbName });
 
             // create monitor collection if it does not exist 
             // WARNING: CreateDocumentCollectionIfNotExistsAsync will create a new 
             // with reserved through pul which has pricing implications. For details
             // visit: https://azure.microsoft.com/en-us/pricing/details/cosmos-db/
-            await client.CreateDocumentCollectionIfNotExistsAsync(
-                UriFactory.CreateDatabaseUri(this.dbName),
+            await monitoredClient.CreateDocumentCollectionIfNotExistsAsync(
+                UriFactory.CreateDatabaseUri(this.monitoredDbName),
                 new DocumentCollection { Id = this.monitoredCollectionName },
                 new RequestOptions { OfferThroughput = 400 });
 
+            // connect monitored client 
+            DocumentClient leaseClient = new DocumentClient(new Uri(leaseUri), this.leaseSecretKey);
+            await leaseClient.CreateDatabaseIfNotExistsAsync(new Database { Id = this.leaseDbName });
             // create lease collect if it does not exist
             // WARNING: CreateDocumentCollectionIfNotExistsAsync will create a new 
             // with reserved through pul which has pricing implications. For details
             // visit: https://azure.microsoft.com/en-us/pricing/details/cosmos-db/
-            await client.CreateDocumentCollectionIfNotExistsAsync(
-            UriFactory.CreateDatabaseUri(this.dbName),
+            await leaseClient.CreateDocumentCollectionIfNotExistsAsync(
+            UriFactory.CreateDatabaseUri(this.leaseDbName),
             new DocumentCollection { Id = this.leaseCollectionName },
             new RequestOptions { OfferThroughput = 400 });
             await StartChangeFeedHost();
@@ -157,22 +171,34 @@ namespace ChangefeedMigrationSample
             // monitored collection info 
             DocumentCollectionInfo documentCollectionLocation = new DocumentCollectionInfo
             {
-                Uri = new Uri(this.uri),
-                MasterKey = this.secretKey,
-                DatabaseName = this.dbName,
+                Uri = new Uri(this.monitoredUri),
+                MasterKey = this.monitoredSecretKey,
+                DatabaseName = this.monitoredDbName,
                 CollectionName = this.monitoredCollectionName
             };
 
             // lease collection info 
             DocumentCollectionInfo leaseCollectionLocation = new DocumentCollectionInfo
             {
-                Uri = new Uri(this.uri),
-                MasterKey = this.secretKey,
-                DatabaseName = this.dbName,
+                Uri = new Uri(this.leaseUri),
+                MasterKey = this.leaseSecretKey,
+                DatabaseName = this.leaseDbName,
                 CollectionName = this.leaseCollectionName
             };
 
-            ChangeFeedEventHost host = new ChangeFeedEventHost(hostName, documentCollectionLocation, leaseCollectionLocation);
+            // Customizable change feed option and host options 
+            ChangeFeedOptions feedOptions = new ChangeFeedOptions();
+            // ie customize StartFromBeginning so change feed reads from beginning
+            // can customize MaxItemCount, PartitonKeyRangeId, RequestContinuation, SessionToken and StartFromBeginning
+            feedOptions.StartFromBeginning = true; 
+
+            ChangeFeedHostOptions feedHostOptions = new ChangeFeedHostOptions(); 
+            // ie. customizing lease renewal interval to 15 seconds
+            // can customize LeaseRenewInterval, LeaseAcquireInterval, LeaseExpirationInterval, FeedPollDelay 
+            feedHostOptions.LeaseRenewInterval = TimeSpan.FromSeconds(15); 
+
+            ChangeFeedEventHost host = new ChangeFeedEventHost(hostName, documentCollectionLocation, leaseCollectionLocation, feedOptions, feedHostOptions);
+
             await host.RegisterObserverAsync<DocumentFeedObserver>();
             Console.WriteLine("Main program: press Enter to stop...");
             Console.ReadLine();
@@ -184,13 +210,13 @@ namespace ChangefeedMigrationSample
             // Use this function to update data in monitored collection in seperate thread
             // Returns all documents in the collection.
             Console.WriteLine("Connect client");
-            DocumentClient client = new DocumentClient(new Uri(this.uri), this.secretKey);
-            Uri collectionUri = UriFactory.CreateDocumentCollectionUri(this.dbName, this.monitoredCollectionName);
+            DocumentClient client = new DocumentClient(new Uri(this.monitoredUri), this.monitoredSecretKey);
+            Uri collectionUri = UriFactory.CreateDocumentCollectionUri(this.monitoredDbName, this.monitoredCollectionName);
 
             Console.WriteLine("Connect database");
             try
             {
-                Database database = await client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(this.dbName));
+                Database database = await client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(this.monitoredDbName));
             }
             catch (Exception e)
             {
@@ -204,7 +230,7 @@ namespace ChangefeedMigrationSample
             {
                 System.Console.WriteLine("Creating document XMS-0004 {0}", i);
                 await client.UpsertDocumentAsync(
-                UriFactory.CreateDocumentCollectionUri(this.dbName, this.monitoredCollectionName),
+                UriFactory.CreateDocumentCollectionUri(this.monitoredDbName, this.monitoredCollectionName),
                 new DeviceReading
                 {
                     Id = String.Join("XMS-005-FE24C_", i.ToString()),
