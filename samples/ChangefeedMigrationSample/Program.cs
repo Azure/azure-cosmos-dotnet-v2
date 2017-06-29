@@ -11,102 +11,19 @@
 // </copyright>
 //---------------------------------------------------------------------------------
 
-namespace ChangefeedMigrationSample
+namespace ChangeFeedMigrationSample
 {
     using DocumentDB.ChangeFeedProcessor;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Converters;
     using System;
-    using System.Collections.Generic;
-    using System.Threading;
     using System.Threading.Tasks;
 
-    // ------------------------------------------------------------------------------------------------
-    // This sample demonstrates using change processor library to read changes from source collection 
-    // to destination collection 
-    // ------------------------------------------------------------------------------------------------
+    /// ------------------------------------------------------------------------------------------------
+    /// This sample demonstrates using change processor library to read changes from source collection 
+    /// to destination collection 
+    /// ------------------------------------------------------------------------------------------------
 
-    public class DeviceReading
-    {
-        [JsonProperty("id")]
-        public string Id;
-
-        [JsonProperty("deviceId")]
-        public string DeviceId;
-
-        [JsonConverter(typeof(IsoDateTimeConverter))]
-        [JsonProperty("readingTime")]
-        public DateTime ReadingTime;
-
-        [JsonProperty("metricType")]
-        public string MetricType;
-
-        [JsonProperty("unit")]
-        public string Unit;
-
-        [JsonProperty("metricValue")]
-        public double MetricValue;
-    }
-
-    class DocumentFeedObserver : IChangeFeedObserver
-    {
-        private static int s_totalDocs = 0;
-        private DocumentCollectionInfo destCollInfo; 
-
-        public DocumentFeedObserver()
-        {
-            destCollInfo = new DocumentCollectionInfo
-            {
-                Uri = new Uri("httpsURI"),
-                MasterKey = "PrimaryKey",
-                DatabaseName = "DestDBname",
-                CollectionName = "DestCollName"
-            };
-        }
-
-        public Task OpenAsync(ChangeFeedObserverContext context)
-        {
-            Console.WriteLine("Worker opened, {0}", context.PartitionKeyRangeId);
-            return Task.CompletedTask;  // Requires targeting .NET 4.6+.
-        }
-
-        public Task CloseAsync(ChangeFeedObserverContext context, ChangeFeedObserverCloseReason reason)
-        {
-            Console.WriteLine("Worker closed, {0}", context.PartitionKeyRangeId);
-            return Task.CompletedTask;
-        }
-
-        public Task ProcessChangesAsync(ChangeFeedObserverContext context, IReadOnlyList<Document> docs)
-        {
-            
-            DocumentClient newClient = new DocumentClient(this.destCollInfo.Uri, this.destCollInfo.MasterKey);
-
-            newClient.CreateDatabaseIfNotExistsAsync(new Database { Id = this.destCollInfo.DatabaseName });
-
-            // create dest collection if it does not exist
-            DocumentCollection destCollection = new DocumentCollection();
-            destCollection.Id = this.destCollInfo.CollectionName;
-
-            //destCollection.PartitionKey.Paths.Add("add partition key if applicable");
-
-            newClient.CreateDocumentCollectionIfNotExistsAsync(
-                UriFactory.CreateDatabaseUri(this.destCollInfo.DatabaseName),
-                destCollection,
-                new RequestOptions { OfferThroughput = 500 });
-
-            Console.WriteLine("Change feed: total {0} doc(s)", Interlocked.Add(ref s_totalDocs, docs.Count));
-            foreach (Document doc in docs)
-            {
-                Console.WriteLine(doc.ToString());
-                newClient.UpsertDocumentAsync(
-                    UriFactory.CreateDocumentCollectionUri(this.destCollInfo.DatabaseName, this.destCollInfo.CollectionName),
-                    doc);
-            }
-            return Task.CompletedTask;
-        }
-    }
 
     class Program
     {
@@ -126,16 +43,17 @@ namespace ChangefeedMigrationSample
 
         static void Main(string[] args)
         {
-            Console.WriteLine("ChangeFeed App");
-            Program newApp = new ChangefeedMigrationSample.Program();
+            Console.WriteLine("Change Feed Migration Sample");
+            Program newApp = new Program();
             // Thread 1 comment out for thread 2 
-            newApp.RunChangeFeedProcessor();
+            newApp.RunChangeFeedProcessorAsync();
             // Thread 2 comment out for thread 1 
             // UpdateDb(EndPointUrl, PrimaryKey); 
+            Console.WriteLine("Running... Press any key to stop.");
             Console.ReadKey();
         }
 
-        async void RunChangeFeedProcessor()
+        async void RunChangeFeedProcessorAsync()
         {
             // connect monitored client 
             DocumentClient monitoredClient = new DocumentClient(new Uri(monitoredUri), this.monitoredSecretKey);
@@ -161,10 +79,10 @@ namespace ChangefeedMigrationSample
             UriFactory.CreateDatabaseUri(this.leaseDbName),
             new DocumentCollection { Id = this.leaseCollectionName },
             new RequestOptions { OfferThroughput = 400 });
-            await StartChangeFeedHost();
+            await RunChangeFeedHostAsync();
         }
 
-        async Task StartChangeFeedHost()
+        async Task RunChangeFeedHostAsync()
         {
             string hostName = Guid.NewGuid().ToString();
 
@@ -205,10 +123,10 @@ namespace ChangefeedMigrationSample
             await host.UnregisterObserversAsync();
         }
 
-        private async Task UpdateDb()
+        private async Task UpdateDbAsync()
+        /// Use this function to update data in monitored collection in seperate thread
+        /// Returns all documents in the collection.
         {
-            // Use this function to update data in monitored collection in seperate thread
-            // Returns all documents in the collection.
             Console.WriteLine("Connect client");
             DocumentClient client = new DocumentClient(new Uri(this.monitoredUri), this.monitoredSecretKey);
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri(this.monitoredDbName, this.monitoredCollectionName);
@@ -225,10 +143,10 @@ namespace ChangefeedMigrationSample
             }
 
             // Create new documents 
-            System.Console.WriteLine("Create JSON document");
+            System.Console.WriteLine("Upserts 10 JSON documents");
             for (int i = 0; i < 10; i++)
             {
-                System.Console.WriteLine("Creating document XMS-0004 {0}", i);
+                System.Console.WriteLine("Creating document {0}", i);
                 await client.UpsertDocumentAsync(
                 UriFactory.CreateDocumentCollectionUri(this.monitoredDbName, this.monitoredCollectionName),
                 new DeviceReading
@@ -240,7 +158,7 @@ namespace ChangefeedMigrationSample
                     Unit = "Fahrenheit",
                     ReadingTime = DateTime.UtcNow
                 });
-                System.Threading.Thread.Sleep(5000);
+                TimeSpan.FromSeconds(5);
             }
         }
 
