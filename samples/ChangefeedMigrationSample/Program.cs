@@ -1,193 +1,123 @@
-﻿namespace ChangefeedMigrationSample
+﻿//--------------------------------------------------------------------------------- 
+// <copyright file="Program.cs" company="Microsoft">
+// Microsoft (R)  Azure SDK 
+// Software Development Kit 
+//  
+// Copyright (c) Microsoft Corporation. All rights reserved.   
+// 
+// THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,  
+// EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES  
+// OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.  
+// </copyright>
+//---------------------------------------------------------------------------------
+
+namespace ChangeFeedMigrationSample
 {
-    using DocumentDB.ChangeFeedProcessor;
+    using Microsoft.Azure.Documents.ChangeFeedProcessor;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Converters;
     using System;
-    using System.Collections.Generic;
-    using System.Threading;
     using System.Threading.Tasks;
 
-    // ------------------------------------------------------------------------------------------------
-    // This sample demonstrates using change processor library to read changes from source collection 
-    // to destination collection 
-    // ------------------------------------------------------------------------------------------------
+    /// ------------------------------------------------------------------------------------------------
+    /// This sample demonstrates using change processor library to read changes from source collection 
+    /// to destination collection 
+    /// ------------------------------------------------------------------------------------------------
 
-    public class DeviceReading
-    {
-        [JsonProperty("id")]
-        public string Id;
-
-        [JsonProperty("deviceId")]
-        public string DeviceId;
-
-        [JsonConverter(typeof(IsoDateTimeConverter))]
-        [JsonProperty("readingTime")]
-        public DateTime ReadingTime;
-
-        [JsonProperty("metricType")]
-        public string MetricType;
-
-        [JsonProperty("unit")]
-        public string Unit;
-
-        [JsonProperty("metricValue")]
-        public double MetricValue;
-    }
 
     class Program
     {
-        private const string EndPointUrl = "https://interntest.documents.azure.com:443/";
-        private const string PrimaryKey = "mXBmwssUDqDNL03M0qkmMBYizwpeIrLqCyFNUOGQsGCEeLRRkWJDleEORnVNzfQ13dkiIyxfhgVM4QAQLzQQzg==";
-        private const string DBName = "SmartHome";
-        private const string MonitoredCollectionName = "Nest";
-        private const string LeaseCollectionName = "Lease";
-        private const string DestCollName = "Dest";
-        private const string DestCollPartKey = "/id";
+        // Modify EndPointUrl and PrimaryKey to connect to your own subscription
+        private string monitoredUri = "yourURI";
+        private string monitoredSecretKey = "yourKey";
+        private string monitoredDbName = "yourDB";
+        private string monitoredCollectionName = "yourColl";
+
+        // optional setting to store lease collection on different account
+        // set lease Uri, secretKey and DbName to same as monitored if both collections 
+        // are on the same account
+        private string leaseUri = "yourURI";
+        private string leaseSecretKey = "yourKey";
+        private string leaseDbName = "yourLeaseDB";
+        private string leaseCollectionName = "yourLeaseColl";
 
         static void Main(string[] args)
         {
-            Console.WriteLine("ChangeFeed App");
-            Program newApp = new ChangefeedMigrationSample.Program();
-            // Thread 1 comment out for thread 2 
-            newApp.RunChangeFeedProcessor(EndPointUrl, PrimaryKey);
-            // Thread 2 comment out for thread 1 
-            // UpdateDb(EndPointUrl, PrimaryKey); 
+            Console.WriteLine("Change Feed Migration Sample");
+            Program newApp = new Program();
+            newApp.RunChangeFeedProcessorAsync();
+            Console.WriteLine("Running... Press any key to stop.");
             Console.ReadKey();
         }
 
-        async void RunChangeFeedProcessor(string uri, string secretKey)
+        async void RunChangeFeedProcessorAsync()
         {
-            // connect client 
-            DocumentClient client = new DocumentClient(new Uri(uri), secretKey);
-            await client.CreateDatabaseIfNotExistsAsync(new Database { Id = DBName });
+            // connect monitored client 
+            DocumentClient monitoredClient = new DocumentClient(new Uri(monitoredUri), this.monitoredSecretKey);
+            await monitoredClient.CreateDatabaseIfNotExistsAsync(new Database { Id = this.monitoredDbName });
 
-            // create monitor collection if it does not exist
-            await client.CreateDocumentCollectionIfNotExistsAsync(
-                UriFactory.CreateDatabaseUri(DBName),
-                new DocumentCollection { Id = MonitoredCollectionName },
-                new RequestOptions { OfferThroughput = 2500 });
+            // create monitor collection if it does not exist 
+            // WARNING: CreateDocumentCollectionIfNotExistsAsync will create a new 
+            // with reserved through pul which has pricing implications. For details
+            // visit: https://azure.microsoft.com/en-us/pricing/details/cosmos-db/
+            await monitoredClient.CreateDocumentCollectionIfNotExistsAsync(
+                UriFactory.CreateDatabaseUri(this.monitoredDbName),
+                new DocumentCollection { Id = this.monitoredCollectionName },
+                new RequestOptions { OfferThroughput = 400 });
 
+            // connect monitored client 
+            DocumentClient leaseClient = new DocumentClient(new Uri(leaseUri), this.leaseSecretKey);
+            await leaseClient.CreateDatabaseIfNotExistsAsync(new Database { Id = this.leaseDbName });
             // create lease collect if it does not exist
-            await client.CreateDocumentCollectionIfNotExistsAsync(
-            UriFactory.CreateDatabaseUri(DBName),
-            new DocumentCollection { Id = LeaseCollectionName },
-            new RequestOptions { OfferThroughput = 2500 });
-            await StartChangeFeedHost(uri, secretKey);
+            // WARNING: CreateDocumentCollectionIfNotExistsAsync will create a new 
+            // with reserved through pul which has pricing implications. For details
+            // visit: https://azure.microsoft.com/en-us/pricing/details/cosmos-db/
+            await leaseClient.CreateDocumentCollectionIfNotExistsAsync(
+            UriFactory.CreateDatabaseUri(this.leaseDbName),
+            new DocumentCollection { Id = this.leaseCollectionName },
+            new RequestOptions { OfferThroughput = 400 });
+            await RunChangeFeedHostAsync();
         }
 
-        async Task StartChangeFeedHost(string uri, string secretKey)
+        async Task RunChangeFeedHostAsync()
         {
             string hostName = Guid.NewGuid().ToString();
 
             // monitored collection info 
             DocumentCollectionInfo documentCollectionLocation = new DocumentCollectionInfo
             {
-                Uri = new Uri(uri),
-                MasterKey = secretKey,
-                DatabaseName = DBName,
-                CollectionName = MonitoredCollectionName
+                Uri = new Uri(this.monitoredUri),
+                MasterKey = this.monitoredSecretKey,
+                DatabaseName = this.monitoredDbName,
+                CollectionName = this.monitoredCollectionName
             };
 
             // lease collection info 
             DocumentCollectionInfo leaseCollectionLocation = new DocumentCollectionInfo
             {
-                Uri = new Uri(uri),
-                MasterKey = secretKey,
-                DatabaseName = DBName,
-                CollectionName = LeaseCollectionName
+                Uri = new Uri(this.leaseUri),
+                MasterKey = this.leaseSecretKey,
+                DatabaseName = this.leaseDbName,
+                CollectionName = this.leaseCollectionName
             };
-            ChangeFeedEventHost host = new ChangeFeedEventHost(hostName, documentCollectionLocation, leaseCollectionLocation);
+
+            // Customizable change feed option and host options 
+            ChangeFeedOptions feedOptions = new ChangeFeedOptions();
+            // ie customize StartFromBeginning so change feed reads from beginning
+            // can customize MaxItemCount, PartitonKeyRangeId, RequestContinuation, SessionToken and StartFromBeginning
+            feedOptions.StartFromBeginning = true;
+
+            ChangeFeedHostOptions feedHostOptions = new ChangeFeedHostOptions();
+            // ie. customizing lease renewal interval to 15 seconds
+            // can customize LeaseRenewInterval, LeaseAcquireInterval, LeaseExpirationInterval, FeedPollDelay 
+            feedHostOptions.LeaseRenewInterval = TimeSpan.FromSeconds(15);
+
+            ChangeFeedEventHost host = new ChangeFeedEventHost(hostName, documentCollectionLocation, leaseCollectionLocation, feedOptions, feedHostOptions);
+
             await host.RegisterObserverAsync<DocumentFeedObserver>();
             Console.WriteLine("Main program: press Enter to stop...");
             Console.ReadLine();
             await host.UnregisterObserversAsync();
         }
-
-        class DocumentFeedObserver : IChangeFeedObserver
-        {
-            private static int s_totalDocs = 0;
-
-            public Task OpenAsync(ChangeFeedObserverContext context)
-            {
-                Console.WriteLine("Worker opened, {0}", context.PartitionKeyRangeId);
-                return Task.CompletedTask;  // Requires targeting .NET 4.6+.
-            }
-
-            public Task CloseAsync(ChangeFeedObserverContext context, ChangeFeedObserverCloseReason reason)
-            {
-                Console.WriteLine("Worker closed, {0}", context.PartitionKeyRangeId);
-                return Task.CompletedTask;
-            }
-
-            public Task ProcessChangesAsync(ChangeFeedObserverContext context, IReadOnlyList<Document> docs)
-            {
-                DocumentClient newClient = new DocumentClient(new Uri(EndPointUrl), PrimaryKey);
-
-                newClient.CreateDatabaseIfNotExistsAsync(new Database { Id = DBName });
-
-                // create dest collection if it does not exist
-                DocumentCollection destCollection = new DocumentCollection();
-                destCollection.Id = DestCollName;
-                destCollection.PartitionKey.Paths.Add(DestCollPartKey);
-
-                newClient.CreateDocumentCollectionIfNotExistsAsync(
-                    UriFactory.CreateDatabaseUri(DBName),
-                    destCollection,
-                    new RequestOptions { OfferThroughput = 2500 });
-
-                Console.WriteLine("Change feed: total {0} doc(s)", Interlocked.Add(ref s_totalDocs, docs.Count));
-                foreach (Document doc in docs)
-                {
-                    Console.WriteLine(doc.ToString());
-                    newClient.UpsertDocumentAsync(
-                        UriFactory.CreateDocumentCollectionUri(DBName, DestCollName),
-                        doc);
-                }
-                return Task.CompletedTask;
-            }
-        }
-
-        private static async Task UpdateDb(string endpoint, string authKey)
-        {
-            // Use this function to update data in monitored collection in seperate thread
-            // Returns all documents in the collection.
-            Console.WriteLine("Connect client");
-            DocumentClient client = new DocumentClient(new Uri(endpoint), authKey);
-            Uri collectionUri = UriFactory.CreateDocumentCollectionUri(DBName, MonitoredCollectionName);
-
-            Console.WriteLine("Connect database");
-            try
-            {
-                Database database = await client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(DBName));
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Connect database failed");
-                Console.WriteLine(e.Message);
-            }
-
-            // Create new documents 
-            System.Console.WriteLine("Create JSON document");
-            for (int i = 0; i < 10; i++)
-            {
-                System.Console.WriteLine("Creating document XMS-0004 {0}", i);
-                await client.UpsertDocumentAsync(
-                UriFactory.CreateDocumentCollectionUri(DBName, MonitoredCollectionName),
-                new DeviceReading
-                {
-                    Id = String.Join("XMS-005-FE24C_", i.ToString()),
-                    DeviceId = "XMS-0005",
-                    MetricType = "Temperature",
-                    MetricValue = 80.00 + (float)i,
-                    Unit = "Fahrenheit",
-                    ReadingTime = DateTime.UtcNow
-                });
-                System.Threading.Thread.Sleep(5000);
-            }
-        }
-
     }
 }
