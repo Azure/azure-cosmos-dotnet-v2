@@ -13,7 +13,7 @@
 
 namespace ChangeFeedMigrationSample
 {
-    using DocumentDB.ChangeFeedProcessor;
+    using Microsoft.Azure.Documents.ChangeFeedProcessor;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using System;
@@ -28,27 +28,24 @@ namespace ChangeFeedMigrationSample
     class Program
     {
         // Modify EndPointUrl and PrimaryKey to connect to your own subscription
-        private string monitoredUri = "https://URI";
-        private string monitoredSecretKey = "primaryKey";
-        private string monitoredDbName = "yourdbName";
-        private string monitoredCollectionName = "monitoredCollectionName";
+        private string monitoredUri = "https://interntest.documents.azure.com:443/";
+        private string monitoredSecretKey = "mXBmwssUDqDNL03M0qkmMBYizwpeIrLqCyFNUOGQsGCEeLRRkWJDleEORnVNzfQ13dkiIyxfhgVM4QAQLzQQzg==";
+        private string monitoredDbName = "SmartHome";
+        private string monitoredCollectionName = "Nest";
 
         // optional setting to store lease collection on different account
         // set lease Uri, secretKey and DbName to same as monitored if both collections 
         // are on the same account
-        private string leaseUri = "https://URI";
-        private string leaseSecretKey = "primaryKey";
-        private string leaseDbName = "yourdbName";
-        private string leaseCollectionName = "leaseCollectionName";
+        private string leaseUri = "https://interntest.documents.azure.com:443/";
+        private string leaseSecretKey = "mXBmwssUDqDNL03M0qkmMBYizwpeIrLqCyFNUOGQsGCEeLRRkWJDleEORnVNzfQ13dkiIyxfhgVM4QAQLzQQzg==";
+        private string leaseDbName = "SmartHome";
+        private string leaseCollectionName = "Lease";
 
         static void Main(string[] args)
         {
             Console.WriteLine("Change Feed Migration Sample");
             Program newApp = new Program();
-            // Thread 1 comment out for thread 2 
             newApp.RunChangeFeedProcessorAsync();
-            // Thread 2 comment out for thread 1 
-            // UpdateDb(EndPointUrl, PrimaryKey); 
             Console.WriteLine("Running... Press any key to stop.");
             Console.ReadKey();
         }
@@ -108,12 +105,12 @@ namespace ChangeFeedMigrationSample
             ChangeFeedOptions feedOptions = new ChangeFeedOptions();
             // ie customize StartFromBeginning so change feed reads from beginning
             // can customize MaxItemCount, PartitonKeyRangeId, RequestContinuation, SessionToken and StartFromBeginning
-            feedOptions.StartFromBeginning = true; 
+            feedOptions.StartFromBeginning = true;
 
-            ChangeFeedHostOptions feedHostOptions = new ChangeFeedHostOptions(); 
+            ChangeFeedHostOptions feedHostOptions = new ChangeFeedHostOptions();
             // ie. customizing lease renewal interval to 15 seconds
             // can customize LeaseRenewInterval, LeaseAcquireInterval, LeaseExpirationInterval, FeedPollDelay 
-            feedHostOptions.LeaseRenewInterval = TimeSpan.FromSeconds(15); 
+            feedHostOptions.LeaseRenewInterval = TimeSpan.FromSeconds(15);
 
             ChangeFeedEventHost host = new ChangeFeedEventHost(hostName, documentCollectionLocation, leaseCollectionLocation, feedOptions, feedHostOptions);
 
@@ -122,45 +119,5 @@ namespace ChangeFeedMigrationSample
             Console.ReadLine();
             await host.UnregisterObserversAsync();
         }
-
-        private async Task UpdateDbAsync()
-        /// Use this function to update data in monitored collection in seperate thread
-        /// Returns all documents in the collection.
-        {
-            Console.WriteLine("Connect client");
-            DocumentClient client = new DocumentClient(new Uri(this.monitoredUri), this.monitoredSecretKey);
-            Uri collectionUri = UriFactory.CreateDocumentCollectionUri(this.monitoredDbName, this.monitoredCollectionName);
-
-            Console.WriteLine("Connect database");
-            try
-            {
-                Database database = await client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(this.monitoredDbName));
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Connect database failed");
-                Console.WriteLine(e.Message);
-            }
-
-            // Create new documents 
-            System.Console.WriteLine("Upserts 10 JSON documents");
-            for (int i = 0; i < 10; i++)
-            {
-                System.Console.WriteLine("Creating document {0}", i);
-                await client.UpsertDocumentAsync(
-                UriFactory.CreateDocumentCollectionUri(this.monitoredDbName, this.monitoredCollectionName),
-                new DeviceReading
-                {
-                    Id = String.Join("XMS-005-FE24C_", i.ToString()),
-                    DeviceId = "XMS-0005",
-                    MetricType = "Temperature",
-                    MetricValue = 80.00 + (float)i,
-                    Unit = "Fahrenheit",
-                    ReadingTime = DateTime.UtcNow
-                });
-                TimeSpan.FromSeconds(5);
-            }
-        }
-
     }
 }

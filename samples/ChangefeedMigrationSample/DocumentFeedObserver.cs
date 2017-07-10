@@ -1,4 +1,4 @@
-﻿using DocumentDB.ChangeFeedProcessor;
+﻿using Microsoft.Azure.Documents.ChangeFeedProcessor;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 using System;
@@ -15,10 +15,10 @@ class DocumentFeedObserver : IChangeFeedObserver
     {
         destCollInfo = new DocumentCollectionInfo
         {
-            Uri = new Uri("httpsURI"),
-            MasterKey = "PrimaryKey",
-            DatabaseName = "DestDBname",
-            CollectionName = "DestCollName"
+            Uri = new Uri("https://interntest.documents.azure.com:443/"),
+            MasterKey = "mXBmwssUDqDNL03M0qkmMBYizwpeIrLqCyFNUOGQsGCEeLRRkWJDleEORnVNzfQ13dkiIyxfhgVM4QAQLzQQzg==",
+            DatabaseName = "SmartHome",
+            CollectionName = "Dest"
         };
     }
 
