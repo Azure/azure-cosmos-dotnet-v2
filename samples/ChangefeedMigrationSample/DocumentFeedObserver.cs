@@ -15,10 +15,10 @@ class DocumentFeedObserver : IChangeFeedObserver
     {
         destCollInfo = new DocumentCollectionInfo
         {
-            Uri = new Uri("https://interntest.documents.azure.com:443/"),
-            MasterKey = "mXBmwssUDqDNL03M0qkmMBYizwpeIrLqCyFNUOGQsGCEeLRRkWJDleEORnVNzfQ13dkiIyxfhgVM4QAQLzQQzg==",
-            DatabaseName = "SmartHome",
-            CollectionName = "Dest"
+            Uri = new Uri("yourURI"),
+            MasterKey = "yourKey",
+            DatabaseName = "yourDestDB",
+            CollectionName = "yourDestColl"
         };
     }
 

@@ -28,18 +28,18 @@ namespace ChangeFeedMigrationSample
     class Program
     {
         // Modify EndPointUrl and PrimaryKey to connect to your own subscription
-        private string monitoredUri = "https://interntest.documents.azure.com:443/";
-        private string monitoredSecretKey = "mXBmwssUDqDNL03M0qkmMBYizwpeIrLqCyFNUOGQsGCEeLRRkWJDleEORnVNzfQ13dkiIyxfhgVM4QAQLzQQzg==";
-        private string monitoredDbName = "SmartHome";
-        private string monitoredCollectionName = "Nest";
+        private string monitoredUri = "yourURI";
+        private string monitoredSecretKey = "yourKey";
+        private string monitoredDbName = "yourDB";
+        private string monitoredCollectionName = "yourColl";
 
         // optional setting to store lease collection on different account
         // set lease Uri, secretKey and DbName to same as monitored if both collections 
         // are on the same account
-        private string leaseUri = "https://interntest.documents.azure.com:443/";
-        private string leaseSecretKey = "mXBmwssUDqDNL03M0qkmMBYizwpeIrLqCyFNUOGQsGCEeLRRkWJDleEORnVNzfQ13dkiIyxfhgVM4QAQLzQQzg==";
-        private string leaseDbName = "SmartHome";
-        private string leaseCollectionName = "Lease";
+        private string leaseUri = "yourURI";
+        private string leaseSecretKey = "yourKey";
+        private string leaseDbName = "yourLeaseDB";
+        private string leaseCollectionName = "yourLeaseColl";
 
         static void Main(string[] args)
         {
