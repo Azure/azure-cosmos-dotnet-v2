@@ -27,27 +27,28 @@ namespace ChangeFeedMigrationSample
 
     class Program
     {
-        // Modify EndPointUrl and PrimaryKey to connect to your own subscription
-        private string monitoredUri = "yourURI";
-        private string monitoredSecretKey = "yourKey";
-        private string monitoredDbName = "yourDB";
-        private string monitoredCollectionName = "yourColl";
+        // Modify to connect to your own subscription and database for monitored collection 
+        private string monitoredUri = "https://URI";
+        private string monitoredSecretKey = "authKey";
+        private string monitoredDbName = "monitoredDatabaseId";
+        private string monitoredCollectionName = "monitoredCollId";
 
-        // optional setting to store lease collection on different account
-        // set lease Uri, secretKey and DbName to same as monitored if both collections 
+        // Modify to connect to your own subscription and database for lease collection 
+        // optional: setting to store lease collection on different account
+        // set lease Uri, SecretKey and DBName to same as monitored if both collections 
         // are on the same account
-        private string leaseUri = "yourURI";
-        private string leaseSecretKey = "yourKey";
-        private string leaseDbName = "yourLeaseDB";
-        private string leaseCollectionName = "yourLeaseColl";
+        private string leaseUri = "https://URI";
+        private string leaseSecretKey = "authKey";
+        private string leaseDbName = "leaseDatabaseId";
+        private string leaseCollectionName = "leaseCollId";
 
         static void Main(string[] args)
         {
             Console.WriteLine("Change Feed Migration Sample");
             Program newApp = new Program();
             newApp.RunChangeFeedProcessorAsync();
-            Console.WriteLine("Running... Press any key to stop.");
-            Console.ReadKey();
+            Console.WriteLine("Running... Press enter to stop.");
+            Console.ReadLine();
         }
 
         async void RunChangeFeedProcessorAsync()
@@ -115,7 +116,7 @@ namespace ChangeFeedMigrationSample
             ChangeFeedEventHost host = new ChangeFeedEventHost(hostName, documentCollectionLocation, leaseCollectionLocation, feedOptions, feedHostOptions);
 
             await host.RegisterObserverAsync<DocumentFeedObserver>();
-            Console.WriteLine("Main program: press Enter to stop...");
+            Console.WriteLine("Press Enter to stop...");
             Console.ReadLine();
             await host.UnregisterObserversAsync();
         }

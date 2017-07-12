@@ -15,10 +15,10 @@ class DocumentFeedObserver : IChangeFeedObserver
     {
         destCollInfo = new DocumentCollectionInfo
         {
-            Uri = new Uri("yourURI"),
-            MasterKey = "yourKey",
-            DatabaseName = "yourDestDB",
-            CollectionName = "yourDestColl"
+            Uri = new Uri("https://URI"),
+            MasterKey = "authKey",
+            DatabaseName = "databaseId",
+            CollectionName = "destCollName"
         };
     }
 
