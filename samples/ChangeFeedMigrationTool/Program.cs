@@ -114,10 +114,7 @@ namespace ChangeFeedMigrationSample
             feedHostOptions.LeaseRenewInterval = TimeSpan.FromSeconds(15);
 
             ChangeFeedEventHost host = new ChangeFeedEventHost(hostName, documentCollectionLocation, leaseCollectionLocation, feedOptions, feedHostOptions);
-
             await host.RegisterObserverAsync<DocumentFeedObserver>();
-            Console.WriteLine("Press Enter to stop...");
-            Console.ReadLine();
             await host.UnregisterObserversAsync();
         }
     }

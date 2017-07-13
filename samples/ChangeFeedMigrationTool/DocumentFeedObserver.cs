@@ -37,7 +37,6 @@ class DocumentFeedObserver : IChangeFeedObserver
 
     public Task ProcessChangesAsync(ChangeFeedObserverContext context, IReadOnlyList<Document> docs)
     {
-
         DocumentClient newClient = new DocumentClient(this.destCollInfo.Uri, this.destCollInfo.MasterKey);
 
         newClient.CreateDatabaseIfNotExistsAsync(new Database { Id = this.destCollInfo.DatabaseName });
@@ -46,7 +45,7 @@ class DocumentFeedObserver : IChangeFeedObserver
         DocumentCollection destCollection = new DocumentCollection();
         destCollection.Id = this.destCollInfo.CollectionName;
 
-        //destCollection.PartitionKey.Paths.Add("add partition key if applicable");
+        // destCollection.PartitionKey.Paths.Add("add partition key if applicable");
 
         newClient.CreateDocumentCollectionIfNotExistsAsync(
             UriFactory.CreateDatabaseUri(this.destCollInfo.DatabaseName),
@@ -56,6 +55,7 @@ class DocumentFeedObserver : IChangeFeedObserver
         Console.WriteLine("Change feed: total {0} doc(s)", Interlocked.Add(ref s_totalDocs, docs.Count));
         foreach (Document doc in docs)
         {
+            // Write only document ID for less output onto console 
             Console.WriteLine(doc.ToString());
             newClient.UpsertDocumentAsync(
                 UriFactory.CreateDocumentCollectionUri(this.destCollInfo.DatabaseName, this.destCollInfo.CollectionName),
