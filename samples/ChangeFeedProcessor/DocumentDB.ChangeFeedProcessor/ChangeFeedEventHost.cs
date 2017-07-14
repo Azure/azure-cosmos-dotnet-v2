@@ -476,7 +476,7 @@ namespace DocumentDB.ChangeFeedProcessor
             this.collectionSelfLink = collection.SelfLink;
 
             // Grab the options-supplied prefix if present otherwise leave it empty.
-            string optionsPrefix = string.IsNullOrWhiteSpace(this.options.LeasePrefix) ? string.Empty : this.options.LeasePrefix;
+            string optionsPrefix = this.options.LeasePrefix ?? string.Empty;
 
             // Beyond this point all access to collection is done via this self link: if collection is removed, we won't access new one using same name by accident.
             this.leasePrefix = string.Format(CultureInfo.InvariantCulture, "{0}{1}_{2}_{3}", optionsPrefix, this.collectionLocation.Uri.Host, database.ResourceId, collection.ResourceId);
