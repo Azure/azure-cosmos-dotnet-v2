@@ -9,23 +9,19 @@ using System.Threading.Tasks;
 class DocumentFeedObserver : IChangeFeedObserver
 {
     private static int s_totalDocs = 0;
-    private DocumentCollectionInfo destCollInfo;
+    private DocumentCollectionInfo collectionInfo;
+    private DocumentClient client; 
 
-    public DocumentFeedObserver()
+    public DocumentFeedObserver(DocumentClient client, DocumentCollectionInfo destCollInfo)
     {
-        destCollInfo = new DocumentCollectionInfo
-        {
-            Uri = new Uri("https://URI"),
-            MasterKey = "authKey",
-            DatabaseName = "databaseId",
-            CollectionName = "destCollName"
-        };
+        this.client = client;
+        this.collectionInfo = destCollInfo; 
     }
 
     public Task OpenAsync(ChangeFeedObserverContext context)
-    {
+    { 
         Console.WriteLine("Worker opened, {0}", context.PartitionKeyRangeId);
-        return Task.CompletedTask;  // Requires targeting .NET 4.6+.
+        return Task.CompletedTask;  
     }
 
     public Task CloseAsync(ChangeFeedObserverContext context, ChangeFeedObserverCloseReason reason)
@@ -37,28 +33,13 @@ class DocumentFeedObserver : IChangeFeedObserver
 
     public Task ProcessChangesAsync(ChangeFeedObserverContext context, IReadOnlyList<Document> docs)
     {
-        DocumentClient newClient = new DocumentClient(this.destCollInfo.Uri, this.destCollInfo.MasterKey);
-
-        newClient.CreateDatabaseIfNotExistsAsync(new Database { Id = this.destCollInfo.DatabaseName });
-
-        // create dest collection if it does not exist
-        DocumentCollection destCollection = new DocumentCollection();
-        destCollection.Id = this.destCollInfo.CollectionName;
-
-        // destCollection.PartitionKey.Paths.Add("add partition key if applicable");
-
-        newClient.CreateDocumentCollectionIfNotExistsAsync(
-            UriFactory.CreateDatabaseUri(this.destCollInfo.DatabaseName),
-            destCollection,
-            new RequestOptions { OfferThroughput = 500 });
 
         Console.WriteLine("Change feed: total {0} doc(s)", Interlocked.Add(ref s_totalDocs, docs.Count));
         foreach (Document doc in docs)
         {
-            // Write only document ID for less output onto console 
             Console.WriteLine(doc.ToString());
-            newClient.UpsertDocumentAsync(
-                UriFactory.CreateDocumentCollectionUri(this.destCollInfo.DatabaseName, this.destCollInfo.CollectionName),
+            this.client.UpsertDocumentAsync(
+                UriFactory.CreateDocumentCollectionUri(this.collectionInfo.DatabaseName, this.collectionInfo.CollectionName),
                 doc);
         }
         return Task.CompletedTask;
