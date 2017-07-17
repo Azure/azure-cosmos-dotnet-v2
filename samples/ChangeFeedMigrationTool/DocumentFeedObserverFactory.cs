@@ -1,37 +1,39 @@
-﻿using Microsoft.Azure.Documents.ChangeFeedProcessor;
-using Microsoft.Azure.Documents;
-using Microsoft.Azure.Documents.Client;
+﻿//--------------------------------------------------------------------------------- 
+// <copyright file="DocumentFeedObserverFactory.cs" company="Microsoft">
+// Microsoft (R)  Azure SDK 
+// Software Development Kit 
+//  
+// Copyright (c) Microsoft Corporation. All rights reserved.   
+// 
+// THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,  
+// EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES  
+// OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.  
+// </copyright>
+//---------------------------------------------------------------------------------
 
-public class DocumentFeedObserverFactory: IChangeFeedObserverFactory
+namespace ChangeFeedMigrationSample
 {
-    DocumentClient client;
-    DocumentCollectionInfo collectionInfo; 
+    using Microsoft.Azure.Documents.ChangeFeedProcessor;
+    using Microsoft.Azure.Documents.Client;
 
-    public DocumentFeedObserverFactory(DocumentCollectionInfo destCollInfo)
+    /// <summary>
+    /// Factory class to create instance of document feed observer. 
+    /// </summary>
+    public class DocumentFeedObserverFactory : IChangeFeedObserverFactory
     {
-        this.collectionInfo = destCollInfo; 
-        this.client = new DocumentClient(destCollInfo.Uri, destCollInfo.MasterKey);
-        this.client.CreateDatabaseIfNotExistsAsync(new Database { Id = destCollInfo.DatabaseName });
+        private DocumentClient client;
+        private DocumentCollectionInfo collectionInfo;
 
-        // create dest collection if it does not exist
-        DocumentCollection destCollection = new DocumentCollection();
-        destCollection.Id = destCollInfo.CollectionName;
+        public DocumentFeedObserverFactory(DocumentCollectionInfo destCollInfo, DocumentClient destClient)
+        {
+            this.collectionInfo = destCollInfo;
+            this.client = destClient;
+        }
 
-        //destCollection.PartitionKey.Paths.Add("add partition key if applicable");
-        this.client.CreateDocumentCollectionIfNotExistsAsync(
-            UriFactory.CreateDatabaseUri(destCollInfo.DatabaseName),
-            destCollection,
-            new RequestOptions { OfferThroughput = 500 });
-    }
-
-    ~DocumentFeedObserverFactory()
-    {
-        if (this.client != null) this.client.Dispose(); 
-    }
-
-    public IChangeFeedObserver CreateObserver()
-    {
-        DocumentFeedObserver newObserver = new DocumentFeedObserver(this.client, this.collectionInfo);
-        return newObserver;  
+        public IChangeFeedObserver CreateObserver()
+        {
+            DocumentFeedObserver newObserver = new DocumentFeedObserver(this.client, this.collectionInfo);
+            return newObserver;
+        }
     }
 }

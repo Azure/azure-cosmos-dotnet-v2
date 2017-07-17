@@ -13,80 +13,93 @@
 
 namespace ChangeFeedMigrationSample
 {
-    using Microsoft.Azure.Documents.ChangeFeedProcessor;
-    using Microsoft.Azure.Documents;
-    using Microsoft.Azure.Documents.Client;
     using System;
+    using System.Configuration;
     using System.Threading.Tasks;
+    using Microsoft.Azure.Documents;
+    using Microsoft.Azure.Documents.ChangeFeedProcessor;
+    using Microsoft.Azure.Documents.Client;
 
     /// ------------------------------------------------------------------------------------------------
     /// This sample demonstrates using change processor library to read changes from source collection 
     /// to destination collection 
     /// ------------------------------------------------------------------------------------------------
-
-
-    class Program
+    public class Program
     {
-        // Modify to connect to your own subscription and database for monitored collection 
-        private string monitoredUri = "https://URI";
-        private string monitoredSecretKey = "authKey";
-        private string monitoredDbName = "monitoredDatabaseId";
-        private string monitoredCollectionName = "monitoredCollId";
+        // Modify EndPointUrl and PrimaryKey to connect to your own subscription
+        private string monitoredUri = ConfigurationManager.AppSettings["monitoredUri"];
+        private string monitoredSecretKey = ConfigurationManager.AppSettings["monitoredSecretKey"];
+        private string monitoredDbName = ConfigurationManager.AppSettings["monitoredDbName"];
+        private string monitoredCollectionName = ConfigurationManager.AppSettings["monitoredCollectionName"];
+        private int monitoredThroughput = int.Parse(ConfigurationManager.AppSettings["monitoredThroughput"]);
 
-        // Modify to connect to your own subscription and database for lease collection 
-        // optional: setting to store lease collection on different account
-        // set lease Uri, SecretKey and DBName to same as monitored if both collections 
-        private string leaseUri = "https://URI";
-        private string leaseSecretKey = "authKey";
-        private string leaseDbName = "leaseDatabaseId";
-        private string leaseCollectionName = "leaseCollId";
+        // optional setting to store lease collection on different account
+        // set lease Uri, secretKey and DbName to same as monitored if both collections 
+        // are on the same account
+        private string leaseUri = ConfigurationManager.AppSettings["leaseUri"];
+        private string leaseSecretKey = ConfigurationManager.AppSettings["leaseSecretKey"];
+        private string leaseDbName = ConfigurationManager.AppSettings["leaseDbName"];
+        private string leaseCollectionName = ConfigurationManager.AppSettings["leaseCollectionName"];
+        private int leaseThroughput = int.Parse(ConfigurationManager.AppSettings["leaseThroughput"]);
 
         // destination collection for data movement in this sample  
         // could be same or different account 
-        private string destUri = "https://URI";
-        private string destSecretKey = "authKey";
-        private string destDbName = "leaseDatabaseId";
-        private string destCollectionName = "leaseCollId";
+        private string destUri = ConfigurationManager.AppSettings["destUri"];
+        private string destSecretKey = ConfigurationManager.AppSettings["destSecretKey"];
+        private string destDbName = ConfigurationManager.AppSettings["destDbName"];
+        private string destCollectionName = ConfigurationManager.AppSettings["destCollectionName"];
+        private int destThroughput = int.Parse(ConfigurationManager.AppSettings["destThroughput"]);
 
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             Console.WriteLine("Change Feed Migration Sample");
             Program newApp = new Program();
-            newApp.RunChangeFeedProcessorAsync();
-            Console.WriteLine("Main Running... Press enter to stop.");
-            Console.ReadLine();
+
+            // create collections
+            newApp.CreateCollectionAsync(
+                newApp.monitoredUri, 
+                newApp.monitoredSecretKey, 
+                newApp.monitoredDbName, 
+                newApp.monitoredCollectionName, 
+                newApp.monitoredThroughput).Wait();
+
+            newApp.CreateCollectionAsync(
+                newApp.leaseUri, 
+                newApp.leaseSecretKey, 
+                newApp.leaseDbName, 
+                newApp.leaseCollectionName, 
+                newApp.leaseThroughput).Wait();
+
+            newApp.CreateCollectionAsync(
+                newApp.destUri, 
+                newApp.destSecretKey, 
+                newApp.destDbName, 
+                newApp.destCollectionName, 
+                newApp.destThroughput).Wait();
+
+            // run change feed processor
+            newApp.RunChangeFeedHostAsync().Wait(); 
         }
 
-        async void RunChangeFeedProcessorAsync()
+        public async Task CreateCollectionAsync(string newUri, string secretKey, string dbName, string collectionName, int throughput)
         {
-            // connect monitored client 
-            DocumentClient monitoredClient = new DocumentClient(new Uri(monitoredUri), this.monitoredSecretKey);
-            await monitoredClient.CreateDatabaseIfNotExistsAsync(new Database { Id = this.monitoredDbName });
+            // connecting client 
+            using (DocumentClient client = new DocumentClient(new Uri(newUri), secretKey))
+            {
+                await client.CreateDatabaseIfNotExistsAsync(new Database { Id = dbName });
 
-            // create monitor collection if it does not exist 
-            // WARNING: CreateDocumentCollectionIfNotExistsAsync will create a new 
-            // with reserved through pul which has pricing implications. For details
-            // visit: https://azure.microsoft.com/en-us/pricing/details/cosmos-db/
-            await monitoredClient.CreateDocumentCollectionIfNotExistsAsync(
-                UriFactory.CreateDatabaseUri(this.monitoredDbName),
-                new DocumentCollection { Id = this.monitoredCollectionName },
-                new RequestOptions { OfferThroughput = 400 });
-
-            // connect monitored client 
-            DocumentClient leaseClient = new DocumentClient(new Uri(leaseUri), this.leaseSecretKey);
-            await leaseClient.CreateDatabaseIfNotExistsAsync(new Database { Id = this.leaseDbName });
-            // create lease collect if it does not exist
-            // WARNING: CreateDocumentCollectionIfNotExistsAsync will create a new 
-            // with reserved through pul which has pricing implications. For details
-            // visit: https://azure.microsoft.com/en-us/pricing/details/cosmos-db/
-            await leaseClient.CreateDocumentCollectionIfNotExistsAsync(
-            UriFactory.CreateDatabaseUri(this.leaseDbName),
-            new DocumentCollection { Id = this.leaseCollectionName },
-            new RequestOptions { OfferThroughput = 400 });
-            await RunChangeFeedHostAsync();
+                // create monitor collection if it does not exist 
+                // WARNING: CreateDocumentCollectionIfNotExistsAsync will create a new 
+                // with reserved through pul which has pricing implications. For details
+                // visit: https://azure.microsoft.com/en-us/pricing/details/cosmos-db/
+                await client.CreateDocumentCollectionIfNotExistsAsync(
+                    UriFactory.CreateDatabaseUri(dbName),
+                    new DocumentCollection { Id = collectionName },
+                    new RequestOptions { OfferThroughput = throughput });
+            }     
         }
 
-        async Task RunChangeFeedHostAsync()
+        public async Task RunChangeFeedHostAsync()
         {
             string hostName = Guid.NewGuid().ToString();
 
@@ -119,26 +132,30 @@ namespace ChangeFeedMigrationSample
 
             // Customizable change feed option and host options 
             ChangeFeedOptions feedOptions = new ChangeFeedOptions();
+
             // ie customize StartFromBeginning so change feed reads from beginning
             // can customize MaxItemCount, PartitonKeyRangeId, RequestContinuation, SessionToken and StartFromBeginning
             feedOptions.StartFromBeginning = true;
 
             ChangeFeedHostOptions feedHostOptions = new ChangeFeedHostOptions();
+
             // ie. customizing lease renewal interval to 15 seconds
             // can customize LeaseRenewInterval, LeaseAcquireInterval, LeaseExpirationInterval, FeedPollDelay 
             feedHostOptions.LeaseRenewInterval = TimeSpan.FromSeconds(15);
 
-            DocumentFeedObserverFactory docObserverFactory = new DocumentFeedObserverFactory(destCollInfo);
+            using (DocumentClient destClient = new DocumentClient(destCollInfo.Uri, destCollInfo.MasterKey))
+            {
+                DocumentFeedObserverFactory docObserverFactory = new DocumentFeedObserverFactory(destCollInfo, destClient);
 
-            ChangeFeedEventHost host = new ChangeFeedEventHost(hostName, documentCollectionLocation, leaseCollectionLocation, feedOptions, feedHostOptions);
+                ChangeFeedEventHost host = new ChangeFeedEventHost(hostName, documentCollectionLocation, leaseCollectionLocation, feedOptions, feedHostOptions);
 
-            await host.RegisterObserverFactoryAsync(docObserverFactory);
+                await host.RegisterObserverFactoryAsync(docObserverFactory);
 
-            Console.WriteLine("Running... Press enter to stop.");
-            Console.ReadLine();
+                Console.WriteLine("Running... Press enter to stop.");
+                Console.ReadLine();
 
-            await host.UnregisterObserversAsync();
-      
+                await host.UnregisterObserversAsync();
+            }
         }
     }
 }
