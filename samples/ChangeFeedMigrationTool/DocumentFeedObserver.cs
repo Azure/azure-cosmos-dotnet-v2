@@ -22,38 +22,64 @@ namespace ChangeFeedMigrationSample
     using Microsoft.Azure.Documents.Client;
 
     /// <summary>
-    /// Cass to create instance of document feed observer. 
+    /// This class implements the IChangeFeedObserver interface and is used to observe 
+    /// changes on change feed. ChangeFeedEventHost will create as many instances of 
+    /// this class as needed. 
     /// </summary>
     public class DocumentFeedObserver : IChangeFeedObserver
     {
-        private static int s_totalDocs = 0;
-        private DocumentCollectionInfo collectionInfo;
+        private static int totalDocs = 0;
         private DocumentClient client;
         private Uri destinationCollectionUri;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DocumentFeedObserver" /> class.
+        /// Saves input DocumentClient and DocumentCollectionInfo parameters to class fields
+        /// </summary>
+        /// <param name="client"> Client connected to destination collection </param>
+        /// <param name="destCollInfo"> Destination collection information </param>
         public DocumentFeedObserver(DocumentClient client, DocumentCollectionInfo destCollInfo)
         {
             this.client = client;
-            this.collectionInfo = destCollInfo;
-            this.destinationCollectionUri = UriFactory.CreateDocumentCollectionUri(this.collectionInfo.DatabaseName, this.collectionInfo.CollectionName);
+            this.destinationCollectionUri = UriFactory.CreateDocumentCollectionUri(destCollInfo.DatabaseName, destCollInfo.CollectionName);
         }
 
+        /// <summary>
+        /// Called when change feed observer is opened; 
+        /// this function prints out observer partition key id. 
+        /// </summary>
+        /// <param name="context">The context specifying partition for this observer, etc.</param>
+        /// <returns>A Task to allow asynchronous execution</returns>
         public Task OpenAsync(ChangeFeedObserverContext context)
         {
-            Console.WriteLine("Worker opened, {0}", context.PartitionKeyRangeId);
+            Console.WriteLine("Observer opened, {0}", context.PartitionKeyRangeId);
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Called when change feed observer is closed; 
+        /// this function prints out observer partition key id and reason for shut down. 
+        /// </summary>
+        /// <param name="context">The context specifying partition for this observer, etc.</param>
+        /// <param name="reason">Specifies the reason the observer is closed.</param>
+        /// <returns>A Task to allow asynchronous execution</returns>
         public Task CloseAsync(ChangeFeedObserverContext context, ChangeFeedObserverCloseReason reason)
         {
-            Console.WriteLine("Worker closed, {0}", context.PartitionKeyRangeId);
+            Console.WriteLine("Observer closed, {0}", context.PartitionKeyRangeId);
             Console.WriteLine("Reason for shutdown, {0}", reason);
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// When document changes are available on change feed, changes are copied to destination connection; 
+        /// this function prints out the changed document ID. 
+        /// </summary>
+        /// <param name="context">The context specifying partition for this observer, etc.</param>
+        /// <param name="docs">The documents changed.</param>
+        /// <returns>A Task to allow asynchronous execution</returns>
         public Task ProcessChangesAsync(ChangeFeedObserverContext context, IReadOnlyList<Document> docs)
         {
-            Console.WriteLine("Change feed: total {0} doc(s)", Interlocked.Add(ref s_totalDocs, docs.Count));
+            Console.WriteLine("Change feed: total {0} doc(s)", Interlocked.Add(ref totalDocs, docs.Count));
             foreach (Document doc in docs)
             {
                 Console.WriteLine(doc.Id.ToString());

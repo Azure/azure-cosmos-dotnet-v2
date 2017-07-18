@@ -24,12 +24,22 @@ namespace ChangeFeedMigrationSample
         private DocumentClient client;
         private DocumentCollectionInfo collectionInfo;
 
-        public DocumentFeedObserverFactory(DocumentCollectionInfo destCollInfo, DocumentClient destClient)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DocumentFeedObserverFactory" /> class.
+        /// Saves input DocumentClient and DocumentCollectionInfo parameters to class fields
+        /// </summary>
+        /// <param name="destClient">Client connected to destination collection</param>
+        /// <param name="destCollInfo">Destination collection information</param>
+        public DocumentFeedObserverFactory(DocumentClient destClient, DocumentCollectionInfo destCollInfo)
         {
             this.collectionInfo = destCollInfo;
             this.client = destClient;
         }
 
+        /// <summary>
+        /// Creates document observer instance with client and destination collection information
+        /// </summary>
+        /// <returns>DocumentFeedObserver with client and destination collection information</returns>
         public IChangeFeedObserver CreateObserver()
         {
             DocumentFeedObserver newObserver = new DocumentFeedObserver(this.client, this.collectionInfo);

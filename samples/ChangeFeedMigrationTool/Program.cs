@@ -21,8 +21,8 @@ namespace ChangeFeedMigrationSample
     using Microsoft.Azure.Documents.Client;
 
     /// ------------------------------------------------------------------------------------------------
-    /// This sample demonstrates using change processor library to read changes from source collection 
-    /// to destination collection 
+    /// <summary> This sample demonstrates using change processor library to read changes from source collection 
+    /// to destination collection </summary> 
     /// ------------------------------------------------------------------------------------------------
     public class Program
     {
@@ -50,55 +50,83 @@ namespace ChangeFeedMigrationSample
         private string destCollectionName = ConfigurationManager.AppSettings["destCollectionName"];
         private int destThroughput = int.Parse(ConfigurationManager.AppSettings["destThroughput"]);
 
+        /// <summary>
+        ///  Main program function; called when program runs
+        /// </summary>
+        /// <param name="args">Command line parameters (not used)</param>
         public static void Main(string[] args)
         {
             Console.WriteLine("Change Feed Migration Sample");
             Program newApp = new Program();
-
-            // create collections
-            newApp.CreateCollectionAsync(
-                newApp.monitoredUri, 
-                newApp.monitoredSecretKey, 
-                newApp.monitoredDbName, 
-                newApp.monitoredCollectionName, 
-                newApp.monitoredThroughput).Wait();
-
-            newApp.CreateCollectionAsync(
-                newApp.leaseUri, 
-                newApp.leaseSecretKey, 
-                newApp.leaseDbName, 
-                newApp.leaseCollectionName, 
-                newApp.leaseThroughput).Wait();
-
-            newApp.CreateCollectionAsync(
-                newApp.destUri, 
-                newApp.destSecretKey, 
-                newApp.destDbName, 
-                newApp.destCollectionName, 
-                newApp.destThroughput).Wait();
-
-            // run change feed processor
-            newApp.RunChangeFeedHostAsync().Wait(); 
+            newApp.MainAsync().Wait();             
         }
 
-        public async Task CreateCollectionAsync(string newUri, string secretKey, string dbName, string collectionName, int throughput)
+        /// <summary>
+        /// Main Async function; checks for or creates monitored/lease collections and runs
+        /// Change Feed Host (RunChangeFeedHostAsync)
+        /// </summary>
+        /// <returns>A Task to allow asynchronous execution</returns>
+        public async Task MainAsync()
+        {
+            await this.CreateCollectionIfNotExistsAsync(
+                this.monitoredUri,
+                this.monitoredSecretKey,
+                this.monitoredDbName,
+                this.monitoredCollectionName,
+                this.monitoredThroughput);
+
+            await this.CreateCollectionIfNotExistsAsync(
+                this.leaseUri,
+                this.leaseSecretKey,
+                this.leaseDbName,
+                this.leaseCollectionName,
+                this.leaseThroughput);
+
+            await this.CreateCollectionIfNotExistsAsync(
+                this.destUri,
+                this.destSecretKey,
+                this.destDbName,
+                this.destCollectionName,
+                this.destThroughput);
+
+            await this.RunChangeFeedHostAsync();
+        }
+
+        /// <summary>
+        /// Checks whether collections exists. Creates new collection if collection does not exist 
+        /// WARNING: CreateCollectionIfNotExistsAsync will create a new 
+        /// with reserved throughput which has pricing implications. For details
+        /// visit: https://azure.microsoft.com/en-us/pricing/details/cosmos-db/
+        /// </summary>
+        /// <param name="endPointUri">End point URI for account </param>
+        /// <param name="secretKey">Primary key to access the account </param>
+        /// <param name="databaseName">Name of database </param>
+        /// <param name="collectionName">Name of collection</param>
+        /// <param name="throughput">Amount of throughput to provision</param>
+        /// <returns>A Task to allow asynchronous execution</returns>
+        public async Task CreateCollectionIfNotExistsAsync(string endPointUri, string secretKey, string databaseName, string collectionName, int throughput)
         {
             // connecting client 
-            using (DocumentClient client = new DocumentClient(new Uri(newUri), secretKey))
+            using (DocumentClient client = new DocumentClient(new Uri(endPointUri), secretKey))
             {
-                await client.CreateDatabaseIfNotExistsAsync(new Database { Id = dbName });
+                await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseName });
 
-                // create monitor collection if it does not exist 
+                // create collection if it does not exist 
                 // WARNING: CreateDocumentCollectionIfNotExistsAsync will create a new 
-                // with reserved through pul which has pricing implications. For details
+                // with reserved throughput which has pricing implications. For details
                 // visit: https://azure.microsoft.com/en-us/pricing/details/cosmos-db/
                 await client.CreateDocumentCollectionIfNotExistsAsync(
-                    UriFactory.CreateDatabaseUri(dbName),
+                    UriFactory.CreateDatabaseUri(databaseName),
                     new DocumentCollection { Id = collectionName },
                     new RequestOptions { OfferThroughput = throughput });
             }     
         }
 
+        /// <summary>
+        /// Registers change feed observer to update changes read on change feed to destination 
+        /// collection. Deregisters change feed observer and closes process when enter key is pressed
+        /// </summary>
+        /// <returns>A Task to allow asynchronous execution</returns>
         public async Task RunChangeFeedHostAsync()
         {
             string hostName = Guid.NewGuid().ToString();
@@ -145,7 +173,7 @@ namespace ChangeFeedMigrationSample
 
             using (DocumentClient destClient = new DocumentClient(destCollInfo.Uri, destCollInfo.MasterKey))
             {
-                DocumentFeedObserverFactory docObserverFactory = new DocumentFeedObserverFactory(destCollInfo, destClient);
+                DocumentFeedObserverFactory docObserverFactory = new DocumentFeedObserverFactory(destClient, destCollInfo);
 
                 ChangeFeedEventHost host = new ChangeFeedEventHost(hostName, documentCollectionLocation, leaseCollectionLocation, feedOptions, feedHostOptions);
 
