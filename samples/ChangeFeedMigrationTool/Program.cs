@@ -66,7 +66,7 @@ namespace ChangeFeedMigrationSample
         /// Change Feed Host (RunChangeFeedHostAsync)
         /// </summary>
         /// <returns>A Task to allow asynchronous execution</returns>
-        public async Task MainAsync()
+        private async Task MainAsync()
         {
             await this.CreateCollectionIfNotExistsAsync(
                 this.monitoredUri,
