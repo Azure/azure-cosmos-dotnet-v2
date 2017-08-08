@@ -1,3 +1,13 @@
+## Changes in 1.16.0 : ##
+- Fixed an issue that required recompiling of the application due to the introduction of JsonSerializerSettings as an optional parameter in the DocumentClient constructor.
+- Marked the DocumentClient constructor obsolete that required JsonSerializerSettings as the last parameter to allow for default values of ConnectionPolicy and ConsistencyLevel parameters when passing in JsonSerializerSettings parameter.
+
+## Changes in 1.15.0 : ##
+- Added support for specifying custom JsonSerializerSettings while instantiating DocumentClient.
+
+## Changes in 1.14.1 : ##
+- Fixed an issue that affected x64 machines that don’t support SSE4 instruction and throw an SEHException when running Azure Cosmos DB DocumentDB API queries.
+
 ## Changes in 1.14.0 : ##
 - Added support for Request Unit per Minute (RU/m) feature.
 - Added support for a new consistency level called ConsistentPrefix.
