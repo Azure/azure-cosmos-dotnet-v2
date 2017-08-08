@@ -1,3 +1,6 @@
+## Changes in 1.16.1 : ##
+- Fixed an issue in the JsonSerializable class that may cause a stack overflow exception. 
+
 ## Changes in 1.16.0 : ##
 - Fixed an issue that required recompiling of the application due to the introduction of JsonSerializerSettings as an optional parameter in the DocumentClient constructor.
 - Marked the DocumentClient constructor obsolete that required JsonSerializerSettings as the last parameter to allow for default values of ConnectionPolicy and ConsistencyLevel parameters when passing in JsonSerializerSettings parameter.
