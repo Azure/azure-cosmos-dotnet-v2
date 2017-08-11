@@ -1,3 +1,9 @@
+
+## Changes in 1.17.0 : ##
+
+* Added support for PartitionKeyRangeId as a FeedOption for scoping query results to a specific partition key range value. 
+* Added support for StartTime as a ChangeFeedOption to start looking for the changes after that time. 
+
 ## Changes in 1.16.1 : ##
 - Fixed an issue in the JsonSerializable class that may cause a stack overflow exception. 
 
