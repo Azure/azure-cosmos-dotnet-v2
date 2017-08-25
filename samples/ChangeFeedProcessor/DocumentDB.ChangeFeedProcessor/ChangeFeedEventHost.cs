@@ -196,9 +196,9 @@ namespace DocumentDB.ChangeFeedProcessor
                 try
                 {
                     response = await query.ExecuteNextAsync<Document>();
-                    string parsedLSNFromSessionToken = ParseAmountFromSessionToken(response.SessionToken);
-                    long lastSequenceNumber = response.Count > 0 ? TryConvertToNumber(response.First().GetPropertyValue<string>(LSNPropertyName)) : 0;
-                    long partitionRemaining = TryConvertToNumber(parsedLSNFromSessionToken) - lastSequenceNumber;
+                    long parsedLSNFromSessionToken = TryConvertToNumber(ParseAmountFromSessionToken(response.SessionToken));
+                    long lastSequenceNumber = response.Count > 0 ? TryConvertToNumber(response.First().GetPropertyValue<string>(LSNPropertyName)) : parsedLSNFromSessionToken;
+                    long partitionRemaining = parsedLSNFromSessionToken - lastSequenceNumber;
                     remaining += partitionRemaining < 0 ? 0 : partitionRemaining;
                 }
                 catch (DocumentClientException ex)
