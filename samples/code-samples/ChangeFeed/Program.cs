@@ -69,6 +69,7 @@
 
             Console.WriteLine("Inserting 100 documents");
             List<Task> insertTasks = new List<Task>();
+            /*
             for (int i = 0; i < 100; i++)
             {
                 insertTasks.Add(client.CreateDocumentAsync(
@@ -77,7 +78,7 @@
             }
 
             await Task.WhenAll(insertTasks);
-
+            */
             // Returns all documents in the collection.
             Console.WriteLine("Reading all changes from the beginning");
             Dictionary<string, string> checkpoints = await GetChanges(client, collectionUri, new Dictionary<string, string>());
@@ -136,7 +137,9 @@
                         PartitionKeyRangeId = pkRange.Id,
                         StartFromBeginning = true,
                         RequestContinuation = continuation,
-                        MaxItemCount = -1
+                        MaxItemCount = -1,
+                        // Set reading time: only show change feed results modified since StartTime
+                        StartTime = DateTime.Now - TimeSpan.FromSeconds(30)
                     });
 
                 while (query.HasMoreResults)
