@@ -19,6 +19,7 @@ namespace DocumentDB.ChangeFeedProcessor
             this.LeaseAcquireInterval = DefaultAcquireInterval;
             this.LeaseExpirationInterval = DefaultExpirationInterval;
             this.FeedPollDelay = DefaultFeedPollDelay;
+            this.IsAutoCheckpointEnabled = true;
         }
 
         /// <summary>
@@ -43,10 +44,22 @@ namespace DocumentDB.ChangeFeedProcessor
         public TimeSpan FeedPollDelay { get; set; }
 
         /// <summary>
-        /// Gets or sets the the frequency how often to checkpoint leases.
+        /// Gets or sets whether the host will checkpoint leases automatically. 
+        /// When this is set to false, use ChangeFeedObserverContext.CheckpointAsync for manual control of checkpoint.
+        /// </summary>
+        public bool IsAutoCheckpointEnabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets the frequency how often to checkpoint leases, when auto checkpoint is enabled.
         /// </summary>
         public CheckpointFrequency CheckpointFrequency { get; set; }
 
+        /// <summary>
+        /// Gets or sets a prefix to be used as part of the lease id. This can be used to support multiple <see cref="ChangeFeedEventHost"/> 
+        /// instances pointing at the same feed while using the same auxiliary collection.
+        /// </summary>
+        public string LeasePrefix { get; set; }
+        
         /// <summary>
         /// Gets or set the minimum partition count for the host.
         /// This can be used to increase the number of partitions for the host and thus override equal distribution (which is the default) of leases between hosts.
