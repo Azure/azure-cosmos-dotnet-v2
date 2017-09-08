@@ -83,6 +83,8 @@ namespace DocumentDB.ChangeFeedProcessor
     {
         const string DefaultUserAgentSuffix = "changefeed-0.3";
         const string LeaseContainerName = "docdb-changefeed";
+        const string LSNPropertyName = "_lsn";
+
         readonly DocumentCollectionInfo collectionLocation;
 
         string leasePrefix;
@@ -169,6 +171,60 @@ namespace DocumentDB.ChangeFeedProcessor
         {
             this.observerFactory = factory;
             await this.StartAsync();
+        }
+
+        /// <summary>
+        /// Asynchronously checks the current existing leases and calculates an estimate of remaining work per leased partitions.
+        /// </summary>
+        /// <returns>An estimate amount of remaining documents to be processed</returns>
+        public async Task<long> GetEstimatedRemainingWork()
+        {
+            await this.InitializeAsync();
+
+            long remaining = 0;
+            ChangeFeedOptions options = new ChangeFeedOptions
+            {
+                MaxItemCount = 1
+            };
+
+            foreach (DocumentServiceLease existingLease in await this.leaseManager.ListLeases())
+            {
+                options.PartitionKeyRangeId = existingLease.PartitionId;
+                options.RequestContinuation = existingLease.ContinuationToken;
+                IDocumentQuery<Document> query = this.documentClient.CreateDocumentChangeFeedQuery(this.collectionSelfLink, options);
+                FeedResponse<Document> response = null;
+
+                try
+                {
+                    response = await query.ExecuteNextAsync<Document>();
+                    long parsedLSNFromSessionToken = TryConvertToNumber(ParseAmountFromSessionToken(response.SessionToken));
+                    long lastSequenceNumber = response.Count > 0 ? TryConvertToNumber(response.First().GetPropertyValue<string>(LSNPropertyName)) : parsedLSNFromSessionToken;
+                    long partitionRemaining = parsedLSNFromSessionToken - lastSequenceNumber;
+                    remaining += partitionRemaining < 0 ? 0 : partitionRemaining;
+                }
+                catch (DocumentClientException ex)
+                {
+                    ExceptionDispatchInfo exceptionDispatchInfo = ExceptionDispatchInfo.Capture(ex);
+                    DocumentClientException dcex = (DocumentClientException)exceptionDispatchInfo.SourceException;
+                    if ((StatusCode.NotFound == (StatusCode)dcex.StatusCode && SubStatusCode.ReadSessionNotAvailable != (SubStatusCode)GetSubStatusCode(dcex))
+                        || StatusCode.Gone == (StatusCode)dcex.StatusCode)
+                    {
+                        // We are not explicitly handling Splits here to avoid any collision with an Observer that might have picked this up and managing the split
+                        TraceLog.Error(string.Format("GetEstimateWork > Partition {0}: resource gone (subStatus={1}).", existingLease.PartitionId, GetSubStatusCode(dcex)));
+                    }
+                    else if (StatusCode.TooManyRequests == (StatusCode)dcex.StatusCode ||
+                                    StatusCode.ServiceUnavailable == (StatusCode)dcex.StatusCode)
+                    {
+                        TraceLog.Warning(string.Format("GetEstimateWork > Partition {0}: retriable exception : {1}", existingLease.PartitionId, dcex.Message));
+                    }
+                    else
+                    {
+                        TraceLog.Error(string.Format("GetEstimateWork > Partition {0}: Unhandled exception", ex.Error.Message));
+                    }
+                }
+            }
+
+            return remaining;
         }
 
         /// <summary>Asynchronously shuts down the host instance. This method maintains the leases on all partitions currently held, and enables each 
@@ -517,15 +573,11 @@ namespace DocumentDB.ChangeFeedProcessor
             DocumentCollection collection = collectionResponse.Resource;
             this.collectionSelfLink = collection.SelfLink;
 
-            // Beyond this point all access to colleciton is done via this self link: if collection is removed, we won't access new one using same name by accident.
-            //this.leasePrefix = string.Format(CultureInfo.InvariantCulture, "{0}_{1}_{2}", this.collectionLocation.Uri.Host, database.ResourceId, collection.ResourceId);
-
             // Grab the options-supplied prefix if present otherwise leave it empty.
-            string optionsPrefix = string.IsNullOrWhiteSpace(this.options.LeasePrefix) ? string.Empty : this.options.LeasePrefix + "_";
-            
+            string optionsPrefix = this.options.LeasePrefix ?? string.Empty;
+
             // Beyond this point all access to collection is done via this self link: if collection is removed, we won't access new one using same name by accident.
             this.leasePrefix = string.Format(CultureInfo.InvariantCulture, "{0}{1}_{2}_{3}", optionsPrefix, this.collectionLocation.Uri.Host, database.ResourceId, collection.ResourceId);
-
 
             var leaseManager = new DocumentServiceLeaseManager(
                 this.auxCollectionLocation, 
@@ -803,6 +855,34 @@ namespace DocumentDB.ChangeFeedProcessor
             }
 
             return isCheckpointNeeded;
+        }
+
+        private static long TryConvertToNumber(string number)
+        {
+            if (string.IsNullOrEmpty(number))
+            {
+                return 0;
+            }
+
+            long parsed = 0;
+            if (!long.TryParse(number, NumberStyles.Any, CultureInfo.InvariantCulture, out parsed))
+            {
+                TraceLog.Warning(string.Format(CultureInfo.InvariantCulture, "Cannot parse number '{0}'.", number));
+                return 0;
+            }
+
+            return parsed;
+        }
+
+        private static string ParseAmountFromSessionToken(string sessionToken)
+        {
+            if (string.IsNullOrEmpty(sessionToken))
+            {
+                return string.Empty;
+            }
+
+            int separatorIndex = sessionToken.IndexOf(':');
+            return sessionToken.Substring(separatorIndex + 1);
         }
 
         private static int GetDocumentCount(ResourceResponse<DocumentCollection> response)
