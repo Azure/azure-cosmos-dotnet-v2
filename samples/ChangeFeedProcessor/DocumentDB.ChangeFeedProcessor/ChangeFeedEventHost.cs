@@ -932,15 +932,17 @@ namespace DocumentDB.ChangeFeedProcessor
                     var name = part.Split('=');
                     if (name.Length > 1 && string.Equals(name[0], "documentsCount", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(name[1]))
                     {
-                        try
+                        Int64 result = -1;
+                        if (Int64.TryParse(name[1], out result))
                         {
-                            return Int64.Parse(name[1]);
+                            return result;
                         }
-                        catch (OverflowException ex)
+                        else
                         {
-                            TraceLog.Error(string.Format("Failed to get document count from response, overflow from Int64.Parse('{0}'): {1}", part, ex));
-                            break;
+                            TraceLog.Error(string.Format("Failed to get document count from response, can't Int64.Parse('{0}')", part));
                         }
+
+                        break;
                     }
                 }
             }
