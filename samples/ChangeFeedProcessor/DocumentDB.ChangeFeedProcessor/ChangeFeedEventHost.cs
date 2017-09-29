@@ -185,7 +185,7 @@ namespace DocumentDB.ChangeFeedProcessor
             this.observerFactory = null;
         }
 
-        async Task IPartitionObserver<DocumentServiceLease>.OnPartitionAcquiredAsync(DocumentServiceLease lease)
+        Task IPartitionObserver<DocumentServiceLease>.OnPartitionAcquiredAsync(DocumentServiceLease lease)
         {
             Debug.Assert(lease != null && !string.IsNullOrEmpty(lease.Owner), "lease");
             TraceLog.Informational(string.Format("Host '{0}' partition {1}: acquired!", this.HostName, lease.PartitionId));
@@ -416,6 +416,8 @@ namespace DocumentDB.ChangeFeedProcessor
             workerData = new WorkerData(workerTask, observer, context, cancellation, lease);
             this.partitionKeyRangeIdToWorkerMap.AddOrUpdate(context.PartitionKeyRangeId, workerData, (string id, WorkerData d) => { return workerData; });
             workerTaskOkToStart.Set();
+
+            return Task.FromResult(0);
         }
         
         async Task IPartitionObserver<DocumentServiceLease>.OnPartitionReleasedAsync(DocumentServiceLease l, ChangeFeedObserverCloseReason reason)
