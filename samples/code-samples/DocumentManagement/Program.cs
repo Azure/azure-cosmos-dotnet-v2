@@ -80,8 +80,7 @@
 
                     RunDocumentsDemo().Wait();
 
-                    // Uncomment to delete database!
-                    // Cleanup();
+                    Cleanup();
                 }
             }
 #if !DEBUG
@@ -114,8 +113,10 @@
             await RunBasicOperationsOnDynamicObjects();
 
             await UseETags();
+
+            await UseConsistencyLevels();
         }
-        
+
         /// <summary>
         /// 1. Basic CRUD operations on a document
         /// 1.1 - Create a document
@@ -490,6 +491,35 @@
                 });
 
             Console.WriteLine("Read doc with StatusCode of {0}", response.StatusCode);
+        }
+
+        private static async Task UseConsistencyLevels()
+        {
+            // Override the consistency level for a read request
+            ResourceResponse<Document> response = await client.ReadDocumentAsync(
+                UriFactory.CreateDocumentUri(databaseName, collectionName, "SalesOrder2"),
+                new RequestOptions
+                {
+                    PartitionKey = new PartitionKey("Account2"),
+                    ConsistencyLevel = ConsistencyLevel.Eventual
+                });
+
+            SalesOrder querySalesOrder = client.CreateDocumentQuery<SalesOrder>(
+                UriFactory.CreateDocumentCollectionUri(databaseName, collectionName), new FeedOptions {  })
+                .Where(so => so.AccountNumber == "Account1")
+                .AsEnumerable()
+                .First();
+
+            // Override the default consistency level for the client
+            DocumentClient newClient = new DocumentClient(new Uri(endpointUrl), authorizationKey, null, ConsistencyLevel.Eventual);
+
+            // Read is now at eventual consistency
+            response = await newClient.ReadDocumentAsync(
+                UriFactory.CreateDocumentUri(databaseName, collectionName, "SalesOrder2"),
+                new RequestOptions
+                {
+                    PartitionKey = new PartitionKey("Account2")
+                });
         }
 
         private static void Cleanup()
