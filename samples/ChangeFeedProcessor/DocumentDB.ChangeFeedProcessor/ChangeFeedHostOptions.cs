@@ -61,12 +61,6 @@ namespace DocumentDB.ChangeFeedProcessor
         public string LeasePrefix { get; set; }
 
         /// <summary>
-        /// Gets or sets a prefix to be used as part of the lease id. This can be used to support multiple <see cref="ChangeFeedEventHost"/> 
-        /// instances pointing at the same feed while using the same auxiliary collection.
-        /// </summary>
-        public string LeasePrefix { get; set; }
-        
-        /// <summary>
         /// Gets or set the minimum partition count for the host.
         /// This can be used to increase the number of partitions for the host and thus override equal distribution (which is the default) of leases between hosts.
         /// </summary>
