@@ -587,6 +587,7 @@ namespace DocumentDB.ChangeFeedProcessor
                 throw;
             }
 
+            Debug.Assert(result != null);
             return await Task.FromResult<DocumentServiceLease>(result);
         }
 
