@@ -132,6 +132,7 @@ namespace DocumentDB.ChangeFeedProcessor
             ChangeFeedOptions changeFeedOptions, 
             ChangeFeedHostOptions hostOptions)
         {
+            // TODO: move hostName from StartAsync to here, see StartAsync for details.
             if (documentCollectionLocation == null) throw new ArgumentNullException("documentCollectionLocation");
             if (documentCollectionLocation.Uri == null) throw new ArgumentNullException("documentCollectionLocation.Uri");
             if (string.IsNullOrWhiteSpace(documentCollectionLocation.DatabaseName)) throw new ArgumentException("documentCollectionLocation.DatabaseName");
@@ -524,9 +525,6 @@ namespace DocumentDB.ChangeFeedProcessor
 
         async Task InitializeAsync()
         {
-            // TODO: move this to constructor, but 1st check with funcitons intergration which seems to use it internally for estimating work.
-            if (string.IsNullOrWhiteSpace(this.HostName)) throw new ArgumentException("The hostName parameter cannot be null or empty string.", "hostName");
-
             this.documentClient = new DocumentClient(this.collectionLocation.Uri, this.collectionLocation.MasterKey, this.collectionLocation.ConnectionPolicy);
 
             Uri databaseUri = UriFactory.CreateDatabaseUri(this.collectionLocation.DatabaseName);
@@ -694,6 +692,9 @@ namespace DocumentDB.ChangeFeedProcessor
 
         async Task StartAsync()
         {
+            // TODO: move this to constructor, but 1st check with functions intergration which seems to use it internally for estimating work.
+            if (string.IsNullOrWhiteSpace(this.HostName)) throw new ArgumentException("The hostName parameter provided to the constructor cannot be null or empty string.", "hostName");
+
             await this.InitializeAsync();
             await this.partitionManager.StartAsync();
         }
