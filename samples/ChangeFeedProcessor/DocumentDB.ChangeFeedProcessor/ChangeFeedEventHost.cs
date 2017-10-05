@@ -81,7 +81,7 @@ namespace DocumentDB.ChangeFeedProcessor
     /// </example>
     public class ChangeFeedEventHost : IPartitionObserver<DocumentServiceLease>
     {
-        const string DefaultUserAgentSuffix = "changefeed-0.2";
+        const string DefaultUserAgentSuffix = "changefeed-0.3.3";
         const string LeaseContainerName = "docdb-changefeed";
         const string LSNPropertyName = "_lsn";
 
@@ -132,10 +132,13 @@ namespace DocumentDB.ChangeFeedProcessor
             ChangeFeedOptions changeFeedOptions, 
             ChangeFeedHostOptions hostOptions)
         {
-            if (documentCollectionLocation == null) throw new ArgumentException("documentCollectionLocation");
-            if (documentCollectionLocation.Uri == null) throw new ArgumentException("documentCollectionLocation.Uri");
+            if (documentCollectionLocation == null) throw new ArgumentNullException("documentCollectionLocation");
+            if (documentCollectionLocation.Uri == null) throw new ArgumentNullException("documentCollectionLocation.Uri");
             if (string.IsNullOrWhiteSpace(documentCollectionLocation.DatabaseName)) throw new ArgumentException("documentCollectionLocation.DatabaseName");
             if (string.IsNullOrWhiteSpace(documentCollectionLocation.CollectionName)) throw new ArgumentException("documentCollectionLocation.CollectionName");
+            if (changeFeedOptions == null) throw new ArgumentNullException("changeFeedOptions");
+            if (!string.IsNullOrEmpty(changeFeedOptions.PartitionKeyRangeId)) throw new ArgumentException("changeFeedOptions.PartitionKeyRangeId must be null or empty string.", "changeFeedOptions.PartitionKeyRangeId");
+            if (hostOptions == null) throw new ArgumentNullException("hostOptions");
             if (hostOptions.MinPartitionCount > hostOptions.MaxPartitionCount) throw new ArgumentException("hostOptions.MinPartitionCount cannot be greater than hostOptions.MaxPartitionCount");
 
             this.collectionLocation = CanoninicalizeCollectionInfo(documentCollectionLocation);
@@ -168,6 +171,8 @@ namespace DocumentDB.ChangeFeedProcessor
         /// <returns>A task indicating that the <see cref="DocumentDB.ChangeFeedProcessor.ChangeFeedEventHost" /> instance has started.</returns>
         public async Task RegisterObserverFactoryAsync(IChangeFeedObserverFactory factory)
         {
+            if (factory == null) throw new ArgumentNullException("factory");
+
             this.observerFactory = factory;
             await this.StartAsync();
         }
@@ -519,6 +524,9 @@ namespace DocumentDB.ChangeFeedProcessor
 
         async Task InitializeAsync()
         {
+            // TODO: move this to constructor, but 1st check with funcitons intergration which seems to use it internally for estimating work.
+            if (string.IsNullOrWhiteSpace(this.HostName)) throw new ArgumentException("The hostName parameter cannot be null or empty string.", "hostName");
+
             this.documentClient = new DocumentClient(this.collectionLocation.Uri, this.collectionLocation.MasterKey, this.collectionLocation.ConnectionPolicy);
 
             Uri databaseUri = UriFactory.CreateDatabaseUri(this.collectionLocation.DatabaseName);
