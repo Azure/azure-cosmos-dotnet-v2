@@ -81,7 +81,7 @@ namespace DocumentDB.ChangeFeedProcessor
     /// </example>
     public class ChangeFeedEventHost : IPartitionObserver<DocumentServiceLease>
     {
-        const string DefaultUserAgentSuffix = "changefeed-0.2";
+        const string DefaultUserAgentSuffix = "changefeed-0.3.2";
         const string LeaseContainerName = "docdb-changefeed";
         const string LSNPropertyName = "_lsn";
 
@@ -843,7 +843,7 @@ namespace DocumentDB.ChangeFeedProcessor
             return sessionToken.Substring(separatorIndex + 1);
         }
 
-        private static int GetDocumentCount(ResourceResponse<DocumentCollection> response)
+        private static Int64 GetDocumentCount(ResourceResponse<DocumentCollection> response)
         {
             Debug.Assert(response != null);
 
@@ -854,9 +854,19 @@ namespace DocumentDB.ChangeFeedProcessor
                 foreach (var part in parts)
                 {
                     var name = part.Split('=');
-                    if (string.Equals(name[0], "documentsCount", StringComparison.OrdinalIgnoreCase))
+                    if (name.Length > 1 && string.Equals(name[0], "documentsCount", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(name[1]))
                     {
-                        return int.Parse(name[1]);
+                        Int64 result = -1;
+                        if (Int64.TryParse(name[1], out result))
+                        {
+                            return result;
+                        }
+                        else
+                        {
+                            TraceLog.Error(string.Format("Failed to get document count from response, can't Int64.TryParse('{0}')", part));
+                        }
+
+                        break;
                     }
                 }
             }
