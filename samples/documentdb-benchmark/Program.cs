@@ -91,7 +91,7 @@ namespace DocumentDBBenchmark
         /// <param name="args">command line arguments.</param>
         public static void Main(string[] args)
         {
-            ThreadPool.SetMinThreads(MinThreadPoolSize, MinThreadPoolSize);
+            //ThreadPool.SetMinThreads(MinThreadPoolSize, MinThreadPoolSize);
 
             string endpoint = ConfigurationManager.AppSettings["EndPointUrl"];
             string authKey = ConfigurationManager.AppSettings["AuthorizationKey"];
@@ -112,7 +112,7 @@ namespace DocumentDBBenchmark
                 using (var client = new DocumentClient(
                     new Uri(endpoint),
                     authKey,
-                    ConnectionPolicyGateway))
+                    ConnectionPolicyDirect))
                 {
                     var program = new Program(client);
                     program.RunAsync().Wait();
@@ -301,7 +301,6 @@ namespace DocumentDBBenchmark
             }
             Interlocked.Decrement(ref this.pendingTaskCount);
         }
-
 
         private async Task LogOutputStats(TaskType taskType)
         {
