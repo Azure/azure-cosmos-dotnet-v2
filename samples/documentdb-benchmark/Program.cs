@@ -28,7 +28,7 @@ namespace DocumentDBBenchmark
             ConnectionMode = ConnectionMode.Gateway, 
             ConnectionProtocol = Protocol.Tcp, 
             RequestTimeout = new TimeSpan(1, 0, 0), 
-            MaxConnectionLimit = 1000, 
+            MaxConnectionLimit = 10000, 
             RetryOptions = new RetryOptions 
             { 
                 MaxRetryAttemptsOnThrottledRequests = 10,
@@ -41,7 +41,7 @@ namespace DocumentDBBenchmark
             ConnectionMode = ConnectionMode.Direct,
             ConnectionProtocol = Protocol.Tcp,
             RequestTimeout = new TimeSpan(1, 0, 0),
-            MaxConnectionLimit = 1000,
+            MaxConnectionLimit = 10000,
             RetryOptions = new RetryOptions
             {
                 MaxRetryAttemptsOnThrottledRequests = 10,
@@ -55,25 +55,12 @@ namespace DocumentDBBenchmark
             Write
         };
 
-        // This class is used to uniquely identify a document in the collection while reading
-        internal class DocumentInfo
-        {
-            internal string PartitionKey { get; set; }
-            internal string Id { get; set; }
-            internal DocumentInfo(string partitionKey, string id)
-            {
-                PartitionKey = partitionKey;
-                Id = id;
-            }
-        }
-
         private static readonly string InstanceId = Dns.GetHostEntry("LocalHost").HostName + Process.GetCurrentProcess().Id;
         private const int MinThreadPoolSize = 100;
 
         private int pendingTaskCount;
         private long documentsProcessed;
         private ConcurrentDictionary<int, double> requestUnitsConsumed = new ConcurrentDictionary<int, double>();
-        private ConcurrentDictionary<int, HashSet<DocumentInfo>> documentsPerTask = new ConcurrentDictionary<int, HashSet<DocumentInfo>>();
         private DocumentClient client;
 
         /// <summary>
@@ -91,7 +78,7 @@ namespace DocumentDBBenchmark
         /// <param name="args">command line arguments.</param>
         public static void Main(string[] args)
         {
-            ThreadPool.SetMinThreads(MinThreadPoolSize, MinThreadPoolSize);
+            // ThreadPool.SetMinThreads(MinThreadPoolSize, MinThreadPoolSize);
 
             string endpoint = ConfigurationManager.AppSettings["EndPointUrl"];
             string authKey = ConfigurationManager.AppSettings["AuthorizationKey"];
@@ -112,7 +99,7 @@ namespace DocumentDBBenchmark
                 using (var client = new DocumentClient(
                     new Uri(endpoint),
                     authKey,
-                    ConnectionPolicyGateway))
+                    ConnectionPolicyDirect))
                 {
                     var program = new Program(client);
                     program.RunAsync().Wait();
@@ -142,7 +129,7 @@ namespace DocumentDBBenchmark
         /// <returns>a Task object.</returns>
         private async Task RunAsync()
         {
-            
+
             DocumentCollection dataCollection = GetCollectionIfExists(DatabaseName, DataCollectionName);
             int currentCollectionThroughput = 0;
 
@@ -191,6 +178,7 @@ namespace DocumentDBBenchmark
             string sampleDocument = File.ReadAllText(ConfigurationManager.AppSettings["DocumentTemplateFile"]);
 
             pendingTaskCount = taskCount;
+            await client.OpenAsync();
             var writeTasks = new List<Task>();
             writeTasks.Add(this.LogOutputStats(TaskType.Write));
 
@@ -204,13 +192,16 @@ namespace DocumentDBBenchmark
 
             requestUnitsConsumed.Clear();
             documentsProcessed = 0;
-            pendingTaskCount = taskCount;
+
+            string[] pkRangesAsArr = await GetPartitionRanges();
+            pendingTaskCount = pkRangesAsArr.Count();
+
             var readTasks = new List<Task>();
             readTasks.Add(this.LogOutputStats(TaskType.Read));
 
-            foreach (var document in documentsPerTask)
+            foreach (var pkRange in pkRangesAsArr)
             {
-                readTasks.Add(this.ReadDocument(document.Key, document.Value));
+                readTasks.Add(this.ReadDocument(pkRange));
             }
 
             await Task.WhenAll(readTasks);
@@ -220,14 +211,13 @@ namespace DocumentDBBenchmark
                 Console.WriteLine("Deleting Database {0}", DatabaseName);
                 await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(DatabaseName));
             }
-        }
+        }   
 
         private async Task InsertDocument(int taskId, DocumentCollection collection, string sampleJson, long numberOfDocumentsToInsert)
         {
             requestUnitsConsumed[taskId] = 0;
             string partitionKeyProperty = collection.PartitionKey.Paths[0].Replace("/", "");
             Dictionary<string, object> newDictionary = JsonConvert.DeserializeObject<Dictionary<string, object>>(sampleJson);
-            documentsPerTask.TryAdd(taskId, new HashSet<DocumentInfo>());
 
             for (var i = 0; i < numberOfDocumentsToInsert; i++)
             {
@@ -244,7 +234,6 @@ namespace DocumentDBBenchmark
 
                     string partition = response.SessionToken.Split(':')[0];
                     requestUnitsConsumed[taskId] += response.RequestCharge;
-                    documentsPerTask[taskId].Add(new DocumentInfo(partitionKey, response.Resource.Id));
                     Interlocked.Increment(ref this.documentsProcessed);
                 }
                 catch (Exception e)
@@ -267,41 +256,39 @@ namespace DocumentDBBenchmark
             Interlocked.Decrement(ref this.pendingTaskCount);
         }
 
-        private async Task ReadDocument(int taskId, HashSet<DocumentInfo> documents)
+        private async Task ReadDocument(string pkRange)
         {
+            Dictionary<string, string> pkRangeToContTokenMapping = new Dictionary<string, string>();
+            Uri documentsLink = UriFactory.CreateDocumentCollectionUri(DatabaseName, DataCollectionName);
+            string documentsLinkAsString = string.Concat(documentsLink.ToString(), "/docs/");
+            int taskId = Int32.Parse(pkRange);
             requestUnitsConsumed[taskId] = 0;
 
-            foreach (DocumentInfo document in documents)
+
+            pkRangeToContTokenMapping[pkRange] = null;
+            int continuation = 1;
+            do
             {
-                try
-                {
-                    var response = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(DatabaseName, DataCollectionName, document.Id), new RequestOptions
+                var response = await client.ReadDocumentFeedAsync(
+                    documentsLinkAsString,
+                    new FeedOptions
                     {
-                        PartitionKey = new PartitionKey(document.PartitionKey)                        
+                        MaxItemCount = 20000,
+                        MaxBufferedItemCount = 20000,
+                        PartitionKeyRangeId = pkRange,
+                        RequestContinuation = pkRangeToContTokenMapping[pkRange]
                     });
 
-                    requestUnitsConsumed[taskId] += response.RequestCharge;
-                    Interlocked.Increment(ref this.documentsProcessed);
-                }
-                catch (Exception e)
-                {
-                    if (e is DocumentClientException)
-                    {
-                        DocumentClientException de = (DocumentClientException)e;
-                        if (de.StatusCode != HttpStatusCode.Forbidden)
-                        {
-                            Trace.TraceError("Failed to read document with id {0} and partition key {1}. Exception was {2}", document.Id, document.PartitionKey, e);
-                        }
-                        else
-                        {
-                            Interlocked.Increment(ref this.documentsProcessed);
-                        }
-                    }
-                }
+                requestUnitsConsumed[taskId] += response.RequestCharge;
+                Interlocked.Add(ref this.documentsProcessed, response.Count);
+
+                // pkRangeToDocCountMapping[pkRange] += response.Count;
+                pkRangeToContTokenMapping[pkRange] = response.ResponseContinuation;
+                continuation++;
             }
+            while (!string.IsNullOrEmpty(pkRangeToContTokenMapping[pkRange]));
             Interlocked.Decrement(ref this.pendingTaskCount);
         }
-
 
         private async Task LogOutputStats(TaskType taskType)
         {
@@ -407,6 +394,28 @@ namespace DocumentDBBenchmark
 
             return client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(databaseName))
                 .Where(c => c.Id == collectionName).AsEnumerable().FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Get partition key ranges as a string array
+        /// </summary>
+        /// <returns></returns>
+        private async Task<string[]> GetPartitionRanges()
+        {
+            List<PartitionKeyRange> partitionKeyRanges = new List<PartitionKeyRange>();
+
+            Uri collectionUri = UriFactory.CreateDocumentCollectionUri(DatabaseName, DataCollectionName);
+
+            string pkRangesResponseContinuation = null;
+            do
+            {
+                FeedResponse<PartitionKeyRange> pkRanges = await client.ReadPartitionKeyRangeFeedAsync(collectionUri, new FeedOptions { RequestContinuation = pkRangesResponseContinuation });
+                partitionKeyRanges.AddRange(pkRanges);
+            }
+            while (pkRangesResponseContinuation != null);
+
+            string[] pkRangesAsArr = partitionKeyRanges.Select(pk => pk.Id).ToArray();
+            return pkRangesAsArr;
         }
     }
 }
