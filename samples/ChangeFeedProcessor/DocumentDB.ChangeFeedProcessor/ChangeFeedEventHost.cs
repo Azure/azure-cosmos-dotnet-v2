@@ -132,7 +132,7 @@ namespace DocumentDB.ChangeFeedProcessor
             ChangeFeedOptions changeFeedOptions, 
             ChangeFeedHostOptions hostOptions)
         {
-            // TODO: move hostName from StartAsync to here, see StartAsync for details.
+            if (string.IsNullOrWhiteSpace(hostName)) throw new ArgumentException("The hostName parameter provided to the constructor cannot be null or empty string.", "hostName");
             if (documentCollectionLocation == null) throw new ArgumentNullException("documentCollectionLocation");
             if (documentCollectionLocation.Uri == null) throw new ArgumentNullException("documentCollectionLocation.Uri");
             if (string.IsNullOrWhiteSpace(documentCollectionLocation.DatabaseName)) throw new ArgumentException("documentCollectionLocation.DatabaseName");
@@ -465,16 +465,20 @@ namespace DocumentDB.ChangeFeedProcessor
             this.partitionKeyRangeIdToWorkerMap.AddOrUpdate(context.PartitionKeyRangeId, newWorkerData, (string id, WorkerData d) => { return newWorkerData; });
         }
         
-        async Task IPartitionObserver<DocumentServiceLease>.OnPartitionReleasedAsync(DocumentServiceLease l, ChangeFeedObserverCloseReason reason)
+        async Task IPartitionObserver<DocumentServiceLease>.OnPartitionReleasedAsync(DocumentServiceLease lease, ChangeFeedObserverCloseReason reason)
         {
+            Debug.Assert(lease != null);
+
 #if DEBUG
             Interlocked.Decrement(ref this.partitionCount);
 #endif
 
-            TraceLog.Informational(string.Format("Host '{0}' releasing partition {1}...", this.HostName, l.PartitionId));
+            TraceLog.Informational(string.Format("Host '{0}' releasing partition {1}...", this.HostName, lease.PartitionId));
             WorkerData workerData = null;
-            if (this.partitionKeyRangeIdToWorkerMap.TryGetValue(l.PartitionId, out workerData))
+            if (this.partitionKeyRangeIdToWorkerMap.TryGetValue(lease.PartitionId, out workerData))
             {
+                Debug.Assert(workerData != null);
+
                 workerData.Cancellation.Cancel();
 
                 try
@@ -488,7 +492,7 @@ namespace DocumentDB.ChangeFeedProcessor
                 }
 
                 await workerData.Task;
-                this.partitionKeyRangeIdToWorkerMap.TryRemove(l.PartitionId, out workerData);
+                this.partitionKeyRangeIdToWorkerMap.TryRemove(lease.PartitionId, out workerData);
             }
 
             TraceLog.Informational(string.Format("Host '{0}' partition {1}: released!", this.HostName, workerData.Context.PartitionKeyRangeId));
@@ -703,9 +707,6 @@ namespace DocumentDB.ChangeFeedProcessor
 
         async Task StartAsync()
         {
-            // TODO: move this to constructor, but 1st check with functions intergration which seems to use it internally for estimating work.
-            if (string.IsNullOrWhiteSpace(this.HostName)) throw new ArgumentException("The hostName parameter provided to the constructor cannot be null or empty string.", "hostName");
-
             await this.InitializeAsync();
             await this.partitionManager.StartAsync();
         }
@@ -888,6 +889,11 @@ namespace DocumentDB.ChangeFeedProcessor
         {
             public WorkerData(Task task, IChangeFeedObserver observer, ChangeFeedObserverContext context, CancellationTokenSource cancellation)
             {
+                Debug.Assert(task != null);
+                Debug.Assert(observer != null);
+                Debug.Assert(context != null);
+                Debug.Assert(cancellation != null);
+
                 this.Task = task;
                 this.Observer = observer;
                 this.Context = context;
