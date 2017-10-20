@@ -143,12 +143,9 @@
 
             if (degreeOfParallelism == -1)
             {
-                // set TaskCount = 10 for each 10k RUs
-                taskCount = currentCollectionThroughput / 1000;
-                if (taskCount >= 250)
-                {
-                    taskCount = 250;
-                }
+                // set TaskCount = 10 for each 10k RUs, minimum 1, maximum 250
+                taskCount = Math.Max(currentCollectionThroughput / 1000, 1);
+                taskCount = Math.Min(taskCount, 250);
             }
             else
             {
