@@ -132,10 +132,14 @@ namespace DocumentDB.ChangeFeedProcessor
             ChangeFeedOptions changeFeedOptions, 
             ChangeFeedHostOptions hostOptions)
         {
-            if (documentCollectionLocation == null) throw new ArgumentException("documentCollectionLocation");
-            if (documentCollectionLocation.Uri == null) throw new ArgumentException("documentCollectionLocation.Uri");
+            if (string.IsNullOrWhiteSpace(hostName)) throw new ArgumentException("The hostName parameter provided to the constructor cannot be null or empty string.", "hostName");
+            if (documentCollectionLocation == null) throw new ArgumentNullException("documentCollectionLocation");
+            if (documentCollectionLocation.Uri == null) throw new ArgumentNullException("documentCollectionLocation.Uri");
             if (string.IsNullOrWhiteSpace(documentCollectionLocation.DatabaseName)) throw new ArgumentException("documentCollectionLocation.DatabaseName");
             if (string.IsNullOrWhiteSpace(documentCollectionLocation.CollectionName)) throw new ArgumentException("documentCollectionLocation.CollectionName");
+            if (changeFeedOptions == null) throw new ArgumentNullException("changeFeedOptions");
+            if (!string.IsNullOrEmpty(changeFeedOptions.PartitionKeyRangeId)) throw new ArgumentException("changeFeedOptions.PartitionKeyRangeId must be null or empty string.", "changeFeedOptions.PartitionKeyRangeId");
+            if (hostOptions == null) throw new ArgumentNullException("hostOptions");
             if (hostOptions.MinPartitionCount > hostOptions.MaxPartitionCount) throw new ArgumentException("hostOptions.MinPartitionCount cannot be greater than hostOptions.MaxPartitionCount");
 
             this.collectionLocation = CanoninicalizeCollectionInfo(documentCollectionLocation);
@@ -168,6 +172,8 @@ namespace DocumentDB.ChangeFeedProcessor
         /// <returns>A task indicating that the <see cref="DocumentDB.ChangeFeedProcessor.ChangeFeedEventHost" /> instance has started.</returns>
         public async Task RegisterObserverFactoryAsync(IChangeFeedObserverFactory factory)
         {
+            if (factory == null) throw new ArgumentNullException("factory");
+
             this.observerFactory = factory;
             await this.StartAsync();
         }
@@ -475,16 +481,20 @@ namespace DocumentDB.ChangeFeedProcessor
             return Task.FromResult(0);
         }
         
-        async Task IPartitionObserver<DocumentServiceLease>.OnPartitionReleasedAsync(DocumentServiceLease l, ChangeFeedObserverCloseReason reason)
+        async Task IPartitionObserver<DocumentServiceLease>.OnPartitionReleasedAsync(DocumentServiceLease lease, ChangeFeedObserverCloseReason reason)
         {
+            Debug.Assert(lease != null);
+
 #if DEBUG
             Interlocked.Decrement(ref this.partitionCount);
 #endif
 
-            TraceLog.Informational(string.Format("Host '{0}' releasing partition {1}...", this.HostName, l.PartitionId));
+            TraceLog.Informational(string.Format("Host '{0}' releasing partition {1}...", this.HostName, lease.PartitionId));
             WorkerData workerData = null;
-            if (this.partitionKeyRangeIdToWorkerMap.TryGetValue(l.PartitionId, out workerData))
+            if (this.partitionKeyRangeIdToWorkerMap.TryGetValue(lease.PartitionId, out workerData))
             {
+                Debug.Assert(workerData != null);
+
                 await workerData.CheckpointInProgress.WaitAsync();
                 try
                 {
@@ -506,7 +516,7 @@ namespace DocumentDB.ChangeFeedProcessor
                 }
 
                 await workerData.Task;
-                this.partitionKeyRangeIdToWorkerMap.TryRemove(l.PartitionId, out workerData);
+                this.partitionKeyRangeIdToWorkerMap.TryRemove(lease.PartitionId, out workerData);
             }
 
             TraceLog.Informational(string.Format("Host '{0}' partition {1}: released!", this.HostName, workerData.Context.PartitionKeyRangeId));
@@ -954,6 +964,11 @@ namespace DocumentDB.ChangeFeedProcessor
         {
             public WorkerData(Task task, IChangeFeedObserver observer, ChangeFeedObserverContext context, CancellationTokenSource cancellation, DocumentServiceLease lease)
             {
+                Debug.Assert(task != null);
+                Debug.Assert(observer != null);
+                Debug.Assert(context != null);
+                Debug.Assert(cancellation != null);
+
                 this.Task = task;
                 this.Observer = observer;
                 this.Context = context;
