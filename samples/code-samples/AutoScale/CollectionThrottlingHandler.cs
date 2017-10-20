@@ -6,19 +6,22 @@ using System.Threading.Tasks;
 
 namespace DocumentDB.Samples.AutoScale
 {
+    using System.Threading;
     using System.Timers;
-
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
 
+    using Timer = System.Timers.Timer;
 
+    /// <summary>
+    /// Throttling handler for a collection
+    /// </summary>
     public class CollectionThrottlingHandler
     {
         private static bool CollectionThroughputIncreased = false;
         private static volatile CollectionThrottlingHandler instance;
-        private static object Singleton = new Object();
+        private static readonly object Singleton = new Object();
         private static readonly object CollectionLock = new object();
-
         private static Timer CollectionThroughputIncreaseTimer;
         private static int CurrentThrottledInstances = 0;
 
@@ -70,10 +73,10 @@ namespace DocumentDB.Samples.AutoScale
             this.client = new DocumentClient(new Uri(accountUri), authKey);
             this.collectionId = collectionId;
             this.databaseId = databaseId;
-            this.incrementValue = settings.ThroughputIncreaseOnThrottle;
+            this.incrementValue = (settings.ThroughputIncreaseOnThrottle < 100) ? 100 : settings.ThroughputIncreaseOnThrottle;
             this.maxThroughPut = settings.MaxCollectionThroughPut;
-            this.throttlingThreshold = settings.MinThrottlingInstances;
-            CollectionThroughputIncreaseTimer = new Timer(settings.ThrottlingResetTimeInSeconds * 1000);
+            this.throttlingThreshold = (settings.MinThrottlingInstances < 1) ? 1 : settings.MinThrottlingInstances;
+            CollectionThroughputIncreaseTimer = new Timer((settings.ThrottlingResetTimeInSeconds < 1 ? 1 : settings.ThrottlingResetTimeInSeconds) * 1000);
             CollectionThroughputIncreaseTimer.Elapsed += ResetThrottlingWindow;
         }
 
@@ -86,15 +89,22 @@ namespace DocumentDB.Samples.AutoScale
         {
             if (docClientException.StatusCode != null && int.Parse(docClientException.StatusCode.Value.ToString()) == 429)
             {
-                if (++CurrentThrottledInstances < this.throttlingThreshold)
+                if (Interlocked.Increment(ref CurrentThrottledInstances) < this.throttlingThreshold)
                 {
                     return;
                 }
 
                 DocumentCollection collection = this.GetCollection(this.databaseId, this.collectionId);
+                if (collection == null)
+                {
+                    return;
+                }
                 
                 lock (CollectionLock)
                 {
+                    //// Ensure that only one thread increases the throughput in case of multi-threaded clients.
+                    //// The CollectionThroughputIncreased flag will be reset based on the settings
+
                     if (!CollectionThroughputIncreased)
                     {
                         Console.WriteLine("Throttling...");
@@ -121,6 +131,7 @@ namespace DocumentDB.Samples.AutoScale
             {
                 return;
             }
+
             int replacementThroughPut = currentOfferThroughPut + incrementValue;
             if (replacementThroughPut > this.maxThroughPut)
             {

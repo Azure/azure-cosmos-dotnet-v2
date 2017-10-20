@@ -35,7 +35,7 @@
             RetryOptions = new RetryOptions
             {
                 MaxRetryAttemptsOnThrottledRequests = 0,
-                MaxRetryWaitTimeInSeconds = 0
+                MaxRetryWaitTimeInSeconds = 1
             }
         };
 
@@ -154,7 +154,7 @@
             pendingTaskCount = taskCount;
             var tasks = new List<Task>();
             tasks.Add(this.LogOutputStats());
-            CollectionThrottlingHandler collectionThrottlingHandler = new CollectionThrottlingHandler(Endpoint, AuthKey, DataCollectionName, DatabaseName, new CollectionThrottlingSettings(1500, 5000, 30, 5));
+            CollectionThrottlingHandler collectionThrottlingHandler = new CollectionThrottlingHandler(Endpoint, AuthKey, DataCollectionName, DatabaseName, new CollectionThrottlingSettings(500, 5000, 30, 5));
             long numberOfDocumentsToInsert = long.Parse(ConfigurationManager.AppSettings["NumberOfDocumentsToInsert"]) / taskCount;
             for (var i = 0; i < taskCount; i++)
             {
