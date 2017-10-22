@@ -1,4 +1,4 @@
-namespace DocumentDBBenchmark
+﻿namespace DocumentDBBenchmark
 {
     using System;
     using System.Collections.Generic;
@@ -23,9 +23,9 @@ namespace DocumentDBBenchmark
         private static readonly string DataCollectionName = ConfigurationManager.AppSettings["CollectionName"];
         private static readonly int CollectionThroughput = int.Parse(ConfigurationManager.AppSettings["CollectionThroughput"]);
 
-        private static readonly ConnectionPolicy ConnectionPolicyGateway = new ConnectionPolicy 
+        private static readonly ConnectionPolicy ConnectionPolicy = new ConnectionPolicy 
         { 
-            ConnectionMode = ConnectionMode.Gateway, 
+            ConnectionMode = ConnectionMode.Direct, 
             ConnectionProtocol = Protocol.Tcp, 
             RequestTimeout = new TimeSpan(1, 0, 0), 
             MaxConnectionLimit = 1000, 
@@ -36,44 +36,12 @@ namespace DocumentDBBenchmark
             } 
         };
 
-        private static readonly ConnectionPolicy ConnectionPolicyDirect = new ConnectionPolicy
-        {
-            ConnectionMode = ConnectionMode.Direct,
-            ConnectionProtocol = Protocol.Tcp,
-            RequestTimeout = new TimeSpan(1, 0, 0),
-            MaxConnectionLimit = 1000,
-            RetryOptions = new RetryOptions
-            {
-                MaxRetryAttemptsOnThrottledRequests = 10,
-                MaxRetryWaitTimeInSeconds = 60
-            }
-        };
-
-        private enum TaskType
-        {
-            Read,
-            Write
-        };
-
-        // This class is used to uniquely identify a document in the collection while reading
-        internal class DocumentInfo
-        {
-            internal string PartitionKey { get; set; }
-            internal string Id { get; set; }
-            internal DocumentInfo(string partitionKey, string id)
-            {
-                PartitionKey = partitionKey;
-                Id = id;
-            }
-        }
-
         private static readonly string InstanceId = Dns.GetHostEntry("LocalHost").HostName + Process.GetCurrentProcess().Id;
         private const int MinThreadPoolSize = 100;
 
         private int pendingTaskCount;
-        private long documentsProcessed;
+        private long documentsInserted;
         private ConcurrentDictionary<int, double> requestUnitsConsumed = new ConcurrentDictionary<int, double>();
-        private ConcurrentDictionary<int, HashSet<DocumentInfo>> documentsPerTask = new ConcurrentDictionary<int, HashSet<DocumentInfo>>();
         private DocumentClient client;
 
         /// <summary>
@@ -91,7 +59,7 @@ namespace DocumentDBBenchmark
         /// <param name="args">command line arguments.</param>
         public static void Main(string[] args)
         {
-            //ThreadPool.SetMinThreads(MinThreadPoolSize, MinThreadPoolSize);
+            ThreadPool.SetMinThreads(MinThreadPoolSize, MinThreadPoolSize);
 
             string endpoint = ConfigurationManager.AppSettings["EndPointUrl"];
             string authKey = ConfigurationManager.AppSettings["AuthorizationKey"];
@@ -112,7 +80,7 @@ namespace DocumentDBBenchmark
                 using (var client = new DocumentClient(
                     new Uri(endpoint),
                     authKey,
-                    ConnectionPolicyDirect))
+                    ConnectionPolicy))
                 {
                     var program = new Program(client);
                     program.RunAsync().Wait();
@@ -191,29 +159,16 @@ namespace DocumentDBBenchmark
             string sampleDocument = File.ReadAllText(ConfigurationManager.AppSettings["DocumentTemplateFile"]);
 
             pendingTaskCount = taskCount;
-            var writeTasks = new List<Task>();
-            writeTasks.Add(this.LogOutputStats(TaskType.Write));
+            var tasks = new List<Task>();
+            tasks.Add(this.LogOutputStats());
 
             long numberOfDocumentsToInsert = long.Parse(ConfigurationManager.AppSettings["NumberOfDocumentsToInsert"]) / taskCount;
             for (var i = 0; i < taskCount; i++)
             {
-                writeTasks.Add(this.InsertDocument(i, dataCollection, sampleDocument, numberOfDocumentsToInsert));
+                tasks.Add(this.InsertDocument(i, client, dataCollection, sampleDocument, numberOfDocumentsToInsert));
             }
 
-            await Task.WhenAll(writeTasks);
-
-            requestUnitsConsumed.Clear();
-            documentsProcessed = 0;
-            pendingTaskCount = taskCount;
-            var readTasks = new List<Task>();
-            readTasks.Add(this.LogOutputStats(TaskType.Read));
-
-            foreach (var document in documentsPerTask)
-            {
-                readTasks.Add(this.ReadDocument(document.Key, document.Value));
-            }
-
-            await Task.WhenAll(readTasks);
+            await Task.WhenAll(tasks);
 
             if (bool.Parse(ConfigurationManager.AppSettings["ShouldCleanupOnFinish"]))
             {
@@ -222,18 +177,16 @@ namespace DocumentDBBenchmark
             }
         }
 
-        private async Task InsertDocument(int taskId, DocumentCollection collection, string sampleJson, long numberOfDocumentsToInsert)
+        private async Task InsertDocument(int taskId, DocumentClient client, DocumentCollection collection, string sampleJson, long numberOfDocumentsToInsert)
         {
             requestUnitsConsumed[taskId] = 0;
             string partitionKeyProperty = collection.PartitionKey.Paths[0].Replace("/", "");
             Dictionary<string, object> newDictionary = JsonConvert.DeserializeObject<Dictionary<string, object>>(sampleJson);
-            documentsPerTask.TryAdd(taskId, new HashSet<DocumentInfo>());
 
             for (var i = 0; i < numberOfDocumentsToInsert; i++)
             {
-                string partitionKey = Guid.NewGuid().ToString();
                 newDictionary["id"] = Guid.NewGuid().ToString();
-                newDictionary[partitionKeyProperty] = partitionKey;
+                newDictionary[partitionKeyProperty] = Guid.NewGuid().ToString();
 
                 try
                 {
@@ -244,8 +197,7 @@ namespace DocumentDBBenchmark
 
                     string partition = response.SessionToken.Split(':')[0];
                     requestUnitsConsumed[taskId] += response.RequestCharge;
-                    documentsPerTask[taskId].Add(new DocumentInfo(partitionKey, response.Resource.Id));
-                    Interlocked.Increment(ref this.documentsProcessed);
+                    Interlocked.Increment(ref this.documentsInserted);
                 }
                 catch (Exception e)
                 {
@@ -258,7 +210,7 @@ namespace DocumentDBBenchmark
                         }
                         else
                         {
-                            Interlocked.Increment(ref this.documentsProcessed);
+                            Interlocked.Increment(ref this.documentsInserted);
                         }
                     }
                 }
@@ -267,42 +219,7 @@ namespace DocumentDBBenchmark
             Interlocked.Decrement(ref this.pendingTaskCount);
         }
 
-        private async Task ReadDocument(int taskId, HashSet<DocumentInfo> documents)
-        {
-            requestUnitsConsumed[taskId] = 0;
-
-            foreach (DocumentInfo document in documents)
-            {
-                try
-                {
-                    var response = await client.ReadDocumentAsync(UriFactory.CreateDocumentUri(DatabaseName, DataCollectionName, document.Id), new RequestOptions
-                    {
-                        PartitionKey = new PartitionKey(document.PartitionKey)                        
-                    });
-
-                    requestUnitsConsumed[taskId] += response.RequestCharge;
-                    Interlocked.Increment(ref this.documentsProcessed);
-                }
-                catch (Exception e)
-                {
-                    if (e is DocumentClientException)
-                    {
-                        DocumentClientException de = (DocumentClientException)e;
-                        if (de.StatusCode != HttpStatusCode.Forbidden)
-                        {
-                            Trace.TraceError("Failed to read document with id {0} and partition key {1}. Exception was {2}", document.Id, document.PartitionKey, e);
-                        }
-                        else
-                        {
-                            Interlocked.Increment(ref this.documentsProcessed);
-                        }
-                    }
-                }
-            }
-            Interlocked.Decrement(ref this.pendingTaskCount);
-        }
-
-        private async Task LogOutputStats(TaskType taskType)
+        private async Task LogOutputStats()
         {
             long lastCount = 0;
             double lastRequestUnits = 0;
@@ -325,18 +242,17 @@ namespace DocumentDBBenchmark
                     requestUnits += requestUnitsConsumed[taskId];
                 }
 
-                long currentCount = this.documentsProcessed;
+                long currentCount = this.documentsInserted;
                 ruPerSecond = (requestUnits / seconds);
                 ruPerMonth = ruPerSecond * 86400 * 30;
 
-                Console.WriteLine("Processed {0} docs @ {1} {2}/s, {3} RU/s ({4} Billion max monthly 1KB reads)",
+                Console.WriteLine("Inserted {0} docs @ {1} writes/s, {2} RU/s ({3}B max monthly 1KB reads)",
                     currentCount,
-                    Math.Round(this.documentsProcessed / seconds),
-                    taskType == TaskType.Write ? "writes" : "reads",
+                    Math.Round(this.documentsInserted / seconds),
                     Math.Round(ruPerSecond),
                     Math.Round(ruPerMonth / (1000 * 1000 * 1000)));
 
-                lastCount = documentsProcessed;
+                lastCount = documentsInserted;
                 lastSeconds = seconds;
                 lastRequestUnits = requestUnits;
             }
@@ -348,10 +264,9 @@ namespace DocumentDBBenchmark
             Console.WriteLine();
             Console.WriteLine("Summary:");
             Console.WriteLine("--------------------------------------------------------------------- ");
-            Console.WriteLine("Processed {0} docs @ {1} {2}/s, {3} RU/s ({4} Billion max monthly 1KB reads)",
-            lastCount,
-                Math.Round(this.documentsProcessed / watch.Elapsed.TotalSeconds),
-                taskType == TaskType.Write ? "writes" : "reads",
+            Console.WriteLine("Inserted {0} docs @ {1} writes/s, {2} RU/s ({3}B max monthly 1KB reads)",
+                lastCount,
+                Math.Round(this.documentsInserted / watch.Elapsed.TotalSeconds),
                 Math.Round(ruPerSecond),
                 Math.Round(ruPerMonth / (1000 * 1000 * 1000)));
             Console.WriteLine("--------------------------------------------------------------------- ");
@@ -368,8 +283,6 @@ namespace DocumentDBBenchmark
             DocumentCollection collection = new DocumentCollection();
             collection.Id = collectionName;
             collection.PartitionKey.Paths.Add(ConfigurationManager.AppSettings["CollectionPartitionKey"]);
-            //collection.IndexingPolicy.IncludedPaths.Add(new IncludedPath { Path = ConfigurationManager.AppSettings["CollectionPartitionKey"] });
-           // collection.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/*" });
 
             // Show user cost of running this test
             double estimatedCostPerMonth = 0.06 * CollectionThroughput;
