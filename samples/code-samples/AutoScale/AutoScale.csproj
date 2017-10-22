@@ -66,11 +66,6 @@
     <Compile Include="Program.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\appSettings.config">
-      <Link>appSettings.config</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <SubType>Designer</SubType>
-    </None>
     <None Include="App.config" />
     <None Include="packages.config" />
     <None Include="Player.json">

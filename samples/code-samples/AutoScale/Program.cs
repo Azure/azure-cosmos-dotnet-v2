@@ -15,7 +15,7 @@
     using Newtonsoft.Json;
 
     /// <summary>
-    /// This sample demonstrates how to achieve high performance writes using DocumentDB.
+    /// This sample demonstrates how to setup a throttling handler which scales up the collection throughput dynamically when throttling limits are reached
     /// </summary>
     public sealed class Program
     {
@@ -25,7 +25,7 @@
         private static readonly string Endpoint = ConfigurationManager.AppSettings["EndPointUrl"];
         private static readonly string AuthKey = ConfigurationManager.AppSettings["AuthorizationKey"];
 
-
+        // For testing this sample, we want throttling to occur immediately - Hence setting the MaxRetryAttemptsOnThrottledRequests to 0
         private static readonly ConnectionPolicy ConnectionPolicy = new ConnectionPolicy
         {
             ConnectionMode = ConnectionMode.Direct,
@@ -34,7 +34,7 @@
             MaxConnectionLimit = 1000,
             RetryOptions = new RetryOptions
             {
-                MaxRetryAttemptsOnThrottledRequests = 0,
+                MaxRetryAttemptsOnThrottledRequests = 0, 
                 MaxRetryWaitTimeInSeconds = 1
             }
         };
@@ -63,7 +63,7 @@
             Console.WriteLine("Summary:");
             Console.WriteLine("--------------------------------------------------------------------- ");
             Console.WriteLine("Endpoint: {0}", Endpoint);
-            Console.WriteLine("Collection : {0}.{1} at {2} request units per second", DatabaseName, DataCollectionName, ConfigurationManager.AppSettings["CollectionThroughput"]);
+            Console.WriteLine("Collection : {0}.{1} at {2} request units per second", DatabaseName, DataCollectionName, ConfigurationManager.AppSettings["StartingCollectionThroughput"]);
             Console.WriteLine("Document Template*: {0}", ConfigurationManager.AppSettings["DocumentTemplateFile"]);
             Console.WriteLine("Degree of parallelism*: {0}", ConfigurationManager.AppSettings["NumberOfTasks"]);
             Console.WriteLine("--------------------------------------------------------------------- ");
@@ -154,7 +154,9 @@
             pendingTaskCount = taskCount;
             var tasks = new List<Task>();
             tasks.Add(this.LogOutputStats());
-            CollectionThrottlingHandler collectionThrottlingHandler = new CollectionThrottlingHandler(Endpoint, AuthKey, DataCollectionName, DatabaseName, new CollectionThrottlingSettings(500, 5000, 30, 5));
+
+            //Set the throttling configuration here
+            CollectionThrottlingHandler collectionThrottlingHandler = new CollectionThrottlingHandler(Endpoint, AuthKey, DataCollectionName, DatabaseName, new CollectionThrottlingSettings(500, 5000, 3000, 5));
             long numberOfDocumentsToInsert = long.Parse(ConfigurationManager.AppSettings["NumberOfDocumentsToInsert"]) / taskCount;
             for (var i = 0; i < taskCount; i++)
             {
@@ -198,7 +200,7 @@
                         DocumentClientException de = (DocumentClientException)e;
                         if (de.StatusCode != HttpStatusCode.Forbidden)
                         {
-                            await collectionThrottlingHandler.HandleDocumentClientException(de);
+                            collectionThrottlingHandler.HandleDocumentClientException(de);
                             Trace.TraceError("Failed to write {0}. Exception was {1}", JsonConvert.SerializeObject(newDictionary), e);
                         }
                         else

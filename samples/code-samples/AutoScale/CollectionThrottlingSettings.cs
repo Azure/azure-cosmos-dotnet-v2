@@ -17,7 +17,7 @@ namespace DocumentDB.Samples.AutoScale
         /// <value>
         /// The throughput increase on throttle.
         /// </value>
-        public int ThroughputIncreaseOnThrottle { get; set; }
+        public int ThroughputIncreaseOnThrottle { get; }
 
         /// <summary>
         /// Gets or sets the maximum collection throughput.
@@ -25,7 +25,7 @@ namespace DocumentDB.Samples.AutoScale
         /// <value>
         /// The maximum collection through put.
         /// </value>
-        public int MaxCollectionThroughPut { get; set; }
+        public int MaxCollectionThroughPut { get; }
 
         /// <summary>
         /// Gets or sets the reset time in seconds after which collection throughput can be increased again.
@@ -33,7 +33,7 @@ namespace DocumentDB.Samples.AutoScale
         /// <value>
         /// The throttling reset time in seconds.
         /// </value>
-        public int ThrottlingResetTimeInSeconds { get; set; }
+        public int ThrottlingResetTimeInSeconds { get; }
 
         /// <summary>
         /// Gets or sets the minimum number of times throttling needs to occur to increase collection throughput.
@@ -41,7 +41,7 @@ namespace DocumentDB.Samples.AutoScale
         /// <value>
         /// The minimum throttling instances.
         /// </value>
-        public int MinThrottlingInstances { get; set; }
+        public int MinThrottlingInstances { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CollectionThrottlingSettings"/> class.
@@ -52,10 +52,10 @@ namespace DocumentDB.Samples.AutoScale
         /// <param name="throttlingThreshold">The throttling threshold.</param>
         public CollectionThrottlingSettings(int throughputIncreaseOnThrottle, int maxCollectionThroughPut, int resetTimeInSeconds, int throttlingThreshold)
         {
-            this.MaxCollectionThroughPut = maxCollectionThroughPut;
-            this.MinThrottlingInstances = throttlingThreshold;
-            this.ThrottlingResetTimeInSeconds = resetTimeInSeconds;
-            this.ThroughputIncreaseOnThrottle = throughputIncreaseOnThrottle;
+            this.MaxCollectionThroughPut = maxCollectionThroughPut < 400 ? throw new ArgumentException("Max collection throughput cannot be less than 400") : maxCollectionThroughPut;
+            this.MinThrottlingInstances = throttlingThreshold < 1 ? 1 : throttlingThreshold;
+            this.ThrottlingResetTimeInSeconds = resetTimeInSeconds < 1 ? 1 : resetTimeInSeconds;
+            this.ThroughputIncreaseOnThrottle = throughputIncreaseOnThrottle < 100 ? 100 :throughputIncreaseOnThrottle;
         }
     }
 }

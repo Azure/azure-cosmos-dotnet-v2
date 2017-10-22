@@ -73,10 +73,10 @@ namespace DocumentDB.Samples.AutoScale
             this.client = new DocumentClient(new Uri(accountUri), authKey);
             this.collectionId = collectionId;
             this.databaseId = databaseId;
-            this.incrementValue = (settings.ThroughputIncreaseOnThrottle < 100) ? 100 : settings.ThroughputIncreaseOnThrottle;
+            this.incrementValue = settings.ThroughputIncreaseOnThrottle;
             this.maxThroughPut = settings.MaxCollectionThroughPut;
-            this.throttlingThreshold = (settings.MinThrottlingInstances < 1) ? 1 : settings.MinThrottlingInstances;
-            CollectionThroughputIncreaseTimer = new Timer((settings.ThrottlingResetTimeInSeconds < 1 ? 1 : settings.ThrottlingResetTimeInSeconds) * 1000);
+            this.throttlingThreshold = settings.MinThrottlingInstances;
+            CollectionThroughputIncreaseTimer = new Timer(settings.ThrottlingResetTimeInSeconds * 1000);
             CollectionThroughputIncreaseTimer.Elapsed += ResetThrottlingWindow;
         }
 
@@ -85,7 +85,7 @@ namespace DocumentDB.Samples.AutoScale
         /// </summary>
         /// <param name="docClientException">The document client exception.</param>
         /// <returns></returns>
-        public async Task HandleDocumentClientException(DocumentClientException docClientException)
+        public void HandleDocumentClientException(DocumentClientException docClientException)
         {
             if (docClientException.StatusCode != null && int.Parse(docClientException.StatusCode.Value.ToString()) == 429)
             {
@@ -99,7 +99,7 @@ namespace DocumentDB.Samples.AutoScale
                 {
                     return;
                 }
-                
+
                 lock (CollectionLock)
                 {
                     //// Ensure that only one thread increases the throughput in case of multi-threaded clients.
@@ -107,7 +107,7 @@ namespace DocumentDB.Samples.AutoScale
 
                     if (!CollectionThroughputIncreased)
                     {
-                        Console.WriteLine("Throttling...");
+                        Console.WriteLine("Throttling limit reached..");
                         this.IncreaseCollectionThroughPut(this.client, collection, this.incrementValue).GetAwaiter().GetResult();
                         CollectionThroughputIncreased = true;
                         CollectionThroughputIncreaseTimer.Enabled = true;
@@ -117,7 +117,7 @@ namespace DocumentDB.Samples.AutoScale
         }
 
         /// <summary>
-        /// Increases the collection through put based on the increment value.
+        /// Increases the collection throughput based on the increment value.
         /// </summary>
         /// <param name="client">The client.</param>
         /// <param name="collection">The collection.</param>
