@@ -19,6 +19,7 @@ namespace DocumentDB.ChangeFeedProcessor
             this.LeaseAcquireInterval = DefaultAcquireInterval;
             this.LeaseExpirationInterval = DefaultExpirationInterval;
             this.FeedPollDelay = DefaultFeedPollDelay;
+            this.IsAutoCheckpointEnabled = true;
         }
 
         /// <summary>
@@ -43,7 +44,13 @@ namespace DocumentDB.ChangeFeedProcessor
         public TimeSpan FeedPollDelay { get; set; }
 
         /// <summary>
-        /// Gets or sets the the frequency how often to checkpoint leases.
+        /// Gets or sets whether the host will checkpoint leases automatically. 
+        /// When this is set to false, use ChangeFeedObserverContext.CheckpointAsync for manual control of checkpoint.
+        /// </summary>
+        public bool IsAutoCheckpointEnabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets the frequency how often to checkpoint leases, when auto checkpoint is enabled.
         /// </summary>
         public CheckpointFrequency CheckpointFrequency { get; set; }
         
