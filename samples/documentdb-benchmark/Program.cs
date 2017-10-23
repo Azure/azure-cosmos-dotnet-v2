@@ -61,6 +61,8 @@ namespace DocumentDBBenchmark
         private int pendingTaskCount;
         private long documentsProcessed;
         private ConcurrentDictionary<int, double> requestUnitsConsumed = new ConcurrentDictionary<int, double>();
+        private ConcurrentDictionary<string, int> pkRangeToDocCountMapping = new ConcurrentDictionary<string, int>();
+
         private DocumentClient client;
 
         /// <summary>
@@ -258,18 +260,20 @@ namespace DocumentDBBenchmark
 
         private async Task ReadDocument(string pkRange)
         {
+            pkRangeToDocCountMapping[pkRange] = 0;
             Dictionary<string, string> pkRangeToContTokenMapping = new Dictionary<string, string>();
             Uri documentsLink = UriFactory.CreateDocumentCollectionUri(DatabaseName, DataCollectionName);
             string documentsLinkAsString = string.Concat(documentsLink.ToString(), "/docs/");
             int taskId = Int32.Parse(pkRange);
             requestUnitsConsumed[taskId] = 0;
 
-
             pkRangeToContTokenMapping[pkRange] = null;
             int continuation = 1;
             do
             {
-                var response = await client.ReadDocumentFeedAsync(
+                try
+                {
+                    var response = await client.ReadDocumentFeedAsync(
                     documentsLinkAsString,
                     new FeedOptions
                     {
@@ -279,12 +283,28 @@ namespace DocumentDBBenchmark
                         RequestContinuation = pkRangeToContTokenMapping[pkRange]
                     });
 
-                requestUnitsConsumed[taskId] += response.RequestCharge;
-                Interlocked.Add(ref this.documentsProcessed, response.Count);
+                    requestUnitsConsumed[taskId] += response.RequestCharge;
+                    Interlocked.Add(ref this.documentsProcessed, response.Count);
+                    pkRangeToDocCountMapping[pkRange] += response.Count;
+                    pkRangeToContTokenMapping[pkRange] = response.ResponseContinuation;
+                    continuation++;
+                }
+                catch (Exception e)
+                {
+                    if (e is DocumentClientException)
+                    {
+                        DocumentClientException de = (DocumentClientException)e;
+                        if (de.StatusCode != HttpStatusCode.Forbidden)
+                        {
+                            Trace.TraceError("Failed to readfeed {0}. Exception was {1}", documentsLink.ToString(), e);
+                        }
+                        else
+                        {
+                            Interlocked.Increment(ref this.documentsProcessed);
+                        }
+                    }
+                }
 
-                // pkRangeToDocCountMapping[pkRange] += response.Count;
-                pkRangeToContTokenMapping[pkRange] = response.ResponseContinuation;
-                continuation++;
             }
             while (!string.IsNullOrEmpty(pkRangeToContTokenMapping[pkRange]));
             Interlocked.Decrement(ref this.pendingTaskCount);
