@@ -36,10 +36,7 @@ namespace MigrateDatabase
 
         private async Task RunAsync(CommandLineOptions options)
         {
-            this.Client = new DocumentClient(
-                             new Uri(options.DocumentDBEndpoint),
-                             options.MasterKey,
-                             new ConnectionPolicy { ConnectionMode = ConnectionMode.Gateway, ConnectionProtocol = Protocol.Tcp });
+            InitializeDocumentClient(options);
 
             Database database = this.Client.CreateDatabaseQuery()
                 .Where(d => d.Id == options.SourceDatabase)
@@ -55,8 +52,7 @@ namespace MigrateDatabase
             if (intermediateDatabase != null)
             {
                 Console.WriteLine($"Found intermediate database {intermediateDatabase}");
-                string sourceDatabaseName = intermediateDatabaseName;
-                sourceCollections = this.Client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(sourceDatabaseName))
+                sourceCollections = this.Client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(intermediateDatabaseName))
                     .AsEnumerable()
                     .ToList();
             }
@@ -67,10 +63,10 @@ namespace MigrateDatabase
                     .AsEnumerable()
                     .ToList();
 
-                await CloneDatabaseAsync(options.SourceDatabase, intermediateDatabaseName, sourceCollections, false);
+                await CloneDatabaseAsync(sourceDatabaseName, intermediateDatabaseName, sourceCollections, false);
 
-                Console.WriteLine($"Deleting database {options.SourceDatabase}");
-                await Client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(options.SourceDatabase));
+                Console.WriteLine($"Deleting database {sourceDatabaseName}");
+                await Client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(sourceDatabaseName));
             }
 
             InitializeDocumentClient(options);
@@ -93,6 +89,7 @@ namespace MigrateDatabase
                              {
                                  ConnectionMode = ConnectionMode.Direct,
                                  ConnectionProtocol = Protocol.Tcp,
+                                 MaxConnectionLimit = 2000,
                                  RetryOptions = new RetryOptions
                                  {
                                      MaxRetryAttemptsOnThrottledRequests = 1000,
@@ -113,7 +110,7 @@ namespace MigrateDatabase
             await this.Client.ReplaceOfferAsync(newOffer);
         }
 
-        private async Task CloneDatabaseAsync(string sourceDatabaseName, string destinationDatabaseName, List<DocumentCollection> collectionInfos, bool enableIndexing = false)
+        private async Task CloneDatabaseAsync(string sourceDatabaseName, string destinationDatabaseName, List<DocumentCollection> collectionInfos, bool enableIndexing = true)
         {
             Console.WriteLine($"Creating database {destinationDatabaseName}");
             await this.Client.CreateDatabaseIfNotExistsAsync(new Database { Id = destinationDatabaseName });
