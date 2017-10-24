@@ -42,24 +42,55 @@ namespace MigrateDatabase
                              new ConnectionPolicy { ConnectionMode = ConnectionMode.Gateway, ConnectionProtocol = Protocol.Tcp });
 
             Database database = this.Client.CreateDatabaseQuery()
-                .Where(d => d.Id == options.Database)
+                .Where(d => d.Id == options.SourceDatabase)
                 .AsEnumerable().FirstOrDefault();
 
-            string intermediateDatabaseName = options.Database + "-copy";
+            string intermediateDatabaseName = options.SourceDatabase + "-copy";
+            Database intermediateDatabase = this.Client.CreateDatabaseQuery()
+                .Where(d => d.Id == intermediateDatabaseName)
+                .AsEnumerable().FirstOrDefault();
 
-            List<DocumentCollection> sourceCollections = this.Client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(options.Database))
-                .AsEnumerable()
-                .ToList();
+            List<DocumentCollection> sourceCollections;
 
-            await CloneDatabaseAsync(options.Database, intermediateDatabaseName, sourceCollections, false);
+            if (intermediateDatabase != null)
+            {
+                Console.WriteLine($"Found intermediate database {intermediateDatabase}");
+                string sourceDatabaseName = intermediateDatabaseName;
+                sourceCollections = this.Client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(sourceDatabaseName))
+                    .AsEnumerable()
+                    .ToList();
+            }
+            else
+            {
+                string sourceDatabaseName = options.SourceDatabase;
+                sourceCollections = this.Client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(sourceDatabaseName))
+                    .AsEnumerable()
+                    .ToList();
 
-            Console.WriteLine($"Deleting database {options.Database}");
-            await Client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(options.Database));
+                await CloneDatabaseAsync(options.SourceDatabase, intermediateDatabaseName, sourceCollections, false);
 
+                Console.WriteLine($"Deleting database {options.SourceDatabase}");
+                await Client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(options.SourceDatabase));
+            }
+
+            InitializeDocumentClient(options);
+
+            string destinationDatabaseName = (options.DestinationDatabase != null) ? options.DestinationDatabase : options.SourceDatabase;
+            await CloneDatabaseAsync(intermediateDatabaseName, destinationDatabaseName, sourceCollections, true);
+
+            Console.WriteLine($"Deleting database {intermediateDatabaseName}");
+            await Client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(intermediateDatabaseName));
+
+            Console.WriteLine($"Complete.");
+        }
+
+        private void InitializeDocumentClient(CommandLineOptions options)
+        {
             this.Client = new DocumentClient(
                              new Uri(options.DocumentDBEndpoint),
                              options.MasterKey,
-                             new ConnectionPolicy {
+                             new ConnectionPolicy
+                             {
                                  ConnectionMode = ConnectionMode.Direct,
                                  ConnectionProtocol = Protocol.Tcp,
                                  RetryOptions = new RetryOptions
@@ -68,13 +99,6 @@ namespace MigrateDatabase
                                      MaxRetryWaitTimeInSeconds = 1000
                                  }
                              });
-
-            await CloneDatabaseAsync(intermediateDatabaseName, options.Database, sourceCollections, true);
-
-            Console.WriteLine($"Deleting database {intermediateDatabaseName}");
-            await Client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(intermediateDatabaseName));
-
-            Console.WriteLine($"Complete.");
         }
 
         private async Task SetMaxThroughputAsync(DocumentCollection collection)
@@ -197,8 +221,11 @@ namespace MigrateDatabase
             [Option('e', "masterKey", HelpText = "DocumentDB master key", Required = true)]
             public string MasterKey { get; set; }
 
-            [Option('d', "database", HelpText = "DocumentDB database ID", Required = true)]
-            public string Database { get; set; }
+            [Option('s', "sourceDatabase", HelpText = "source DocumentDB database ID", Required = true)]
+            public string SourceDatabase { get; set; }
+
+            [Option('d', "destDatabase", HelpText = "dest DocumentDB database ID", Required = false)]
+            public string DestinationDatabase { get; set; }
         }
     }
 }
