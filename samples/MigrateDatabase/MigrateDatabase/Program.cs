@@ -39,7 +39,11 @@ namespace MigrateDatabase
             this.Client = new DocumentClient(
                              new Uri(options.DocumentDBEndpoint),
                              options.MasterKey,
-                             new ConnectionPolicy { ConnectionMode = ConnectionMode.Gateway, ConnectionProtocol = Protocol.Tcp });            
+                             new ConnectionPolicy { ConnectionMode = ConnectionMode.Gateway, ConnectionProtocol = Protocol.Tcp });
+
+            Database database = this.Client.CreateDatabaseQuery()
+                .Where(d => d.Id == options.Database)
+                .AsEnumerable().FirstOrDefault();
 
             string intermediateDatabaseName = options.Database + "-copy";
 
@@ -65,6 +69,18 @@ namespace MigrateDatabase
             Console.WriteLine($"Complete.");
         }
 
+        private async Task SetMaxThroughputAsync(DocumentCollection collection)
+        {
+            FeedResponse<PartitionKeyRange> pkRanges = await this.Client.ReadPartitionKeyRangeFeedAsync(collection.SelfLink);
+            int maxThroughput = pkRanges.Count * 10000;
+
+            Offer offer = this.Client.CreateOfferQuery().Where(o => o.ResourceLink == collection.SelfLink).AsEnumerable().FirstOrDefault();
+
+            OfferV2 newOffer = new OfferV2(offer, maxThroughput);
+
+            await this.Client.ReplaceOfferAsync(newOffer);
+        }
+
         private async Task CloneDatabaseAsync(string sourceDatabaseName, string destinationDatabaseName, List<DocumentCollection> collectionInfos, bool enableIndexing = false)
         {
             Console.WriteLine($"Creating database {destinationDatabaseName}");
@@ -76,10 +92,7 @@ namespace MigrateDatabase
 
                 Console.WriteLine($"\tCreating collection {destinationDatabaseName}/{coll.Id}");
 
-                DocumentCollection newColl = await this.Client.CreateDocumentCollectionIfNotExistsAsync(
-                    UriFactory.CreateDatabaseUri(destinationDatabaseName),
-                    collectionDefinition,
-                    new RequestOptions { OfferThroughput = 10000 });
+                DocumentCollection newColl = await CreateCollectionWithRetry(destinationDatabaseName, collectionDefinition);
 
                 DisplayCounts(sourceDatabaseName, coll.Id);
 
@@ -110,6 +123,26 @@ namespace MigrateDatabase
                 while (continuation != null);
 
                 Console.WriteLine($"\tCopied {totalCount} documents.");
+            }
+        }
+
+        private async Task<DocumentCollection> CreateCollectionWithRetry(string databaseName, DocumentCollection collectionDefinition)
+        {
+            while(true)
+            {
+                try
+                {
+                    DocumentCollection newColl = await this.Client.CreateDocumentCollectionIfNotExistsAsync(
+                        UriFactory.CreateDatabaseUri(databaseName),
+                        collectionDefinition,
+                        new RequestOptions { OfferThroughput = 10000 });
+
+                    return newColl;
+                }
+                catch (Exception)
+                {
+                    await Task.Delay(1000);
+                }
             }
         }
 
