@@ -36,29 +36,33 @@ namespace MigrateDatabase
 
         private async Task RunAsync(CommandLineOptions options)
         {
-            using (this.Client = new DocumentClient(
-                new Uri(options.DocumentDBEndpoint),
-                options.MasterKey,
-                new ConnectionPolicy { ConnectionMode = ConnectionMode.Gateway, ConnectionProtocol = Protocol.Tcp }))
-            {
-                string intermediateDatabaseName = options.Database + "-copy";
+            this.Client = new DocumentClient(
+                             new Uri(options.DocumentDBEndpoint),
+                             options.MasterKey,
+                             new ConnectionPolicy { ConnectionMode = ConnectionMode.Gateway, ConnectionProtocol = Protocol.Tcp });            
 
-                List<DocumentCollection> sourceCollections = this.Client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(options.Database))
-                    .AsEnumerable()
-                    .ToList();
+            string intermediateDatabaseName = options.Database + "-copy";
 
-                await CloneDatabaseAsync(options.Database, intermediateDatabaseName, sourceCollections, false);
+            List<DocumentCollection> sourceCollections = this.Client.CreateDocumentCollectionQuery(UriFactory.CreateDatabaseUri(options.Database))
+                .AsEnumerable()
+                .ToList();
 
-                Console.WriteLine($"Deleting database {options.Database}");
-                await Client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(options.Database));
+            await CloneDatabaseAsync(options.Database, intermediateDatabaseName, sourceCollections, false);
 
-                await CloneDatabaseAsync(intermediateDatabaseName, options.Database, sourceCollections, true);
+            Console.WriteLine($"Deleting database {options.Database}");
+            await Client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(options.Database));
 
-                Console.WriteLine($"Deleting database {intermediateDatabaseName}");
-                await Client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(intermediateDatabaseName));
+            this.Client = new DocumentClient(
+                             new Uri(options.DocumentDBEndpoint),
+                             options.MasterKey,
+                             new ConnectionPolicy { ConnectionMode = ConnectionMode.Gateway, ConnectionProtocol = Protocol.Tcp });
 
-                Console.WriteLine($"Complete.");
-            }
+            await CloneDatabaseAsync(intermediateDatabaseName, options.Database, sourceCollections, true);
+
+            Console.WriteLine($"Deleting database {intermediateDatabaseName}");
+            await Client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(intermediateDatabaseName));
+
+            Console.WriteLine($"Complete.");
         }
 
         private async Task CloneDatabaseAsync(string sourceDatabaseName, string destinationDatabaseName, List<DocumentCollection> collectionInfos, bool enableIndexing = false)
@@ -72,7 +76,7 @@ namespace MigrateDatabase
 
                 Console.WriteLine($"\tCreating collection {destinationDatabaseName}/{coll.Id}");
 
-                await this.Client.CreateDocumentCollectionIfNotExistsAsync(
+                DocumentCollection newColl = await this.Client.CreateDocumentCollectionIfNotExistsAsync(
                     UriFactory.CreateDatabaseUri(destinationDatabaseName),
                     collectionDefinition,
                     new RequestOptions { OfferThroughput = 10000 });
@@ -87,7 +91,7 @@ namespace MigrateDatabase
                 do
                 {
                     FeedResponse<dynamic> response = await this.Client.ReadDocumentFeedAsync(
-                        coll.SelfLink,
+                        UriFactory.CreateDocumentCollectionUri(sourceDatabaseName, coll.Id),
                         new FeedOptions { MaxItemCount = -1, RequestContinuation = continuation });
                     continuation = response.ResponseContinuation;
 
@@ -113,9 +117,12 @@ namespace MigrateDatabase
         {
             int count = this.Client.CreateDocumentQuery(
                 UriFactory.CreateDocumentCollectionUri(databaseName, collectionName), 
-                new FeedOptions { MaxDegreeOfParallelism = -1, MaxItemCount = -1 }).Count();
+                new FeedOptions {
+                    MaxDegreeOfParallelism = -1,
+                    MaxItemCount = -1,
+                    EnableCrossPartitionQuery = true }).Count();
 
-            Console.WriteLine($"Collection {databaseName + "." + collectionName} has {count} docs");
+            Console.WriteLine($"\tCollection {databaseName + "." + collectionName} has {count} docs");
         }
 
         private static DocumentCollection CloneCollectionConfigs(DocumentCollection coll, bool enableIndexing)
