@@ -68,22 +68,17 @@ namespace MigrateDatabase
 
             foreach (DocumentCollection coll in collectionInfos)
             {
-                string partitionKeyPath = coll.PartitionKey.Paths[0];
-
-                IndexingPolicy noIndexing = new IndexingPolicy();
-                noIndexing.IndexingMode = IndexingMode.None;
-                noIndexing.ExcludedPaths.Add(new ExcludedPath { Path = "/*" });
+                DocumentCollection collectionDefinition = CloneCollectionConfigs(coll, enableIndexing);
 
                 Console.WriteLine($"\tCreating collection {destinationDatabaseName}/{coll.Id}");
+
                 await this.Client.CreateDocumentCollectionIfNotExistsAsync(
                     UriFactory.CreateDatabaseUri(destinationDatabaseName),
-                    new DocumentCollection() {
-                        Id = coll.Id,
-                        IndexingPolicy = (enableIndexing)? coll.IndexingPolicy: noIndexing,
-                        PartitionKey = new PartitionKeyDefinition { Paths = { partitionKeyPath } },
-                        DefaultTimeToLive = coll.DefaultTimeToLive
-                    }, 
+                    collectionDefinition,
                     new RequestOptions { OfferThroughput = 10000 });
+
+
+                Console.WriteLine($"\tCopying data...");
 
                 int totalCount = 0;
                 FeedResponse<dynamic> response;
@@ -91,24 +86,53 @@ namespace MigrateDatabase
                 do
                 {
                     response = await this.Client.ReadDocumentFeedAsync(
-                        coll.SelfLink, 
+                        coll.SelfLink,
                         new FeedOptions { MaxItemCount = -1 });
 
                     List<Task> insertTasks = new List<Task>();
                     foreach (Document document in response)
                     {
                         insertTasks.Add(this.Client.UpsertDocumentAsync(
-                            UriFactory.CreateDocumentCollectionUri(destinationDatabaseName, coll.Id), 
+                            UriFactory.CreateDocumentCollectionUri(destinationDatabaseName, coll.Id),
                             document));
                         totalCount++;
                     }
 
                     await Task.WhenAll(insertTasks);
+                    Console.WriteLine($"\tCopied {totalCount} documents...");
                 }
                 while (response.ResponseContinuation != null);
 
                 Console.WriteLine($"\tCopied {totalCount} documents.");
             }
+        }
+
+        private static DocumentCollection CloneCollectionConfigs(DocumentCollection coll, bool enableIndexing)
+        {
+            DocumentCollection collectionDefinition = new DocumentCollection();
+            collectionDefinition.Id = coll.Id;
+
+            PartitionKeyDefinition partitionKeyDefinition = coll.PartitionKey;
+            if (partitionKeyDefinition.Paths.Count > 0)
+            {
+                collectionDefinition.PartitionKey = partitionKeyDefinition;
+            }
+
+            if (enableIndexing)
+            {
+                collectionDefinition.IndexingPolicy = coll.IndexingPolicy;
+            }
+            else
+            {
+                IndexingPolicy noIndexing = new IndexingPolicy();
+                noIndexing.IndexingMode = IndexingMode.None;
+                noIndexing.Automatic = false;
+
+                collectionDefinition.IndexingPolicy = noIndexing;
+            }
+
+            collectionDefinition.DefaultTimeToLive = coll.DefaultTimeToLive;
+            return collectionDefinition;
         }
 
         class CommandLineOptions
