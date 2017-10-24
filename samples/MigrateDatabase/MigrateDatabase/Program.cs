@@ -77,17 +77,19 @@ namespace MigrateDatabase
                     collectionDefinition,
                     new RequestOptions { OfferThroughput = 10000 });
 
+                DisplayCounts(coll);
 
                 Console.WriteLine($"\tCopying data...");
 
                 int totalCount = 0;
-                FeedResponse<dynamic> response;
+                string continuation = null;
 
                 do
                 {
-                    response = await this.Client.ReadDocumentFeedAsync(
+                    FeedResponse<dynamic> response = await this.Client.ReadDocumentFeedAsync(
                         coll.SelfLink,
-                        new FeedOptions { MaxItemCount = -1 });
+                        new FeedOptions { MaxItemCount = -1, RequestContinuation = continuation });
+                    continuation = response.ResponseContinuation;
 
                     List<Task> insertTasks = new List<Task>();
                     foreach (Document document in response)
@@ -101,10 +103,19 @@ namespace MigrateDatabase
                     await Task.WhenAll(insertTasks);
                     Console.WriteLine($"\tCopied {totalCount} documents...");
                 }
-                while (response.ResponseContinuation != null);
+                while (continuation != null);
 
                 Console.WriteLine($"\tCopied {totalCount} documents.");
             }
+        }
+
+        private void DisplayCounts(DocumentCollection coll)
+        {
+            int count = this.Client.CreateDocumentQuery(
+                coll.SelfLink, 
+                new FeedOptions { MaxDegreeOfParallelism = -1, MaxItemCount = -1 }).Count();
+
+            Console.WriteLine($"Collection {coll.Id} has {count} docs");
         }
 
         private static DocumentCollection CloneCollectionConfigs(DocumentCollection coll, bool enableIndexing)
