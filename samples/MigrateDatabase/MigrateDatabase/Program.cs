@@ -112,7 +112,7 @@ namespace MigrateDatabase
                     foreach (Document document in response)
                     {
                         insertTasks.Add(this.Client.UpsertDocumentAsync(
-                            UriFactory.CreateDocumentCollectionUri(destinationDatabaseName, coll.Id),
+                            newColl.SelfLink,
                             document));
                         totalCount++;
                     }
@@ -128,22 +128,12 @@ namespace MigrateDatabase
 
         private async Task<DocumentCollection> CreateCollectionWithRetry(string databaseName, DocumentCollection collectionDefinition)
         {
-            while(true)
-            {
-                try
-                {
-                    DocumentCollection newColl = await this.Client.CreateDocumentCollectionIfNotExistsAsync(
-                        UriFactory.CreateDatabaseUri(databaseName),
-                        collectionDefinition,
-                        new RequestOptions { OfferThroughput = 10000 });
+            DocumentCollection newColl = await this.Client.CreateDocumentCollectionIfNotExistsAsync(
+                UriFactory.CreateDatabaseUri(databaseName),
+                collectionDefinition,
+                new RequestOptions { OfferThroughput = 10000 });
 
-                    return newColl;
-                }
-                catch (Exception)
-                {
-                    await Task.Delay(1000);
-                }
-            }
+            return newColl;
         }
 
         private void DisplayCounts(string databaseName, string collectionName)
