@@ -77,7 +77,7 @@ namespace MigrateDatabase
                     collectionDefinition,
                     new RequestOptions { OfferThroughput = 10000 });
 
-                DisplayCounts(coll);
+                DisplayCounts(sourceDatabaseName, coll.Id);
 
                 Console.WriteLine($"\tCopying data...");
 
@@ -109,24 +109,25 @@ namespace MigrateDatabase
             }
         }
 
-        private void DisplayCounts(DocumentCollection coll)
+        private void DisplayCounts(string databaseName, string collectionName)
         {
             int count = this.Client.CreateDocumentQuery(
-                coll.SelfLink, 
+                UriFactory.CreateDocumentCollectionUri(databaseName, collectionName), 
                 new FeedOptions { MaxDegreeOfParallelism = -1, MaxItemCount = -1 }).Count();
 
-            Console.WriteLine($"Collection {coll.Id} has {count} docs");
+            Console.WriteLine($"Collection {databaseName + "." + collectionName} has {count} docs");
         }
 
         private static DocumentCollection CloneCollectionConfigs(DocumentCollection coll, bool enableIndexing)
         {
             DocumentCollection collectionDefinition = new DocumentCollection();
             collectionDefinition.Id = coll.Id;
-
-            PartitionKeyDefinition partitionKeyDefinition = coll.PartitionKey;
-            if (partitionKeyDefinition.Paths.Count > 0)
+            if (coll.PartitionKey.Paths.Count > 0)
             {
-                collectionDefinition.PartitionKey = partitionKeyDefinition;
+                foreach (string path in coll.PartitionKey.Paths)
+                {
+                    collectionDefinition.PartitionKey.Paths.Add(path);
+                }
             }
 
             if (enableIndexing)
