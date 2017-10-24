@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("ChangeFeed")]
+[assembly: AssemblyProduct("MigrateDatabase")]
 [assembly: AssemblyCopyright("Copyright ©  2017")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("13372996-d569-4d5f-9801-43267ac5ade0")]
+[assembly: Guid("d0eed45a-9411-43e1-b313-b09f56e172dd")]
 
 // Version information for an assembly consists of the following four values:
 //
