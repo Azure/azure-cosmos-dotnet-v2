@@ -59,7 +59,15 @@ namespace MigrateDatabase
             this.Client = new DocumentClient(
                              new Uri(options.DocumentDBEndpoint),
                              options.MasterKey,
-                             new ConnectionPolicy { ConnectionMode = ConnectionMode.Gateway, ConnectionProtocol = Protocol.Tcp });
+                             new ConnectionPolicy {
+                                 ConnectionMode = ConnectionMode.Direct,
+                                 ConnectionProtocol = Protocol.Tcp,
+                                 RetryOptions = new RetryOptions
+                                 {
+                                     MaxRetryAttemptsOnThrottledRequests = 1000,
+                                     MaxRetryWaitTimeInSeconds = 1000
+                                 }
+                             });
 
             await CloneDatabaseAsync(intermediateDatabaseName, options.Database, sourceCollections, true);
 
@@ -105,7 +113,11 @@ namespace MigrateDatabase
                 {
                     FeedResponse<dynamic> response = await this.Client.ReadDocumentFeedAsync(
                         UriFactory.CreateDocumentCollectionUri(sourceDatabaseName, coll.Id),
-                        new FeedOptions { MaxItemCount = -1, RequestContinuation = continuation });
+                        new FeedOptions {
+                            MaxItemCount = -1,
+                            RequestContinuation = continuation,
+                            MaxDegreeOfParallelism = -1
+                        });
                     continuation = response.ResponseContinuation;
 
                     List<Task> insertTasks = new List<Task>();
