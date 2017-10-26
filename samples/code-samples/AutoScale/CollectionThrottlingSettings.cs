@@ -52,7 +52,7 @@ namespace DocumentDB.Samples.AutoScale
         /// <param name="throttlingThreshold">The throttling threshold.</param>
         public CollectionThrottlingSettings(int throughputIncreaseOnThrottle, int maxCollectionThroughPut, int resetTimeInSeconds, int throttlingThreshold)
         {
-            this.MaxCollectionThroughPut = maxCollectionThroughPut < 400 ? throw new ArgumentException("Max collection throughput cannot be less than 400") : maxCollectionThroughPut;
+            this.MaxCollectionThroughPut = maxCollectionThroughPut < 400 ? 400 : maxCollectionThroughPut;
             this.MinThrottlingInstances = throttlingThreshold < 1 ? 1 : throttlingThreshold;
             this.ThrottlingResetTimeInSeconds = resetTimeInSeconds < 1 ? 1 : resetTimeInSeconds;
             this.ThroughputIncreaseOnThrottle = throughputIncreaseOnThrottle < 100 ? 100 :throughputIncreaseOnThrottle;
