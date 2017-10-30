@@ -18,7 +18,6 @@ using System.Runtime.InteropServices;
 // to COM components.  If you need to access a type in this assembly from 
 // COM, set the ComVisible attribute to true on that type.
 [assembly: ComVisible(false)]
-[assembly:InternalsVisibleTo("DocumentDB.ChangeFeedProcessor.Test")]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("43b55c4c-377c-49ef-9165-337542f4319e")]

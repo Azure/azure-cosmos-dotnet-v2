@@ -81,7 +81,7 @@ namespace DocumentDB.ChangeFeedProcessor
     /// </example>
     public class ChangeFeedEventHost : IPartitionObserver<DocumentServiceLease>
     {
-        const string DefaultUserAgentSuffix = "changefeed-0.4";
+        const string DefaultUserAgentSuffix = "changefeed-0.3";
         const string LeaseContainerName = "docdb-changefeed";
         const string LSNPropertyName = "_lsn";
 
@@ -633,12 +633,12 @@ namespace DocumentDB.ChangeFeedProcessor
             await this.leaseManager.CreateLeaseStoreIfNotExistsAsync();
 
             var ranges = new Dictionary<string, PartitionKeyRange>();
-            foreach (var range in await CollectionHelper.EnumPartitionKeyRangesAsync(this.documentClient, this.collectionSelfLink))
+            foreach (var range in await this.EnumPartitionKeyRangesAsync(this.collectionSelfLink))
             {
                 ranges.Add(range.Id, range);
             }
 
-            TraceLog.Informational(string.Format("Source collection: '{0}', {1} partition(s), {2} document(s)", this.collectionLocation.CollectionName, ranges.Count, CollectionHelper.GetDocumentCount(collectionResponse)));
+            TraceLog.Informational(string.Format("Source collection: '{0}', {1} partition(s), {2} document(s)", this.collectionLocation.CollectionName, ranges.Count, GetDocumentCount(collectionResponse)));
 
             await this.CreateLeases(ranges);
 
@@ -739,6 +739,25 @@ namespace DocumentDB.ChangeFeedProcessor
                 this.options.DegreeOfParallelism);
         }
 
+        async Task<List<PartitionKeyRange>> EnumPartitionKeyRangesAsync(string collectionSelfLink)
+        {
+            Debug.Assert(!string.IsNullOrWhiteSpace(collectionSelfLink), "collectionSelfLink");
+
+            string partitionkeyRangesPath = string.Format(CultureInfo.InvariantCulture, "{0}/pkranges", collectionSelfLink);
+
+            FeedResponse<PartitionKeyRange> response = null;
+            var partitionKeyRanges = new List<PartitionKeyRange>();
+            do
+            {
+                FeedOptions feedOptions = new FeedOptions { MaxItemCount = 1000, RequestContinuation = response != null ? response.ResponseContinuation : null };
+                response = await this.documentClient.ReadPartitionKeyRangeFeedAsync(partitionkeyRangesPath, feedOptions);
+                partitionKeyRanges.AddRange(response);
+            }
+            while (!string.IsNullOrEmpty(response.ResponseContinuation));
+
+            return partitionKeyRanges;
+        }
+
         async Task StartAsync()
         {
             await this.InitializeAsync();
@@ -798,7 +817,7 @@ namespace DocumentDB.ChangeFeedProcessor
 
             TraceLog.Informational(string.Format("Partition {0} is gone due to split, continuation '{1}'", partitionKeyRangeId, continuationToken));
 
-            List<PartitionKeyRange> allRanges = await CollectionHelper.EnumPartitionKeyRangesAsync(this.documentClient, this.collectionSelfLink);
+            List<PartitionKeyRange> allRanges = await this.EnumPartitionKeyRangesAsync(this.collectionSelfLink);
 
             var childRanges = new List<PartitionKeyRange>(allRanges.Where(range => range.Parents.Contains(partitionKeyRangeId)));
             if (childRanges.Count < 2)
@@ -899,6 +918,37 @@ namespace DocumentDB.ChangeFeedProcessor
 
             int separatorIndex = sessionToken.IndexOf(':');
             return sessionToken.Substring(separatorIndex + 1);
+        }
+
+        private static Int64 GetDocumentCount(ResourceResponse<DocumentCollection> response)
+        {
+            Debug.Assert(response != null);
+
+            var resourceUsage = response.ResponseHeaders["x-ms-resource-usage"];
+            if (resourceUsage != null)
+            {
+                var parts = resourceUsage.Split(';');
+                foreach (var part in parts)
+                {
+                    var name = part.Split('=');
+                    if (name.Length > 1 && string.Equals(name[0], "documentsCount", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(name[1]))
+                    {
+                        Int64 result = -1;
+                        if (Int64.TryParse(name[1], out result))
+                        {
+                            return result;
+                        }
+                        else
+                        {
+                            TraceLog.Error(string.Format("Failed to get document count from response, can't Int64.Parse('{0}')", part));
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            return -1;
         }
 
         private class WorkerData
