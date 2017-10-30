@@ -59,3 +59,4 @@ ehthumbs.db
 
 # Folder config file
 Desktop.ini
+/samples/ChangeFeedProcessor/.vs/DocumentDB.ChangeFeedProcessor/v15/sqlite3/storage.ide
