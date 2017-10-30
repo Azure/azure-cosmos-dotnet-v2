@@ -32,7 +32,7 @@ namespace DocumentDB.ChangeFeedProcessor
                         }
                         else
                         {
-                            TraceLog.Error(string.Format("Failed to get document count from response, can't Int64.TryParse('{0}')", part));
+                            TraceLog.Error(string.Format("Failed to get document count from response, can't Int64.Parse('{0}')", part));
                         }
 
                         break;

@@ -81,7 +81,7 @@ namespace DocumentDB.ChangeFeedProcessor
     /// </example>
     public class ChangeFeedEventHost : IPartitionObserver<DocumentServiceLease>
     {
-        const string DefaultUserAgentSuffix = "changefeed-0.3.3";
+        const string DefaultUserAgentSuffix = "changefeed-0.4";
         const string LeaseContainerName = "docdb-changefeed";
         const string LSNPropertyName = "_lsn";
 
@@ -275,7 +275,6 @@ namespace DocumentDB.ChangeFeedProcessor
                     TraceLog.Verbose(string.Format("Worker task waiting for start signal: partition '{0}'", lease.PartitionId));
 
                     workerTaskOkToStart.WaitOne();
-
                     Debug.Assert(workerData != null);
                     TraceLog.Verbose(string.Format("Worker task started: partition '{0}'", lease.PartitionId));
 
@@ -313,99 +312,101 @@ namespace DocumentDB.ChangeFeedProcessor
 
                     string lastContinuation = options.RequestContinuation;
 
-                    while (this.isShutdown == 0)
+                    try
                     {
-                        do
+                        while (this.isShutdown == 0)
                         {
-                            ExceptionDispatchInfo exceptionDispatchInfo = null;
-                            FeedResponse<Document> response = null;
-
-                            try
+                            do
                             {
-                                response = await query.ExecuteNextAsync<Document>();
-                                lastContinuation = response.ResponseContinuation;
-                            }
-                            catch (DocumentClientException ex)
-                            {
-                                exceptionDispatchInfo = ExceptionDispatchInfo.Capture(ex);
-                            }
+                                ExceptionDispatchInfo exceptionDispatchInfo = null;
+                                FeedResponse<Document> response = null;
 
-                            if (exceptionDispatchInfo != null)
-                            {
-                                DocumentClientException dcex = (DocumentClientException)exceptionDispatchInfo.SourceException;
-
-                                if (StatusCode.NotFound == (StatusCode)dcex.StatusCode && SubStatusCode.ReadSessionNotAvailable != (SubStatusCode)GetSubStatusCode(dcex))
+                                try
                                 {
-                                    // Most likely, the database or collection was removed while we were enumerating.
-                                    // Shut down. The user will need to start over.
-                                    // Note: this has to be a new task, can't await for shutdown here, as shudown awaits for all worker tasks.
-                                    TraceLog.Error(string.Format("Partition {0}: resource gone (subStatus={1}). Aborting.", context.PartitionKeyRangeId, GetSubStatusCode(dcex)));
-                                    await Task.Factory.StartNew(() => this.StopAsync(ChangeFeedObserverCloseReason.ResourceGone));
-                                    break;
+                                    response = await query.ExecuteNextAsync<Document>();
+                                    lastContinuation = response.ResponseContinuation;
                                 }
-                                else if (StatusCode.Gone == (StatusCode)dcex.StatusCode)
+                                catch (DocumentClientException ex)
                                 {
-                                    SubStatusCode subStatusCode = (SubStatusCode)GetSubStatusCode(dcex);
-                                    if (SubStatusCode.PartitionKeyRangeGone == subStatusCode)
-                                    {
-                                        bool isSuccess = await HandleSplitAsync(context.PartitionKeyRangeId, lastContinuation, lease.Id);
-                                        if (!isSuccess)
-                                        {
-                                            TraceLog.Error(string.Format("Partition {0}: HandleSplit failed! Aborting.", context.PartitionKeyRangeId));
-                                            await Task.Factory.StartNew(() => this.StopAsync(ChangeFeedObserverCloseReason.ResourceGone));
-                                            break;
-                                        }
+                                    exceptionDispatchInfo = ExceptionDispatchInfo.Capture(ex);
+                                }
 
-                                        // Throw LeaseLostException so that we take the lease down.
-                                        throw new LeaseLostException(lease, exceptionDispatchInfo.SourceException, true);
-                                    }
-                                    else if (SubStatusCode.Splitting == subStatusCode)
+                                if (exceptionDispatchInfo != null)
+                                {
+                                    DocumentClientException dcex = (DocumentClientException)exceptionDispatchInfo.SourceException;
+
+                                    if (StatusCode.NotFound == (StatusCode)dcex.StatusCode && SubStatusCode.ReadSessionNotAvailable != (SubStatusCode)GetSubStatusCode(dcex))
                                     {
-                                        TraceLog.Warning(string.Format("Partition {0} is splitting. Will retry to read changes until split finishes. {1}", context.PartitionKeyRangeId, dcex.Message));
+                                        // Most likely, the database or collection was removed while we were enumerating.
+                                        // Shut down. The user will need to start over.
+                                        // Note: this has to be a new task, can't await for shutdown here, as shudown awaits for all worker tasks.
+                                        TraceLog.Error(string.Format("Partition {0}: resource gone (subStatus={1}). Aborting.", context.PartitionKeyRangeId, GetSubStatusCode(dcex)));
+                                        await Task.Factory.StartNew(() => this.StopAsync(ChangeFeedObserverCloseReason.ResourceGone));
+                                        break;
+                                    }
+                                    else if (StatusCode.Gone == (StatusCode)dcex.StatusCode)
+                                    {
+                                        SubStatusCode subStatusCode = (SubStatusCode)GetSubStatusCode(dcex);
+                                        if (SubStatusCode.PartitionKeyRangeGone == subStatusCode)
+                                        {
+                                            bool isSuccess = await HandleSplitAsync(context.PartitionKeyRangeId, lastContinuation, lease.Id);
+                                            if (!isSuccess)
+                                            {
+                                                TraceLog.Error(string.Format("Partition {0}: HandleSplit failed! Aborting.", context.PartitionKeyRangeId));
+                                                await Task.Factory.StartNew(() => this.StopAsync(ChangeFeedObserverCloseReason.ResourceGone));
+                                                break;
+                                            }
+
+                                            // Throw LeaseLostException so that we take the lease down.
+                                            throw new LeaseLostException(lease, exceptionDispatchInfo.SourceException, true);
+                                        }
+                                        else if (SubStatusCode.Splitting == subStatusCode)
+                                        {
+                                            TraceLog.Warning(string.Format("Partition {0} is splitting. Will retry to read changes until split finishes. {1}", context.PartitionKeyRangeId, dcex.Message));
+                                        }
+                                        else
+                                        {
+                                            exceptionDispatchInfo.Throw();
+                                        }
+                                    }
+                                    else if (StatusCode.TooManyRequests == (StatusCode)dcex.StatusCode ||
+                                        StatusCode.ServiceUnavailable == (StatusCode)dcex.StatusCode)
+                                    {
+                                        TraceLog.Warning(string.Format("Partition {0}: retriable exception : {1}", context.PartitionKeyRangeId, dcex.Message));
                                     }
                                     else
                                     {
                                         exceptionDispatchInfo.Throw();
                                     }
+
+                                    await Task.Delay(dcex.RetryAfter != TimeSpan.Zero ? dcex.RetryAfter : this.options.FeedPollDelay, cancellation.Token);
                                 }
-                                else if (StatusCode.TooManyRequests == (StatusCode)dcex.StatusCode ||
-                                    StatusCode.ServiceUnavailable == (StatusCode)dcex.StatusCode)
+
+                                if (response != null)
                                 {
-                                    TraceLog.Warning(string.Format("Partition {0}: retriable exception : {1}", context.PartitionKeyRangeId, dcex.Message));
-                                }
-                                else
-                                {
-                                    exceptionDispatchInfo.Throw();
-                                }
-
-                                await Task.Delay(dcex.RetryAfter != TimeSpan.Zero ? dcex.RetryAfter : this.options.FeedPollDelay, cancellation.Token);
-                            }
-
-                            if (response != null)
-                            {
-                                if (response.Count > 0)
-                                {
-                                    List<Document> docs = new List<Document>();
-                                    docs.AddRange(response);
-
-                                    try
+                                    if (response.Count > 0)
                                     {
-                                        context.FeedResponse = response;
-                                        await observer.ProcessChangesAsync(context, docs);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        TraceLog.Error(string.Format("IChangeFeedObserver.ProcessChangesAsync exception: {0}", ex));
-                                        closeReason = ChangeFeedObserverCloseReason.ObserverError;
-                                        throw;
-                                    }
-                                    finally
-                                    {
-                                        context.FeedResponse = null;
-                                    }
-                                }
+                                        List<Document> docs = new List<Document>();
+                                        docs.AddRange(response);
 
-                                checkpointStats.ProcessedDocCount += (uint)response.Count;
+                                        try
+                                        {
+                                            context.FeedResponse = response;
+                                            await observer.ProcessChangesAsync(context, docs);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            TraceLog.Error(string.Format("IChangeFeedObserver.ProcessChangesAsync exception: {0}", ex));
+                                            closeReason = ChangeFeedObserverCloseReason.ObserverError;
+                                            throw;
+                                        }
+                                        finally
+                                        {
+                                            context.FeedResponse = null;
+                                        }
+                                    }
+
+                                    checkpointStats.ProcessedDocCount += (uint)response.Count;
 
                                     if (this.options.IsAutoCheckpointEnabled)
                                     {
@@ -423,36 +424,30 @@ namespace DocumentDB.ChangeFeedProcessor
                             }
                             while (query.HasMoreResults && this.isShutdown == 0);
 
-                        if (this.isShutdown == 0)
-                        {
-                            await Task.Delay(this.options.FeedPollDelay, cancellation.Token);
-                        }
-                    } // Outer while (this.isShutdown == 0) loop.
+                            if (this.isShutdown == 0)
+                            {
+                                await Task.Delay(this.options.FeedPollDelay, cancellation.Token);
+                            }
+                        } // Outer while (this.isShutdown == 0) loop.
 
                         closeReason = ChangeFeedObserverCloseReason.Shutdown;
                     }
-                catch (LeaseLostException ex)
-                {
-                    closeReason = ex.IsGone ? ChangeFeedObserverCloseReason.LeaseGone : ChangeFeedObserverCloseReason.LeaseLost;
-                }
                     catch (TaskCanceledException ex)
                     {
-                    if (cancellation.IsCancellationRequested || this.isShutdown != 0)
+                        if (!cancellation.IsCancellationRequested || this.isShutdown == 0)
                         {
-                        TraceLog.Informational(string.Format("Cancel signal received for partition {0} worker!", context.PartitionKeyRangeId));
-                        if (!closeReason.HasValue)
-                        {
-                            closeReason = ChangeFeedObserverCloseReason.Shutdown;
-                        }
+                            TraceLog.Warning(string.Format("Partition {0}: got task cancelled exception in non-shutdown scenario [cancellation={1}, isShutdown={2}], {3}", context.PartitionKeyRangeId, cancellation.IsCancellationRequested, this.isShutdown, ex.StackTrace));
+                            closeReason = ChangeFeedObserverCloseReason.Unknown;
                         }
                         else
                         {
-                        TraceLog.Warning(string.Format("Partition {0}: got task cancelled exception in non-shutdown scenario [cancellation={1}, isShutdown={2}], {3}", context.PartitionKeyRangeId, cancellation.IsCancellationRequested, this.isShutdown, ex.StackTrace));
-                        if (!closeReason.HasValue)
-                        {
-                            closeReason = ChangeFeedObserverCloseReason.Unknown;
+                            TraceLog.Informational(string.Format("Cancel signal received for partition {0} worker!", context.PartitionKeyRangeId));
                         }
                     }
+                }
+                catch (LeaseLostException ex)
+                {
+                    closeReason = ex.IsGone ? ChangeFeedObserverCloseReason.LeaseGone : ChangeFeedObserverCloseReason.LeaseLost;
                 }
                 catch (Exception ex)
                 {
@@ -481,20 +476,16 @@ namespace DocumentDB.ChangeFeedProcessor
             return Task.FromResult(0);
         }
         
-        async Task IPartitionObserver<DocumentServiceLease>.OnPartitionReleasedAsync(DocumentServiceLease lease, ChangeFeedObserverCloseReason reason)
+        async Task IPartitionObserver<DocumentServiceLease>.OnPartitionReleasedAsync(DocumentServiceLease l, ChangeFeedObserverCloseReason reason)
         {
-            Debug.Assert(lease != null);
-
 #if DEBUG
             Interlocked.Decrement(ref this.partitionCount);
 #endif
 
-            TraceLog.Informational(string.Format("Host '{0}' releasing partition {1}...", this.HostName, lease.PartitionId));
+            TraceLog.Informational(string.Format("Host '{0}' releasing partition {1}...", this.HostName, l.PartitionId));
             WorkerData workerData = null;
-            if (this.partitionKeyRangeIdToWorkerMap.TryGetValue(lease.PartitionId, out workerData))
+            if (this.partitionKeyRangeIdToWorkerMap.TryGetValue(l.PartitionId, out workerData))
             {
-                Debug.Assert(workerData != null);
-
                 await workerData.CheckpointInProgress.WaitAsync();
                 try
                 {
@@ -516,7 +507,7 @@ namespace DocumentDB.ChangeFeedProcessor
                 }
 
                 await workerData.Task;
-                this.partitionKeyRangeIdToWorkerMap.TryRemove(lease.PartitionId, out workerData);
+                this.partitionKeyRangeIdToWorkerMap.TryRemove(l.PartitionId, out workerData);
             }
 
             TraceLog.Informational(string.Format("Host '{0}' partition {1}: released!", this.HostName, workerData.Context.PartitionKeyRangeId));
@@ -914,11 +905,6 @@ namespace DocumentDB.ChangeFeedProcessor
         {
             public WorkerData(Task task, IChangeFeedObserver observer, ChangeFeedObserverContext context, CancellationTokenSource cancellation, DocumentServiceLease lease)
             {
-                Debug.Assert(task != null);
-                Debug.Assert(observer != null);
-                Debug.Assert(context != null);
-                Debug.Assert(cancellation != null);
-
                 this.Task = task;
                 this.Observer = observer;
                 this.Context = context;
