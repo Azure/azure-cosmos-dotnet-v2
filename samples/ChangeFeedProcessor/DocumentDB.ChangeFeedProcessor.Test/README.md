@@ -1,0 +1,8 @@
+# Change Feed Processor Test
+This project contains tests for Change Feed Processor library.
+
+## To run the tests, do the following:
+* Install local emulator. See https://docs.microsoft.com/en-us/azure/cosmos-db/local-emulator.
+* Make sure build configuration is set to x64 (Debug or Release).
+* Make sure test are configuraed to use process architechture x64 (Test->Test Settings->Default Processor Architechture->x64).
+* Open Test Explorer (Test->Windows->Test Explorer) and run tests from there.
