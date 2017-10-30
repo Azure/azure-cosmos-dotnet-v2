@@ -81,7 +81,7 @@ namespace DocumentDB.ChangeFeedProcessor
     /// </example>
     public class ChangeFeedEventHost : IPartitionObserver<DocumentServiceLease>
     {
-        const string DefaultUserAgentSuffix = "changefeed-0.3";
+        const string DefaultUserAgentSuffix = "changefeed-0.3.3";
         const string LeaseContainerName = "docdb-changefeed";
         const string LSNPropertyName = "_lsn";
 
@@ -132,7 +132,7 @@ namespace DocumentDB.ChangeFeedProcessor
             ChangeFeedOptions changeFeedOptions, 
             ChangeFeedHostOptions hostOptions)
         {
-            if (string.IsNullOrWhiteSpace(hostName)) throw new ArgumentException("The hostName parameter cannot be null or empty string.", "hostName");
+            if (string.IsNullOrWhiteSpace(hostName)) throw new ArgumentException("The hostName parameter provided to the constructor cannot be null or empty string.", "hostName");
             if (documentCollectionLocation == null) throw new ArgumentNullException("documentCollectionLocation");
             if (documentCollectionLocation.Uri == null) throw new ArgumentNullException("documentCollectionLocation.Uri");
             if (string.IsNullOrWhiteSpace(documentCollectionLocation.DatabaseName)) throw new ArgumentException("documentCollectionLocation.DatabaseName");
@@ -275,6 +275,7 @@ namespace DocumentDB.ChangeFeedProcessor
                     TraceLog.Verbose(string.Format("Worker task waiting for start signal: partition '{0}'", lease.PartitionId));
 
                     workerTaskOkToStart.WaitOne();
+
                     Debug.Assert(workerData != null);
                     TraceLog.Verbose(string.Format("Worker task started: partition '{0}'", lease.PartitionId));
 
@@ -408,21 +409,21 @@ namespace DocumentDB.ChangeFeedProcessor
 
                                     checkpointStats.ProcessedDocCount += (uint)response.Count;
 
-                                    if (this.options.IsAutoCheckpointEnabled)
+                                if (this.options.IsAutoCheckpointEnabled)
+                                {
+                                    if (IsCheckpointNeeded(lease, checkpointStats))
                                     {
-                                        if (IsCheckpointNeeded(lease, checkpointStats))
-                                        {
-                                            lease = workerData.Lease = await this.CheckpointAsync(lease, response.ResponseContinuation, context);
-                                            checkpointStats.Reset();
-                                        }
-                                        else if (response.Count > 0)
-                                        {
-                                            TraceLog.Informational(string.Format("Checkpoint: not checkpointing for partition {0}, {1} docs, new continuation '{2}' as frequency condition is not met", lease.PartitionId, response.Count, response.ResponseContinuation));
-                                        }
+                                        lease = workerData.Lease = await this.CheckpointAsync(lease, response.ResponseContinuation, context);
+                                        checkpointStats.Reset();
+                                    }
+                                    else if (response.Count > 0)
+                                    {
+                                        TraceLog.Informational(string.Format("Checkpoint: not checkpointing for partition {0}, {1} docs, new continuation '{2}' as frequency condition is not met", lease.PartitionId, response.Count, response.ResponseContinuation));
                                     }
                                 }
                             }
-                            while (query.HasMoreResults && this.isShutdown == 0);
+                        }
+                        while (query.HasMoreResults && this.isShutdown == 0);
 
                             if (this.isShutdown == 0)
                             {
@@ -476,16 +477,20 @@ namespace DocumentDB.ChangeFeedProcessor
             return Task.FromResult(0);
         }
         
-        async Task IPartitionObserver<DocumentServiceLease>.OnPartitionReleasedAsync(DocumentServiceLease l, ChangeFeedObserverCloseReason reason)
+        async Task IPartitionObserver<DocumentServiceLease>.OnPartitionReleasedAsync(DocumentServiceLease lease, ChangeFeedObserverCloseReason reason)
         {
+            Debug.Assert(lease != null);
+
 #if DEBUG
             Interlocked.Decrement(ref this.partitionCount);
 #endif
 
-            TraceLog.Informational(string.Format("Host '{0}' releasing partition {1}...", this.HostName, l.PartitionId));
+            TraceLog.Informational(string.Format("Host '{0}' releasing partition {1}...", this.HostName, lease.PartitionId));
             WorkerData workerData = null;
-            if (this.partitionKeyRangeIdToWorkerMap.TryGetValue(l.PartitionId, out workerData))
+            if (this.partitionKeyRangeIdToWorkerMap.TryGetValue(lease.PartitionId, out workerData))
             {
+                Debug.Assert(workerData != null);
+
                 await workerData.CheckpointInProgress.WaitAsync();
                 try
                 {
@@ -507,7 +512,7 @@ namespace DocumentDB.ChangeFeedProcessor
                 }
 
                 await workerData.Task;
-                this.partitionKeyRangeIdToWorkerMap.TryRemove(l.PartitionId, out workerData);
+                this.partitionKeyRangeIdToWorkerMap.TryRemove(lease.PartitionId, out workerData);
             }
 
             TraceLog.Informational(string.Format("Host '{0}' partition {1}: released!", this.HostName, workerData.Context.PartitionKeyRangeId));
@@ -955,6 +960,11 @@ namespace DocumentDB.ChangeFeedProcessor
         {
             public WorkerData(Task task, IChangeFeedObserver observer, ChangeFeedObserverContext context, CancellationTokenSource cancellation, DocumentServiceLease lease)
             {
+                Debug.Assert(task != null);
+                Debug.Assert(observer != null);
+                Debug.Assert(context != null);
+                Debug.Assert(cancellation != null);
+
                 this.Task = task;
                 this.Observer = observer;
                 this.Context = context;
