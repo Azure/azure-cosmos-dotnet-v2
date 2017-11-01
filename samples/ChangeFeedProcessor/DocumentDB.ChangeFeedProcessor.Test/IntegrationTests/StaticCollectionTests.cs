@@ -14,73 +14,24 @@ namespace DocumentDB.ChangeFeedProcessor.Test
     /// <summary>
     /// Collection is not modified as part of tests.
     /// </summary>
+    /// <remarks>
+    /// Since monitored collection is created once and tests are only reading, all test methods are independent and can run in parallel.
+    /// </remarks>
     [TestClass]
-    public class StaticCollectionTests
+    public class StaticCollectionTests : IntegrationTest
     {
-        static DocumentCollectionInfo monitoredCollectionInfo;
-        static DocumentCollectionInfo leaseCollectionInfo;
-        static int monitoredOfferThroughput, leaseOfferThroughput;
         const int documentCount = 1519;
-        static readonly TimeSpan changeWaitTimeout = TimeSpan.FromSeconds(30);
 
         [ClassInitialize]
-        public static async Task ClassInitialize(TestContext testContext)
+        public static void ClassInitialize(TestContext testContext)
         {
-            System.Net.ServicePointManager.DefaultConnectionLimit = 1000;  // Default is 2.
-            ThreadPool.SetMinThreads(1000, 1000);   // 32
-            ThreadPool.SetMaxThreads(5000, 5000);   // 32
-
-            Helper.GetConfigurationSettings(out monitoredCollectionInfo, out leaseCollectionInfo, out monitoredOfferThroughput, out leaseOfferThroughput);
-
-            var monitoredCollection = new DocumentCollection
-            {
-                Id = monitoredCollectionInfo.CollectionName,
-                PartitionKey = new PartitionKeyDefinition { Paths = new Collection<string> { "/id" } }
-            };
-
-            using (var client = new DocumentClient(monitoredCollectionInfo.Uri, monitoredCollectionInfo.MasterKey, monitoredCollectionInfo.ConnectionPolicy))
-            {
-                await Helper.CreateDocumentCollectionAsync(client, monitoredCollectionInfo.DatabaseName, monitoredCollection, monitoredOfferThroughput);
-
-                await Helper.CreateDocumentsAsync(
-                    client,
-                    UriFactory.CreateDocumentCollectionUri(monitoredCollectionInfo.DatabaseName, monitoredCollectionInfo.CollectionName),
-                    documentCount);
-            }
-        }
-
-        [ClassCleanup]
-        public static async Task ClassCleanup()
-        {
-            using (var client = new DocumentClient(monitoredCollectionInfo.Uri, monitoredCollectionInfo.MasterKey, monitoredCollectionInfo.ConnectionPolicy))
-            {
-                await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(monitoredCollectionInfo.DatabaseName));
-            }
-        }
-
-        [TestInitialize]
-        public async Task TestInitialize()
-        {
-            var leaseCollection = new DocumentCollection { Id = leaseCollectionInfo.CollectionName };
-            using (var client = new DocumentClient(leaseCollectionInfo.Uri, leaseCollectionInfo.MasterKey, leaseCollectionInfo.ConnectionPolicy))
-            {
-                await Helper.CreateDocumentCollectionAsync(client, leaseCollectionInfo.DatabaseName, leaseCollection, leaseOfferThroughput);
-            }
-        }
-
-        [TestCleanup]
-        public async Task TestCleanup()
-        {
-            using (var client = new DocumentClient(leaseCollectionInfo.Uri, leaseCollectionInfo.MasterKey, leaseCollectionInfo.ConnectionPolicy))
-            {
-                await client.DeleteDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(leaseCollectionInfo.DatabaseName, leaseCollectionInfo.CollectionName));
-            }
+            RegisterTestClass(typeof(StaticCollectionTests));
         }
 
         [TestMethod]
         public async Task CountDocumentsInCollection_NormalCase()
         {
-            int partitionKeyRangeCount = await Helper.GetPartitionCount(monitoredCollectionInfo);
+            int partitionKeyRangeCount = await Helper.GetPartitionCount(this.ClassData.monitoredCollectionInfo);
             int openedCount = 0, closedCount = 0, processedCount = 0;
             var allDocsProcessed = new ManualResetEvent(false);
 
@@ -98,9 +49,9 @@ namespace DocumentDB.ChangeFeedProcessor.Test
                 });
 
             var host = new ChangeFeedEventHost(
-                Guid.NewGuid().ToString(), 
-                monitoredCollectionInfo, 
-                leaseCollectionInfo, 
+                Guid.NewGuid().ToString(),
+                this.ClassData.monitoredCollectionInfo,
+                this.LeaseCollectionInfo, 
                 new ChangeFeedOptions { StartFromBeginning = true },
                 new ChangeFeedHostOptions());
             await host.RegisterObserverFactoryAsync(observerFactory);
@@ -149,8 +100,8 @@ namespace DocumentDB.ChangeFeedProcessor.Test
 
             var host = new ChangeFeedEventHost(
                 Guid.NewGuid().ToString(),
-                monitoredCollectionInfo,
-                leaseCollectionInfo,
+                this.ClassData.monitoredCollectionInfo,
+                this.LeaseCollectionInfo,
                 new ChangeFeedOptions { StartFromBeginning = true },
                 new ChangeFeedHostOptions());
             await host.RegisterObserverFactoryAsync(observerFactory);
@@ -170,7 +121,7 @@ namespace DocumentDB.ChangeFeedProcessor.Test
         [TestMethod]
         public async Task CountDocumentsInCollection_TwoHosts()
         {
-            int partitionKeyRangeCount = await Helper.GetPartitionCount(monitoredCollectionInfo);
+            int partitionKeyRangeCount = await Helper.GetPartitionCount(this.ClassData.monitoredCollectionInfo);
             Assert.IsTrue(partitionKeyRangeCount > 1, "Prerequisite failed: expected monitored collection with at least 2 partitions.");
 
             int processedCount = 0;
@@ -189,16 +140,16 @@ namespace DocumentDB.ChangeFeedProcessor.Test
 
             var host1 = new ChangeFeedEventHost(
                 Guid.NewGuid().ToString(),
-                monitoredCollectionInfo,
-                leaseCollectionInfo,
+                this.ClassData.monitoredCollectionInfo,
+                this.LeaseCollectionInfo,
                 new ChangeFeedOptions { StartFromBeginning = true },
                 new ChangeFeedHostOptions { MaxPartitionCount = partitionKeyRangeCount / 2});
             await host1.RegisterObserverFactoryAsync(observerFactory);
 
             var host2 = new ChangeFeedEventHost(
                 Guid.NewGuid().ToString(),
-                monitoredCollectionInfo,
-                leaseCollectionInfo,
+                this.ClassData.monitoredCollectionInfo,
+                this.LeaseCollectionInfo,
                 new ChangeFeedOptions { StartFromBeginning = true },
                 new ChangeFeedHostOptions { MaxPartitionCount = partitionKeyRangeCount - partitionKeyRangeCount / 2 });
             await host2.RegisterObserverFactoryAsync(observerFactory);
@@ -219,7 +170,7 @@ namespace DocumentDB.ChangeFeedProcessor.Test
         [TestMethod]
         public async Task StopAtFullSpeed()
         {
-            int partitionKeyRangeCount = await Helper.GetPartitionCount(monitoredCollectionInfo);
+            int partitionKeyRangeCount = await Helper.GetPartitionCount(this.ClassData.monitoredCollectionInfo);
             int openedCount = 0, closedCount = 0, processedCount = 0;
             var quarterDocsProcessed = new ManualResetEvent(false);
 
@@ -238,8 +189,8 @@ namespace DocumentDB.ChangeFeedProcessor.Test
 
             var host = new ChangeFeedEventHost(
                 Guid.NewGuid().ToString(),
-                monitoredCollectionInfo,
-                leaseCollectionInfo,
+                this.ClassData.monitoredCollectionInfo,
+                this.LeaseCollectionInfo,
                 new ChangeFeedOptions { StartFromBeginning = true, MaxItemCount = 2 },
                 new ChangeFeedHostOptions());
             await host.RegisterObserverFactoryAsync(observerFactory);
@@ -250,6 +201,17 @@ namespace DocumentDB.ChangeFeedProcessor.Test
 
             Assert.AreEqual(partitionKeyRangeCount, openedCount, "Wrong closedCount");
             Assert.AreEqual(partitionKeyRangeCount, closedCount, "Wrong closedCount");
+        }
+
+        protected override async Task FinishTestClassInitializeAsync()
+        {
+            using (var client = new DocumentClient(this.ClassData.monitoredCollectionInfo.Uri, this.ClassData.monitoredCollectionInfo.MasterKey, this.ClassData.monitoredCollectionInfo.ConnectionPolicy))
+            {
+                await Helper.CreateDocumentsAsync(
+                    client,
+                    UriFactory.CreateDocumentCollectionUri(this.ClassData.monitoredCollectionInfo.DatabaseName, this.ClassData.monitoredCollectionInfo.CollectionName),
+                    documentCount);
+            }
         }
     }
 }

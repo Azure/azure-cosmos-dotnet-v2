@@ -22,7 +22,6 @@ namespace DocumentDB.ChangeFeedProcessor.Test
                 Uri = new Uri(ConfigurationManager.AppSettings["endpoint"]),
                 MasterKey = ConfigurationManager.AppSettings["masterKey"],
                 DatabaseName = ConfigurationManager.AppSettings["databaseId"],
-                CollectionName = ConfigurationManager.AppSettings["monitoredCollectionId"],
                 ConnectionPolicy = new ConnectionPolicy { ConnectionMode = ConnectionMode.Gateway }
             };
 
@@ -31,7 +30,6 @@ namespace DocumentDB.ChangeFeedProcessor.Test
                 Uri = new Uri(ConfigurationManager.AppSettings["endpoint"]),
                 MasterKey = ConfigurationManager.AppSettings["masterKey"],
                 DatabaseName = ConfigurationManager.AppSettings["databaseId"],
-                CollectionName = ConfigurationManager.AppSettings["leaseCollectionId"],
                 ConnectionPolicy = new ConnectionPolicy { ConnectionMode = ConnectionMode.Gateway }
             };
 

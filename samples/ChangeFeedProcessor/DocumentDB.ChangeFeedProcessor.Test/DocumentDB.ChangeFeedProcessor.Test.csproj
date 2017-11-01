@@ -78,9 +78,12 @@
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Helper.cs" />
+    <Compile Include="IntegrationTests\DynamicCollectionTests.cs" />
+    <Compile Include="IntegrationTests\IntegrationTest.cs" />
     <Compile Include="IntegrationTests\StaticCollectionTests.cs" />
     <Compile Include="Observer\TestObserver.cs" />
     <Compile Include="Observer\TestObserverFactory.cs" />
@@ -89,12 +92,18 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DocumentDB.ChangeFeedProcessor\DocumentDB.ChangeFeedProcessor.csproj">
       <Project>{43b55c4c-377c-49ef-9165-337542f4319e}</Project>
       <Name>DocumentDB.ChangeFeedProcessor</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="run.runsettings">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
