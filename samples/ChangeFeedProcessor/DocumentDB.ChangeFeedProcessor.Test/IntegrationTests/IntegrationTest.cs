@@ -31,12 +31,17 @@ namespace DocumentDB.ChangeFeedProcessor.Test
     {
         protected class TestClassData
         {
+            internal readonly SemaphoreSlim classInitializeSyncRoot = new SemaphoreSlim(1, 1);
+            internal readonly object testContextSyncRoot = new object();
+            internal readonly int testCount;
+            internal volatile int executedTestCount;
             internal DocumentCollectionInfo monitoredCollectionInfo;
             internal DocumentCollectionInfo leaseCollectionInfoTemplate;
-            internal int testCount;
-            internal int executedTestCount;
-            internal SemaphoreSlim classInitializeSyncRoot = new SemaphoreSlim(1, 1);
-            internal object testContextSyncRoot = new object();
+
+            internal TestClassData(int testCount)
+            {
+                this.testCount = testCount;
+            }
         }
 
         private const string leaseCollectionInfoPropertyName = "leaseCollectionInfo";
@@ -142,7 +147,7 @@ namespace DocumentDB.ChangeFeedProcessor.Test
 
             lock (testClassesSyncRoot)
             {
-                testClasses[testClassType.Name] = new TestClassData();
+                testClasses[testClassType.Name] = new TestClassData(GetTestCount(testClassType));
             }
         }
 
@@ -178,8 +183,6 @@ namespace DocumentDB.ChangeFeedProcessor.Test
 
             await test.FinishTestClassInitializeAsync();
 
-            test.ClassData.testCount = test.GetTestCount();
-
             return leaseCollectionInfo;
         }
 
@@ -194,10 +197,12 @@ namespace DocumentDB.ChangeFeedProcessor.Test
             }
         }
 
-        private int GetTestCount()
+        private static int GetTestCount(Type testType)
         {
+            Debug.Assert(testType != null);
+
             int testMethodCount = 0;
-            foreach (var method in this.GetType().GetMethods())
+            foreach (var method in testType.GetMethods())
             {
                 if (method.GetCustomAttribute(typeof(TestMethodAttribute)) != null) testMethodCount++;
             }

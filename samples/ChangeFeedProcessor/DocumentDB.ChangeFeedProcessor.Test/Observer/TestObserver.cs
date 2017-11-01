@@ -7,6 +7,8 @@ namespace DocumentDB.ChangeFeedProcessor.Test.Observer
 {
     class TestObserver : IChangeFeedObserver
     {
+        private readonly IChangeFeedObserver parent;
+
         public TestObserver(IChangeFeedObserver parent)
         {
             Debug.Assert(parent != null);
@@ -27,7 +29,5 @@ namespace DocumentDB.ChangeFeedProcessor.Test.Observer
         {
             return this.parent.ProcessChangesAsync(context, docs);
         }
-
-        IChangeFeedObserver parent;
     }
 }

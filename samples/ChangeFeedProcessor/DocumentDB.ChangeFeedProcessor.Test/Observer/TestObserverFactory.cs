@@ -9,6 +9,10 @@ namespace DocumentDB.ChangeFeedProcessor.Test.Observer
 {
     class TestObserverFactory : IChangeFeedObserverFactory, IChangeFeedObserver
     {
+        private readonly Func<ChangeFeedObserverContext, Task> openProcessor;
+        private readonly Func<ChangeFeedObserverContext, ChangeFeedObserverCloseReason, Task> closeProcessor;
+        private readonly Func<ChangeFeedObserverContext, IReadOnlyList<Document>, Task> changeProcessor;
+
         public TestObserverFactory(Func<ChangeFeedObserverContext, IReadOnlyList<Document>, Task> changeProcessor)
         {
             this.changeProcessor = changeProcessor;
@@ -46,9 +50,5 @@ namespace DocumentDB.ChangeFeedProcessor.Test.Observer
             if (this.changeProcessor != null) return this.changeProcessor(context, docs);
             else return Task.CompletedTask;
         }
-
-        Func<ChangeFeedObserverContext, Task> openProcessor;
-        Func<ChangeFeedObserverContext, ChangeFeedObserverCloseReason, Task> closeProcessor;
-        Func<ChangeFeedObserverContext, IReadOnlyList<Document>, Task> changeProcessor;
     }
 }
