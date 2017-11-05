@@ -81,7 +81,7 @@ namespace DocumentDB.ChangeFeedProcessor
     /// </example>
     public class ChangeFeedEventHost : IPartitionObserver<DocumentServiceLease>
     {
-        const string DefaultUserAgentSuffix = "changefeed-0.3.2";
+        const string DefaultUserAgentSuffix = "changefeed-0.3.3";
         const string LeaseContainerName = "docdb-changefeed";
         const string LSNPropertyName = "_lsn";
 
@@ -126,16 +126,20 @@ namespace DocumentDB.ChangeFeedProcessor
         /// <param name="changeFeedOptions">Options to pass to the Microsoft.AzureDocuments.DocumentClient.CreateChangeFeedQuery API.</param>
         /// <param name="hostOptions">Additional options to control load-balancing of <see cref="DocumentDB.ChangeFeedProcessor.ChangeFeedEventHost" /> instances.</param>
         public ChangeFeedEventHost(
-            string hostName, 
-            DocumentCollectionInfo documentCollectionLocation, 
-            DocumentCollectionInfo auxCollectionLocation, 
-            ChangeFeedOptions changeFeedOptions, 
+            string hostName,
+            DocumentCollectionInfo documentCollectionLocation,
+            DocumentCollectionInfo auxCollectionLocation,
+            ChangeFeedOptions changeFeedOptions,
             ChangeFeedHostOptions hostOptions)
         {
-            if (documentCollectionLocation == null) throw new ArgumentException("documentCollectionLocation");
-            if (documentCollectionLocation.Uri == null) throw new ArgumentException("documentCollectionLocation.Uri");
+            if (string.IsNullOrWhiteSpace(hostName)) throw new ArgumentException("The hostName parameter cannot be null or empty string.", "hostName");
+            if (documentCollectionLocation == null) throw new ArgumentNullException("documentCollectionLocation");
+            if (documentCollectionLocation.Uri == null) throw new ArgumentNullException("documentCollectionLocation.Uri");
             if (string.IsNullOrWhiteSpace(documentCollectionLocation.DatabaseName)) throw new ArgumentException("documentCollectionLocation.DatabaseName");
             if (string.IsNullOrWhiteSpace(documentCollectionLocation.CollectionName)) throw new ArgumentException("documentCollectionLocation.CollectionName");
+            if (changeFeedOptions == null) throw new ArgumentNullException("changeFeedOptions");
+            if (!string.IsNullOrEmpty(changeFeedOptions.PartitionKeyRangeId)) throw new ArgumentException("changeFeedOptions.PartitionKeyRangeId must be null or empty string.", "changeFeedOptions.PartitionKeyRangeId");
+            if (hostOptions == null) throw new ArgumentNullException("hostOptions");
             if (hostOptions.MinPartitionCount > hostOptions.MaxPartitionCount) throw new ArgumentException("hostOptions.MinPartitionCount cannot be greater than hostOptions.MaxPartitionCount");
 
             this.collectionLocation = CanoninicalizeCollectionInfo(documentCollectionLocation);
@@ -168,6 +172,8 @@ namespace DocumentDB.ChangeFeedProcessor
         /// <returns>A task indicating that the <see cref="DocumentDB.ChangeFeedProcessor.ChangeFeedEventHost" /> instance has started.</returns>
         public async Task RegisterObserverFactoryAsync(IChangeFeedObserverFactory factory)
         {
+            if (factory == null) throw new ArgumentNullException("factory");
+
             this.observerFactory = factory;
             await this.StartAsync();
         }
@@ -235,7 +241,7 @@ namespace DocumentDB.ChangeFeedProcessor
             this.observerFactory = null;
         }
 
-        async Task IPartitionObserver<DocumentServiceLease>.OnPartitionAcquiredAsync(DocumentServiceLease lease)
+        Task IPartitionObserver<DocumentServiceLease>.OnPartitionAcquiredAsync(DocumentServiceLease lease)
         {
             Debug.Assert(lease != null && !string.IsNullOrEmpty(lease.Owner), "lease");
             TraceLog.Informational(string.Format("Host '{0}' partition {1}: acquired!", this.HostName, lease.PartitionId));
@@ -245,8 +251,11 @@ namespace DocumentDB.ChangeFeedProcessor
 #endif
 
             IChangeFeedObserver observer = this.observerFactory.CreateObserver();
-            ChangeFeedObserverContext context = new ChangeFeedObserverContext { PartitionKeyRangeId = lease.PartitionId };
+            ChangeFeedObserverContext context = new ChangeFeedObserverContext(lease.PartitionId, this);
             CancellationTokenSource cancellation = new CancellationTokenSource();
+
+            WorkerData workerData = null;
+            ManualResetEvent workerTaskOkToStart = new ManualResetEvent(false);
 
             // Create ChangeFeedOptions to use for this worker.
             ChangeFeedOptions options = new ChangeFeedOptions
@@ -258,11 +267,18 @@ namespace DocumentDB.ChangeFeedProcessor
                 RequestContinuation = this.changeFeedOptions.RequestContinuation
             };
 
-            var workerTask = await Task.Factory.StartNew(async () =>
+            Task workerTask = Task.Run(async () =>
             {
                 ChangeFeedObserverCloseReason? closeReason = null;
                 try
                 {
+                    TraceLog.Verbose(string.Format("Worker task waiting for start signal: partition '{0}'", lease.PartitionId));
+
+                    workerTaskOkToStart.WaitOne();
+
+                    Debug.Assert(workerData != null);
+                    TraceLog.Verbose(string.Format("Worker task started: partition '{0}'", lease.PartitionId));
+
                     try
                     {
                         await observer.OpenAsync(context);
@@ -285,8 +301,8 @@ namespace DocumentDB.ChangeFeedProcessor
                     {
                         // It could be that the lease was created by different host and we picked it up.
                         checkpointStats = this.statsSinceLastCheckpoint.AddOrUpdate(
-                            lease.PartitionId, 
-                            new CheckpointStats(), 
+                            lease.PartitionId,
+                            new CheckpointStats(),
                             (partitionId, existingStats) => existingStats);
                         Trace.TraceWarning(string.Format("Added stats for partition '{0}' for which the lease was picked up after the host was started.", lease.PartitionId));
                     }
@@ -391,14 +407,17 @@ namespace DocumentDB.ChangeFeedProcessor
 
                                 checkpointStats.ProcessedDocCount += (uint)response.Count;
 
-                                if (IsCheckpointNeeded(lease, checkpointStats))
+                                if (this.options.IsAutoCheckpointEnabled)
                                 {
-                                    lease = await CheckpointAsync(lease, response.ResponseContinuation, context);
-                                    checkpointStats.Reset();
-                                }
-                                else if (response.Count > 0)
-                                {
-                                    TraceLog.Informational(string.Format("Checkpoint: not checkpointing for partition {0}, {1} docs, new continuation '{2}' as frequency condition is not met", lease.PartitionId, response.Count, response.ResponseContinuation));
+                                    if (IsCheckpointNeeded(lease, checkpointStats))
+                                    {
+                                        lease = workerData.Lease = await this.CheckpointAsync(lease, response.ResponseContinuation, context);
+                                        checkpointStats.Reset();
+                                    }
+                                    else if (response.Count > 0)
+                                    {
+                                        TraceLog.Informational(string.Format("Checkpoint: not checkpointing for partition {0}, {1} docs, new continuation '{2}' as frequency condition is not met", lease.PartitionId, response.Count, response.ResponseContinuation));
+                                    }
                                 }
                             }
                         }
@@ -455,24 +474,39 @@ namespace DocumentDB.ChangeFeedProcessor
                 TraceLog.Informational(string.Format("Partition {0}: worker finished!", context.PartitionKeyRangeId));
             });
 
-            var newWorkerData = new WorkerData(workerTask, observer, context, cancellation);
-            this.partitionKeyRangeIdToWorkerMap.AddOrUpdate(context.PartitionKeyRangeId, newWorkerData, (string id, WorkerData d) => { return newWorkerData; });
+            workerData = new WorkerData(workerTask, observer, context, cancellation, lease);
+            this.partitionKeyRangeIdToWorkerMap.AddOrUpdate(context.PartitionKeyRangeId, workerData, (string id, WorkerData d) => { return workerData; });
+            workerTaskOkToStart.Set();
+
+            return Task.FromResult(0);
         }
-        
-        async Task IPartitionObserver<DocumentServiceLease>.OnPartitionReleasedAsync(DocumentServiceLease l, ChangeFeedObserverCloseReason reason)
+
+        async Task IPartitionObserver<DocumentServiceLease>.OnPartitionReleasedAsync(DocumentServiceLease lease, ChangeFeedObserverCloseReason reason)
         {
+            Debug.Assert(lease != null);
+
 #if DEBUG
             Interlocked.Decrement(ref this.partitionCount);
 #endif
 
-            TraceLog.Informational(string.Format("Host '{0}' releasing partition {1}...", this.HostName, l.PartitionId));
+            TraceLog.Informational(string.Format("Host '{0}' releasing partition {1}...", this.HostName, lease.PartitionId));
             WorkerData workerData = null;
-            if (this.partitionKeyRangeIdToWorkerMap.TryGetValue(l.PartitionId, out workerData))
+            if (this.partitionKeyRangeIdToWorkerMap.TryGetValue(lease.PartitionId, out workerData))
             {
-                workerData.Cancellation.Cancel();
+                Debug.Assert(workerData != null);
+
+                await workerData.CheckpointInProgress.WaitAsync();
+                try
+                {
+                    workerData.Cancellation.Cancel();
+                }
+                finally
+                {
+                    workerData.CheckpointInProgress.Release();
+                }
 
                 try
-                { 
+                {
                     await workerData.Observer.CloseAsync(workerData.Context, reason);
                 }
                 catch (Exception ex)
@@ -482,7 +516,7 @@ namespace DocumentDB.ChangeFeedProcessor
                 }
 
                 await workerData.Task;
-                this.partitionKeyRangeIdToWorkerMap.TryRemove(l.PartitionId, out workerData);
+                this.partitionKeyRangeIdToWorkerMap.TryRemove(lease.PartitionId, out workerData);
             }
 
             TraceLog.Informational(string.Format("Host '{0}' partition {1}: released!", this.HostName, workerData.Context.PartitionKeyRangeId));
@@ -498,6 +532,44 @@ namespace DocumentDB.ChangeFeedProcessor
             }
 
             return result;
+        }
+
+        internal async Task CheckpointAsync(string continuation, ChangeFeedObserverContext context)
+        {
+            if (string.IsNullOrEmpty(continuation)) throw new ArgumentException("continuation");
+            if (context == null) throw new ArgumentNullException("context");
+            if (string.IsNullOrEmpty(context.PartitionKeyRangeId)) throw new ArgumentException("context.PartitionKeyRangeId");
+
+            WorkerData workerData;
+            this.partitionKeyRangeIdToWorkerMap.TryGetValue(context.PartitionKeyRangeId, out workerData);
+
+            if (workerData == null)
+            {
+                TraceLog.Warning(string.Format("CheckpointAsync: called at wrong time, failed to get worker data for partition {0}. Most likely the partition is not longer owned by this host.", context.PartitionKeyRangeId));
+                throw new LeaseLostException(string.Format("Failed to find lease for partition {0} in the set of owned leases.", context.PartitionKeyRangeId));
+            }
+
+            if (workerData.Lease == null)
+            {
+                TraceLog.Error(string.Format("CheckpointAsync: found the worker data but lease is null, for partition {0}. This should never happen.", context.PartitionKeyRangeId));
+                throw new LeaseLostException(string.Format("Failed to find lease for partition {0}.", context.PartitionKeyRangeId));
+            }
+
+            await workerData.CheckpointInProgress.WaitAsync();
+            try
+            {
+                if (workerData.Cancellation.IsCancellationRequested)
+                {
+                    TraceLog.Warning(string.Format("CheckpointAsync: called at wrong time, partition {0} is shutting down. The ownership of the partition by this host is about to end.", context.PartitionKeyRangeId));
+                    throw new LeaseLostException(string.Format("CheckpointAsync: partition {0} is shutting down.", context.PartitionKeyRangeId));
+                }
+
+                workerData.Lease = await this.CheckpointAsync(workerData.Lease, continuation, context);
+            }
+            finally
+            {
+                workerData.CheckpointInProgress.Release();
+            }
         }
 
         async Task<DocumentServiceLease> CheckpointAsync(DocumentServiceLease lease, string continuation, ChangeFeedObserverContext context)
@@ -537,7 +609,7 @@ namespace DocumentDB.ChangeFeedProcessor
 
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri(this.collectionLocation.DatabaseName, this.collectionLocation.CollectionName);
             ResourceResponse<DocumentCollection> collectionResponse = await this.documentClient.ReadDocumentCollectionAsync(
-                collectionUri, 
+                collectionUri,
                 new RequestOptions { PopulateQuotaInfo = true });
             DocumentCollection collection = collectionResponse.Resource;
             this.collectionSelfLink = collection.SelfLink;
@@ -549,9 +621,9 @@ namespace DocumentDB.ChangeFeedProcessor
             this.leasePrefix = string.Format(CultureInfo.InvariantCulture, "{0}{1}_{2}_{3}", optionsPrefix, this.collectionLocation.Uri.Host, database.ResourceId, collection.ResourceId);
 
             var leaseManager = new DocumentServiceLeaseManager(
-                this.auxCollectionLocation, 
-                this.leasePrefix, 
-                this.options.LeaseExpirationInterval, 
+                this.auxCollectionLocation,
+                this.leasePrefix,
+                this.options.LeaseExpirationInterval,
                 this.options.LeaseRenewInterval);
             await leaseManager.InitializeAsync();
 
@@ -570,12 +642,12 @@ namespace DocumentDB.ChangeFeedProcessor
             await this.leaseManager.CreateLeaseStoreIfNotExistsAsync();
 
             var ranges = new Dictionary<string, PartitionKeyRange>();
-            foreach (var range in await this.EnumPartitionKeyRangesAsync(this.collectionSelfLink))
+            foreach (var range in await CollectionHelper.EnumPartitionKeyRangesAsync(this.documentClient, this.collectionSelfLink))
             {
                 ranges.Add(range.Id, range);
             }
 
-            TraceLog.Informational(string.Format("Source collection: '{0}', {1} partition(s), {2} document(s)", this.collectionLocation.CollectionName, ranges.Count, GetDocumentCount(collectionResponse)));
+            TraceLog.Informational(string.Format("Source collection: '{0}', {1} partition(s), {2} document(s)", this.collectionLocation.CollectionName, ranges.Count, CollectionHelper.GetDocumentCount(collectionResponse)));
 
             await this.CreateLeases(ranges);
 
@@ -676,25 +748,6 @@ namespace DocumentDB.ChangeFeedProcessor
                 this.options.DegreeOfParallelism);
         }
 
-        async Task<List<PartitionKeyRange>> EnumPartitionKeyRangesAsync(string collectionSelfLink)
-        {
-            Debug.Assert(!string.IsNullOrWhiteSpace(collectionSelfLink), "collectionSelfLink");
-
-            string partitionkeyRangesPath = string.Format(CultureInfo.InvariantCulture, "{0}/pkranges", collectionSelfLink);
-
-            FeedResponse<PartitionKeyRange> response = null;
-            var partitionKeyRanges = new List<PartitionKeyRange>();
-            do
-            {
-                FeedOptions feedOptions = new FeedOptions { MaxItemCount = 1000, RequestContinuation = response != null ? response.ResponseContinuation : null };
-                response = await this.documentClient.ReadPartitionKeyRangeFeedAsync(partitionkeyRangesPath, feedOptions);
-                partitionKeyRanges.AddRange(response);
-            }
-            while (!string.IsNullOrEmpty(response.ResponseContinuation));
-
-            return partitionKeyRanges;
-        }
-
         async Task StartAsync()
         {
             await this.InitializeAsync();
@@ -725,7 +778,10 @@ namespace DocumentDB.ChangeFeedProcessor
 
             // wait for everything to shutdown
             TraceLog.Informational(string.Format("Host '{0}': Waiting for {1} closing tasks...", this.HostName, closingTasks.Count));
-            await Task.WhenAll(closingTasks.ToArray());
+            if (closingTasks.Count > 0)
+            {
+                await Task.WhenAll(closingTasks.ToArray());
+            }
 
             this.partitionKeyRangeIdToWorkerMap.Clear();
 
@@ -751,7 +807,7 @@ namespace DocumentDB.ChangeFeedProcessor
 
             TraceLog.Informational(string.Format("Partition {0} is gone due to split, continuation '{1}'", partitionKeyRangeId, continuationToken));
 
-            List<PartitionKeyRange> allRanges = await this.EnumPartitionKeyRangesAsync(this.collectionSelfLink);
+            List<PartitionKeyRange> allRanges = await CollectionHelper.EnumPartitionKeyRangesAsync(this.documentClient, this.collectionSelfLink);
 
             var childRanges = new List<PartitionKeyRange>(allRanges.Where(range => range.Parents.Contains(partitionKeyRangeId)));
             if (childRanges.Count < 2)
@@ -854,45 +910,20 @@ namespace DocumentDB.ChangeFeedProcessor
             return sessionToken.Substring(separatorIndex + 1);
         }
 
-        private static Int64 GetDocumentCount(ResourceResponse<DocumentCollection> response)
-        {
-            Debug.Assert(response != null);
-
-            var resourceUsage = response.ResponseHeaders["x-ms-resource-usage"];
-            if (resourceUsage != null)
-            {
-                var parts = resourceUsage.Split(';');
-                foreach (var part in parts)
-                {
-                    var name = part.Split('=');
-                    if (name.Length > 1 && string.Equals(name[0], "documentsCount", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(name[1]))
-                    {
-                        Int64 result = -1;
-                        if (Int64.TryParse(name[1], out result))
-                        {
-                            return result;
-                        }
-                        else
-                        {
-                            TraceLog.Error(string.Format("Failed to get document count from response, can't Int64.TryParse('{0}')", part));
-                        }
-
-                        break;
-                    }
-                }
-            }
-
-            return -1;
-        }
-
         private class WorkerData
         {
-            public WorkerData(Task task, IChangeFeedObserver observer, ChangeFeedObserverContext context, CancellationTokenSource cancellation)
+            public WorkerData(Task task, IChangeFeedObserver observer, ChangeFeedObserverContext context, CancellationTokenSource cancellation, DocumentServiceLease lease)
             {
+                Debug.Assert(task != null);
+                Debug.Assert(observer != null);
+                Debug.Assert(context != null);
+                Debug.Assert(cancellation != null);
+
                 this.Task = task;
                 this.Observer = observer;
                 this.Context = context;
                 this.Cancellation = cancellation;
+                this.Lease = lease;
             }
 
             public Task Task { get; private set; }
@@ -902,6 +933,10 @@ namespace DocumentDB.ChangeFeedProcessor
             public ChangeFeedObserverContext Context { get; private set; }
 
             public CancellationTokenSource Cancellation { get; private set; }
+
+            public DocumentServiceLease Lease { get; set; }
+
+            internal SemaphoreSlim CheckpointInProgress = new SemaphoreSlim(1, 1); // Use semphore as it doesn't have thread affinity.
         }
 
         /// <summary>

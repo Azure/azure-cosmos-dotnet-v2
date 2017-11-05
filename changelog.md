@@ -1,4 +1,9 @@
 
+
+## Changes in 1.18.0 : ##
+
+* Added several reliability fixes and improvements.
+
 ## Changes in 1.17.0 : ##
 
 * Added support for PartitionKeyRangeId as a FeedOption for scoping query results to a specific partition key range value. 

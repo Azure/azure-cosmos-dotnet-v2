@@ -13,15 +13,10 @@ namespace DocumentDB.Sample.MultiModel
         private readonly DocumentClient client;
         private readonly DocumentCollection collection;
 
-        private GraphConnection graphConnection;
-        private GraphCommand graphCommand;
-
         public GraphModel(DocumentClient client, DocumentCollection collection)
         {
             this.client = client;
             this.collection = collection;
-            this.graphConnection = new GraphConnection(client, collection);
-            this.graphCommand = new GraphCommand(this.graphConnection);
         }
 
         public async Task AddNodesAsync()

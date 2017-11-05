@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("DocumentDB.ChangeFeedProcessor")]
+[assembly: AssemblyTitle("DocumentMediaSample")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("DocumentDB.ChangeFeedProcessor")]
-[assembly: AssemblyCopyright("Copyright ©  2017")]
+[assembly: AssemblyProduct("DocumentMediaSample")]
+[assembly: AssemblyCopyright("Copyright ©  2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -18,10 +18,9 @@ using System.Runtime.InteropServices;
 // to COM components.  If you need to access a type in this assembly from 
 // COM, set the ComVisible attribute to true on that type.
 [assembly: ComVisible(false)]
-[assembly:InternalsVisibleTo("DocumentDB.ChangeFeedProcessor.Test")]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("43b55c4c-377c-49ef-9165-337542f4319e")]
+[assembly: Guid("4928e1cd-f9a9-4ff3-a8cb-8b0c1a081de9")]
 
 // Version information for an assembly consists of the following four values:
 //
