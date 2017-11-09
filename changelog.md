@@ -1,7 +1,7 @@
 
 ## Changes in 1.18.1 : ##
 
-* Internal internalsvisibleto changes for Microsoft friends assemblies.
+* Internal changes for Microsoft friends assemblies.
 
 ## Changes in 1.18.0 : ##
 
