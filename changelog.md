@@ -1,4 +1,13 @@
 
+## Changes in 1.19.0 : ##
+
+* Branding change from Azure DocumentDB to Azure Cosmos DB in the API Reference documentation, metadata information in assemblies, and the NuGet package. 
+* Expose diagnostic information and latency from the response of requests sent with direct connectivity mode. The property names are RequestDiagnosticsString and RequestLatency on ResourceResponse class.
+* This SDK version requires the latest version of Azure Cosmos DB Emulator available for download from https://aka.ms/cosmosdb-emulator.
+
+## Changes in 1.18.1 : ##
+
+* Internal changes for Microsoft friends assemblies.
 
 ## Changes in 1.18.0 : ##
 
