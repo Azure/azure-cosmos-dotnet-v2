@@ -84,10 +84,19 @@
                 }
             }
 #if !DEBUG
-            catch (DocumentClientException de)
+            catch (AggregateException age)
             {
-                Exception baseException = de.GetBaseException();
-                Console.WriteLine("{0} error occurred: {1}, Message: {2}", de.StatusCode, de.Message, baseException.Message);
+                age.Handle(ex => {
+                    DocumentClientException de = ex as DocumentClientException;
+                    if (de != null)
+                    {
+                        Exception baseException = de.GetBaseException();
+                        Console.WriteLine("{0} error occurred: {1}, Message: {2}", de.StatusCode, de.Message, baseException.Message);
+                        return true;
+                    }
+
+                    return false;
+                });
             }
             catch (Exception e)
             {
