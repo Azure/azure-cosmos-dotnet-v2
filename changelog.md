@@ -1,4 +1,9 @@
 
+## Changes in 1.19.1 : ##
+
+* Adds the ability to specify unique indexes for the documents by using UniqueKeyPolicy property on the DocumentCollection.
+* Fixed a bug in which the custom JsonSerializer settings were not being honored for some queries and stored procedure execution.
+ 
 ## Changes in 1.19.0 : ##
 
 * Branding change from Azure DocumentDB to Azure Cosmos DB in the API Reference documentation, metadata information in assemblies, and the NuGet package. 
