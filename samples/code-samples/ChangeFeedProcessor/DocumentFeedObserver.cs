@@ -94,7 +94,7 @@ namespace ChangeFeedMigrationSample
 
                 if (this.destinationCollectionUri != null)
                 {
-                    this.client.UpsertDocumentAsync(this.destinationCollectionUri, doc);
+                    return this.client.UpsertDocumentAsync(this.destinationCollectionUri, doc);
                 }
             }
 
