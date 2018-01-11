@@ -77,16 +77,14 @@ namespace ChangeFeedMigrationSample
         /// <param name="context">The context specifying partition for this observer, etc.</param>
         /// <param name="docs">The documents changed.</param>
         /// <returns>A Task to allow asynchronous execution</returns>
-        public Task ProcessChangesAsync(ChangeFeedObserverContext context, IReadOnlyList<Document> docs)
+        public async Task ProcessChangesAsync(ChangeFeedObserverContext context, IReadOnlyList<Document> docs)
         {
             Console.WriteLine("Change feed: total {0} doc(s)", Interlocked.Add(ref totalDocs, docs.Count));
             foreach (Document doc in docs)
             {
                 Console.WriteLine(doc.Id.ToString());
-                this.client.UpsertDocumentAsync(this.destinationCollectionUri, doc);
+                await this.client.UpsertDocumentAsync(this.destinationCollectionUri, doc);
             }
-
-            return Task.CompletedTask;
         }
     }
 }
