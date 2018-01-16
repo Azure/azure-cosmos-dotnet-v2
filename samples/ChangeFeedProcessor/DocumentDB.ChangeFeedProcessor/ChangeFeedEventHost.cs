@@ -264,6 +264,7 @@ namespace DocumentDB.ChangeFeedProcessor
                 PartitionKeyRangeId = this.changeFeedOptions.PartitionKeyRangeId,
                 SessionToken = this.changeFeedOptions.SessionToken,
                 StartFromBeginning = this.changeFeedOptions.StartFromBeginning,
+                StartTime = this.changeFeedOptions.StartTime,
                 RequestContinuation = this.changeFeedOptions.RequestContinuation
             };
 
