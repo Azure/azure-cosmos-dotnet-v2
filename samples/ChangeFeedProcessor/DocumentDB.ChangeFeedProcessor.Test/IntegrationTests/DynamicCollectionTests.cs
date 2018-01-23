@@ -158,7 +158,7 @@ namespace DocumentDB.ChangeFeedProcessor.Test.IntegrationTests
 
                 try
                 {
-                    // Create some docs to make sure that it's returned as signle response for 1st execute of query.
+                    // Create some docs to make sure that one separate response is returned for 1st execute of query before retries.
                     // These are to make sure continuation token is passed along during retries.
                     var sproc = new StoredProcedure
                     {
