@@ -387,9 +387,6 @@ namespace DocumentDB.ChangeFeedProcessor
 
                                     options.MaxItemCount /= 2;
                                     TraceLog.Warning(string.Format("Reducing maxItemCount, new value: {0}.", options.MaxItemCount));
-
-                                    options.RequestContinuation = lastContinuation;
-                                    query = this.documentClient.CreateDocumentChangeFeedQuery(this.collectionSelfLink, options);
                                 }
                                 else
                                 {
@@ -441,8 +438,6 @@ namespace DocumentDB.ChangeFeedProcessor
                                 if (options.MaxItemCount != this.changeFeedOptions.MaxItemCount)
                                 {
                                     options.MaxItemCount = this.changeFeedOptions.MaxItemCount;
-                                    options.RequestContinuation = lastContinuation;
-                                    query = this.documentClient.CreateDocumentChangeFeedQuery(this.collectionSelfLink, options);
                                 }
                             }
                         }

@@ -158,23 +158,26 @@ namespace DocumentDB.ChangeFeedProcessor.Test.IntegrationTests
 
                 try
                 {
-                    // Create 3 docs each 1.5MB. All 3 do not fit into MAX_RESPONSE_SIZE (4 MB). 2nd and 3rd are in same transaction.
-                    var content = string.Format("{{\"id\": \"doc0\", \"value\": \"{0}\"}}", new string('x', 1500000));
-                    await client.CreateDocumentAsync(collectionUri, JsonConvert.DeserializeObject(content));
-
+                    // Create some docs to make sure that it's returned as signle response for 1st execute of query.
+                    // These are to make sure continuation token is passed along during retries.
                     var sproc = new StoredProcedure
                     {
                         Id = "createTwoDocs",
-                        Body = @"function() { for (var i = 0; i < 2; ++i) __.createDocument(
+                        Body = @"function(startIndex) { for (var i = 0; i < 2; ++i) __.createDocument(
                             __.getSelfLink(),
-                            { id: 'doc' + (i + 1).toString(), value: 'y'.repeat(1500000) },
-                            err => { if (err) throw err;} );
-                        }"
+                            { id: 'doc' + (i + startIndex).toString(), value: 'y'.repeat(1500000) },
+                            err => { if (err) throw err;}
+                        );}"
                     };
 
                     var sprocUri = UriFactory.CreateStoredProcedureUri(this.ClassData.monitoredCollectionInfo.DatabaseName, monitoredCollection.Id, sproc.Id);
                     await client.CreateStoredProcedureAsync(collectionUri, sproc);
-                    await client.ExecuteStoredProcedureAsync<object>(sprocUri);
+                    await client.ExecuteStoredProcedureAsync<object>(sprocUri, 0);
+
+                    // Create 3 docs each 1.5MB. All 3 do not fit into MAX_RESPONSE_SIZE (4 MB). 2nd and 3rd are in same transaction.
+                    var content = string.Format("{{\"id\": \"doc2\", \"value\": \"{0}\"}}", new string('x', 1500000));
+                    await client.CreateDocumentAsync(collectionUri, JsonConvert.DeserializeObject(content));
+                    await client.ExecuteStoredProcedureAsync<object>(sprocUri, 3);
 
                     var allDocsProcessed = new ManualResetEvent(false);
                     int processedDocCount = 0;
@@ -187,7 +190,7 @@ namespace DocumentDB.ChangeFeedProcessor.Test.IntegrationTests
                         {
                             processedDocCount += docs.Count;
                             foreach (var doc in docs) accumulator += doc.Id.ToString() + ".";
-                            if (processedDocCount == 3) allDocsProcessed.Set();
+                            if (processedDocCount == 5) allDocsProcessed.Set();
                             return Task.CompletedTask;
                         });
 
@@ -195,7 +198,7 @@ namespace DocumentDB.ChangeFeedProcessor.Test.IntegrationTests
                         Guid.NewGuid().ToString(),
                         monitoredCollectionInfo,
                         this.LeaseCollectionInfo,
-                        new ChangeFeedOptions { StartFromBeginning = true, MaxItemCount = 5 },
+                        new ChangeFeedOptions { StartFromBeginning = true, MaxItemCount = 6 },
                         new ChangeFeedHostOptions());
                     await host.RegisterObserverFactoryAsync(observerFactory);
 
@@ -205,7 +208,7 @@ namespace DocumentDB.ChangeFeedProcessor.Test.IntegrationTests
                     try
                     {
                         Assert.IsTrue(isStartOk, "Timed out waiting for docs to process");
-                        Assert.AreEqual("doc0.doc1.doc2.", accumulator);
+                        Assert.AreEqual("doc0.doc1.doc2.doc3.doc4.", accumulator);
                     }
                     finally
                     {
