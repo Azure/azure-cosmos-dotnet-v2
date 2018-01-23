@@ -84,6 +84,7 @@ namespace DocumentDB.ChangeFeedProcessor
         const string DefaultUserAgentSuffix = "changefeed-0.3.3";
         const string LeaseContainerName = "docdb-changefeed";
         const string LSNPropertyName = "_lsn";
+        const int DefaultMaxItemCount = 100;
 
         readonly DocumentCollectionInfo collectionLocation;
 
@@ -374,6 +375,19 @@ namespace DocumentDB.ChangeFeedProcessor
                                 {
                                     TraceLog.Warning(string.Format("Partition {0}: retriable exception : {1}", context.PartitionKeyRangeId, dcex.Message));
                                 }
+                                else if(dcex.Message.Contains("Reduce page size and try again."))
+                                {
+                                    // Temporary workaround to compare exception message, until server provides better way of handling this case.
+                                    if (!options.MaxItemCount.HasValue) options.MaxItemCount = DefaultMaxItemCount;
+                                    else if (options.MaxItemCount <= 1)
+                                    {
+                                        TraceLog.Error(string.Format("Cannot reduce maxItemCount further as it's already at {0}.", options.MaxItemCount));
+                                        exceptionDispatchInfo.Throw();
+                                    }
+
+                                    options.MaxItemCount /= 2;
+                                    TraceLog.Warning(string.Format("Reducing maxItemCount, new value: {0}.", options.MaxItemCount));
+                                }
                                 else
                                 {
                                     exceptionDispatchInfo.Throw();
@@ -419,6 +433,11 @@ namespace DocumentDB.ChangeFeedProcessor
                                     {
                                         TraceLog.Informational(string.Format("Checkpoint: not checkpointing for partition {0}, {1} docs, new continuation '{2}' as frequency condition is not met", lease.PartitionId, response.Count, response.ResponseContinuation));
                                     }
+                                }
+
+                                if (options.MaxItemCount != this.changeFeedOptions.MaxItemCount)
+                                {
+                                    options.MaxItemCount = this.changeFeedOptions.MaxItemCount;
                                 }
                             }
                         }

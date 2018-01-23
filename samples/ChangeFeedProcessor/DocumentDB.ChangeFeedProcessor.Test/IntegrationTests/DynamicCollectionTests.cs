@@ -37,7 +37,7 @@ namespace DocumentDB.ChangeFeedProcessor.Test.IntegrationTests
             var allDocsProcessed = new ManualResetEvent(false);
 
             var observerFactory = new TestObserverFactory(
-                context => 
+                context =>
                 {
                     int newCount = Interlocked.Increment(ref openedCount);
                     if (newCount == partitionCount) allObserversStarted.Set();
@@ -106,7 +106,7 @@ namespace DocumentDB.ChangeFeedProcessor.Test.IntegrationTests
                 var observerFactory = new TestObserverFactory(
                     null,
                     null,
-                    (context, docs) => 
+                    (context, docs) =>
                     {
                         processedDocs.AddRange(docs);
                         foreach (var doc in docs)
@@ -126,16 +126,98 @@ namespace DocumentDB.ChangeFeedProcessor.Test.IntegrationTests
 
                 var isStartOk = allDocsProcessed.WaitOne(
                     Debugger.IsAttached ? IntegrationTest.changeWaitTimeout + IntegrationTest.changeWaitTimeout : IntegrationTest.changeWaitTimeout);
-                Assert.IsTrue(isStartOk, "Timed out waiting for docs to process");
 
                 try
                 {
+                    Assert.IsTrue(isStartOk, "Timed out waiting for docs to process");
                     Assert.AreEqual(1, processedDocs.Count, "Wrong processed count");
                     Assert.AreEqual("doc2", processedDocs[0].Id, "Wrong doc.id");
                 }
                 finally
                 {
                     await host.UnregisterObserversAsync();
+                }
+            }
+        }
+
+        [TestMethod]
+        public async Task TestReducePageSizeScenario()
+        {
+            // Use different colleciton: we need 1-partition collection to make sure all docs get to same partition.
+            var databaseUri = UriFactory.CreateDatabaseUri(this.ClassData.monitoredCollectionInfo.DatabaseName);
+
+            DocumentCollectionInfo monitoredCollectionInfo = new DocumentCollectionInfo(this.ClassData.monitoredCollectionInfo);
+            monitoredCollectionInfo.CollectionName = this.ClassData.monitoredCollectionInfo.CollectionName + "_" + Guid.NewGuid().ToString();
+
+            var collectionUri = UriFactory.CreateDocumentCollectionUri(this.ClassData.monitoredCollectionInfo.DatabaseName, monitoredCollectionInfo.CollectionName);
+            var monitoredCollection = new DocumentCollection { Id = monitoredCollectionInfo.CollectionName };
+
+            using (var client = new DocumentClient(this.ClassData.monitoredCollectionInfo.Uri, this.ClassData.monitoredCollectionInfo.MasterKey, this.ClassData.monitoredCollectionInfo.ConnectionPolicy))
+            {
+                await client.CreateDocumentCollectionAsync(databaseUri, monitoredCollection, new RequestOptions { OfferThroughput = 10000 });
+
+                try
+                {
+                    // Create some docs to make sure that one separate response is returned for 1st execute of query before retries.
+                    // These are to make sure continuation token is passed along during retries.
+                    var sproc = new StoredProcedure
+                    {
+                        Id = "createTwoDocs",
+                        Body = @"function(startIndex) { for (var i = 0; i < 2; ++i) __.createDocument(
+                            __.getSelfLink(),
+                            { id: 'doc' + (i + startIndex).toString(), value: 'y'.repeat(1500000) },
+                            err => { if (err) throw err;}
+                        );}"
+                    };
+
+                    var sprocUri = UriFactory.CreateStoredProcedureUri(this.ClassData.monitoredCollectionInfo.DatabaseName, monitoredCollection.Id, sproc.Id);
+                    await client.CreateStoredProcedureAsync(collectionUri, sproc);
+                    await client.ExecuteStoredProcedureAsync<object>(sprocUri, 0);
+
+                    // Create 3 docs each 1.5MB. All 3 do not fit into MAX_RESPONSE_SIZE (4 MB). 2nd and 3rd are in same transaction.
+                    var content = string.Format("{{\"id\": \"doc2\", \"value\": \"{0}\"}}", new string('x', 1500000));
+                    await client.CreateDocumentAsync(collectionUri, JsonConvert.DeserializeObject(content));
+                    await client.ExecuteStoredProcedureAsync<object>(sprocUri, 3);
+
+                    var allDocsProcessed = new ManualResetEvent(false);
+                    int processedDocCount = 0;
+                    string accumulator = string.Empty;
+
+                    var observerFactory = new TestObserverFactory(
+                        null,
+                        null,
+                        (context, docs) =>
+                        {
+                            processedDocCount += docs.Count;
+                            foreach (var doc in docs) accumulator += doc.Id.ToString() + ".";
+                            if (processedDocCount == 5) allDocsProcessed.Set();
+                            return Task.CompletedTask;
+                        });
+
+                    var host = new ChangeFeedEventHost(
+                        Guid.NewGuid().ToString(),
+                        monitoredCollectionInfo,
+                        this.LeaseCollectionInfo,
+                        new ChangeFeedOptions { StartFromBeginning = true, MaxItemCount = 6 },
+                        new ChangeFeedHostOptions());
+                    await host.RegisterObserverFactoryAsync(observerFactory);
+
+                    var isStartOk = allDocsProcessed.WaitOne(
+                        Debugger.IsAttached ? IntegrationTest.changeWaitTimeout + IntegrationTest.changeWaitTimeout : IntegrationTest.changeWaitTimeout);
+
+                    try
+                    {
+                        Assert.IsTrue(isStartOk, "Timed out waiting for docs to process");
+                        Assert.AreEqual("doc0.doc1.doc2.doc3.doc4.", accumulator);
+                    }
+                    finally
+                    {
+                        await host.UnregisterObserversAsync();
+                    }
+                }
+                finally
+                {
+                    await client.DeleteDocumentCollectionAsync(collectionUri);
                 }
             }
         }
