@@ -81,7 +81,7 @@ namespace DocumentDB.ChangeFeedProcessor
     /// </example>
     public class ChangeFeedEventHost : IPartitionObserver<DocumentServiceLease>
     {
-        const string DefaultUserAgentSuffix = "changefeed-0.3.3";
+        const string DefaultUserAgentSuffix = "changefeed-0.3.4";
         const string LeaseContainerName = "docdb-changefeed";
         const string LSNPropertyName = "_lsn";
         const int DefaultMaxItemCount = 100;
