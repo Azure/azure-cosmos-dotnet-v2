@@ -1,4 +1,14 @@
 
+## Changes in 1.20.0 : ##
+
+* Cross partition query performance improvements in automatic mode (MaxDegreeOfParallelism=-1)
+* new QueryMetrics ToString() function
+* Add PartitionKey to ChangeFeed
+* Expose partition stats
+* Add PartitionKey to ChangeFeedOptions
+* Large session token bug fix
+* Other minor reliability and bug fixes
+
 ## Changes in 1.19.1 : ##
 
 * Adds the ability to specify unique indexes for the documents by using UniqueKeyPolicy property on the DocumentCollection.
