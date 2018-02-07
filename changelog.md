@@ -3,7 +3,7 @@
 
 * Improved cross partition query performance when the MaxDegreeOfParallelism property is set to -1 in FeedOptions.
 * Added a new ToString() function to QueryMetrics.
-* Expose partition statistics on reading collections.
+* Exposed partition statistics on reading collections.
 * Added PartitionKey property to ChangeFeedOptions.
 * Minor bug fixes.
 
