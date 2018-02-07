@@ -1,4 +1,4 @@
-# Microsoft Azure .NET SDK
+# Microsoft Azure Cosmos DB .NET SDK
 
 Welcome to the repo containing all things .NET for the Azure Cosmos DB API which is published with name [Microsoft.Azure.DocumentDB](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/). For documentation please see the Microsoft Azure [link](https://docs.microsoft.com/en-us/azure/cosmos-db/documentdb-sdk-dotnet).
 
