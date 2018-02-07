@@ -5,7 +5,7 @@ Welcome to the repo containing all things .NET for the Azure Cosmos DB API which
 ## Disclaimer
 The implementation in this project is intended for reference purpose only.
 
-## Consuming the official Microsoft Azure DocumentDB SDK
+## Consuming the official Microsoft Azure Cosmos DB SDK
 From Package Manager Console
    Install-Package Microsoft.Azure.DocumentDB
    
