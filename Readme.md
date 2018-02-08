@@ -6,7 +6,8 @@ The implementation in this project is intended for reference purpose only.
 
 ## Consuming the official Microsoft Azure Cosmos DB SDK
 From Package Manager Console
-   Install-Package Microsoft.Azure.DocumentDB
+    .NET Framework: Install-Package Microsoft.Azure.DocumentDB
+    .NET Standard: Install-Package Microsoft.Azure.DocumentDB.Core
    
 ## SDK release notes
 https://github.com/Azure/azure-documentdb-dotnet/blob/master/changelog.md 
@@ -20,9 +21,5 @@ https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-sdk-dotnet
 https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-dotnet-samples is a good starting point.
 Also great source of samples can be found at https://github.com/Azure/azure-documentdb-dotnet/tree/master/samples
 
-## Repo layout
-In this repo you can find the following;
-
-- **samples/** - A great source of sample code showing you how to use the DocumentDB .NET API in your projects.
-- **sdk/** - The source for the DocumentDB .NET API will be published when it becomes available. 
-
+## Performance guidelines
+https://docs.microsoft.com/en-us/azure/cosmos-db/performance-tips
