@@ -21,5 +21,5 @@ https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-sdk-dotnet
 https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-dotnet-samples is a good starting point.
 Also great source of samples can be found at https://github.com/Azure/azure-documentdb-dotnet/tree/master/samples
 
-## Performance guidelines
+## Performance tips
 https://docs.microsoft.com/en-us/azure/cosmos-db/performance-tips
