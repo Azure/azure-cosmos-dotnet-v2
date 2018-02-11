@@ -1,5 +1,5 @@
 
-## Changes in 1.20.0 : ##
+## Changes in 1.20.1 : ##
 
 * Improved cross partition query performance when the MaxDegreeOfParallelism property is set to -1 in FeedOptions.
 * Added a new ToString() function to QueryMetrics.
