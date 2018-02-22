@@ -1,4 +1,8 @@
 
+## Changes in 1.20.2 : ##
+
+* Fixed intermittent SessionConsistency race condition.
+
 ## Changes in 1.20.1 : ##
 
 * Improved cross partition query performance when the MaxDegreeOfParallelism property is set to -1 in FeedOptions.
