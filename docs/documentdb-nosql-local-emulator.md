@@ -1,8 +1,8 @@
-# Use the Azure DocumentDB Emulator for Development and Testing
-The Azure DocumentDB Emulator provides a local environment that emulates the Azure DocumentDB service for development purposes. Using the DocumentDB Emulator, you can develop and test your application locally, without creating an Azure subscription or incurring any costs. When you're satisfied with how your application is working in the DocumentDB Emulator, you can switch to using an Azure DocumentDB account in the cloud.
+# Use the Azure Cosmos DB Emulator for Development and Testing
+The Azure Cosmos DB Emulator provides a local environment that emulates the Azure Cosmos DB service for development purposes. Using the Cosmos DB Emulator, you can develop and test your application locally, without creating an Azure subscription or incurring any costs. When you're satisfied with how your application is working in the Cosmos DB Emulator, you can switch to using an Azure Cosmos DB account in the cloud.
 
-## DocumentDB Emulator system requirements
-The DocumentDB Emulator has the following hardware and software requirements:
+## Cosmos DB Emulator system requirements
+The Cosmos DB Emulator has the following hardware and software requirements:
 
 * Software requirements
   * Windows Server 2012 R2, Windows Server 2016, or Windows 10
@@ -10,50 +10,50 @@ The DocumentDB Emulator has the following hardware and software requirements:
   *	2 GB RAM
   *	10 GB available hard disk space
 
-## Installing the DocumentDB Emulator
-You can download the DocumentDB Emulator from the [Microsoft Download Center](https://aka.ms/documentdb-emulator). To install, configure, and run the DocumentDB Emulator, you must have administrative privileges on the computer.
+## Installing the Cosmos DB Emulator
+You can download the Cosmos DB Emulator from the [Microsoft Download Center](https://aka.ms/documentdb-emulator). To install, configure, and run the Cosmos DB Emulator, you must have administrative privileges on the computer.
 
 > [!NOTE]
-> To install, configure, and run the DocumentDB Emulator, you must have administrative privileges on the computer.
+> To install, configure, and run the Cosmos DB Emulator, you must have administrative privileges on the computer.
 
-## Checking for DocumentDB Emulator updates
-The DocumentDB Emulator includes a built-in Azure DocumentDB Data Explorer to browse data stored within DocumentDB, create new collections, and let you know when a new update is available for download. 
+## Checking for Cosmos DB Emulator updates
+The Cosmos DB Emulator includes a built-in Azure Cosmos DB Data Explorer to browse data stored within Cosmos DB, create new collections, and let you know when a new update is available for download. 
 
 > [!NOTE]
-> Data created in one version of the DocumentDB Emulator is not guaranteed to be accessible when using a different version. If you need to persist your data for the long term, it is recommended that you store that data in an Azure DocumentDB account, rather than in the DocumentDB Emulator. 
+> Data created in one version of the Cosmos DB Emulator is not guaranteed to be accessible when using a different version. If you need to persist your data for the long term, it is recommended that you store that data in an Azure Cosmos DB account, rather than in the Cosmos DB Emulator. 
 
-## How the DocumentDB Emulator works
-The DocumentDB Emulator provides a high-fidelity emulation of the DocumentDB service. It supports identical functionality as Azure DocumentDB, including support for creating and querying JSON documents, provisioning and scaling collections, and executing stored procedures and triggers. You can develop and test applications using the DocumentDB Emulator, and deploy them to Azure at global scale by just making a single configuration change to the connection endpoint for DocumentDB.
+## How the Cosmos DB Emulator works
+The Cosmos DB Emulator provides a high-fidelity emulation of the Cosmos DB service. It supports identical functionality as Azure Cosmos DB, including support for creating and querying JSON documents, provisioning and scaling collections, and executing stored procedures and triggers. You can develop and test applications using the Cosmos DB Emulator, and deploy them to Azure at global scale by just making a single configuration change to the connection endpoint for Cosmos DB.
 
-While we created a high-fidelity local emulation of the actual DocumentDB service, the implementation of the DocumentDB Emulator is different than that of the service. For example, the DocumentDB Emulator uses standard OS components such as the local file system for persistence, and HTTPS protocol stack for connectivity. This means that some functionality that relies on Azure infrastructure like global replication, single-digit millisecond latency for reads/writes, and tunable consistency levels are not available via the DocumentDB Emulator.
+While we created a high-fidelity local emulation of the actual Cosmos DB service, the implementation of the Cosmos DB Emulator is different than that of the service. For example, the Cosmos DB Emulator uses standard OS components such as the local file system for persistence, and HTTPS protocol stack for connectivity. This means that some functionality that relies on Azure infrastructure like global replication, single-digit millisecond latency for reads/writes, and tunable consistency levels are not available via the Cosmos DB Emulator.
 
-## Authenticating requests against the DocumentDB Emulator
-Just as with Azure Document in the cloud, every request that you make against the DocumentDB Emulator must be authenticated. The DocumentDB Emulator supports a single fixed account and a well-known authentication key for master key authentication. This account and key are the only credentials permitted for use with the DocumentDB Emulator. They are:
+## Authenticating requests against the Cosmos DB Emulator
+Just as with Azure Document in the cloud, every request that you make against the Cosmos DB Emulator must be authenticated. The Cosmos DB Emulator supports a single fixed account and a well-known authentication key for master key authentication. This account and key are the only credentials permitted for use with the Cosmos DB Emulator. They are:
 
     Account name: localhost:<port>
     Account key: C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==
 
 > [!NOTE]
-> The master key supported by the DocumentDB Emulator is intended for use only with the emulator. You cannot use your production DocumentDB account and key with the DocumentDB Emulator. 
+> The master key supported by the Cosmos DB Emulator is intended for use only with the emulator. You cannot use your production Cosmos DB account and key with the Cosmos DB Emulator. 
 
-Additionally, just as the Azure DocumentDB service, the DocumentDB Emulator supports only secure communication via SSL.
+Additionally, just as the Azure Cosmos DB service, the Cosmos DB Emulator supports only secure communication via SSL.
 
-## Start and initialize the DocumentDB Emulator
-To start the Azure DocumentDB Emulator, select the Start button or press the Windows key. Begin typing **DocumentDB Emulator**, and select the emulator from the list of applications. When the emulator is running, you'll see an icon in the Windows taskbar notification area.
+## Start and initialize the Cosmos DB Emulator
+To start the Azure Cosmos DB Emulator, select the Start button or press the Windows key. Begin typing **Cosmos DB Emulator**, and select the emulator from the list of applications. When the emulator is running, you'll see an icon in the Windows taskbar notification area.
 
-The DocumentDB Emulator is installed by default to the `C:\Program Files\Azure DocumentDB Emulator` directory. You can also start and stop the emulator from the command line. Please see below for options for running the emulator from the command line.
+The Cosmos DB Emulator is installed by default to the `C:\Program Files\Azure DocumentDB Emulator` directory. You can also start and stop the emulator from the command line. Please see below for options for running the emulator from the command line.
 
-## Developing with the DocumentDB Emulator
-Once you have the DocumentDB Emulator running on your desktop, you can use any supported [DocumentDB SDK](https://docs.microsoft.com/azure/documentdb/documentdb-sdk-dotnet) or the [DocumentDB REST API](https://msdn.microsoft.com/library/azure/dn781481.aspx) to interact with the Emulator. The DocumentDB Emulator also includes a built-in Data Explorer that lets you create collections, view and edit documents without writing any code. 
+## Developing with the Cosmos DB Emulator
+Once you have the Cosmos DB Emulator running on your desktop, you can use any supported [Cosmos DB SDK](https://docs.microsoft.com/azure/documentdb/documentdb-sdk-dotnet) or the [Cosmos DB REST API](https://msdn.microsoft.com/library/azure/dn781481.aspx) to interact with the Emulator. The Cosmos DB Emulator also includes a built-in Data Explorer that lets you create collections, view and edit documents without writing any code. 
 
-    // Connect to the DocumentDB Emulator running locally
+    // Connect to the Cosmos DB Emulator running locally
     DocumentClient client = new DocumentClient(
         new Uri("https://localhost:8081"), 
         "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==");
 
-You can use existing tools like [DocumentDB Studio](https://github.com/mingaliu/DocumentDBStudio) to connect to the DocumentDB Emulator. You can also migrate data between the DocumentDB Emulator and the Azure DocumentDB service using the [DocumentDB Data Migration Tool](https://github.com/azure/azure-documentdb-datamigrationtool).
+You can use existing tools like [DocumentDB Studio](https://github.com/mingaliu/DocumentDBStudio) to connect to the Cosmos DB Emulator. You can also migrate data between the Cosmos DB Emulator and the Azure Cosmos DB service using the [DocumentDB Data Migration Tool](https://github.com/azure/azure-documentdb-datamigrationtool).
 
-## DocumentDB Emulator command line tool reference
+## Cosmos DB Emulator command line tool reference
 From the installation location, you can use the command line to start and stop the emulator, configure options, and perform other operations.
 
 ### Command Line Syntax
@@ -71,13 +71,13 @@ To view the list of options, type `DocumentDB.LocalEmulator.exe /?` at the comma
 </tr>
 <tr>
   <td>[No arguments]</td>
-  <td>Starts up the DocumentDB Emulator with default settings</td>
+  <td>Starts up the Cosmos DB Emulator with default settings</td>
   <td>DocumentDB.LocalEmulator.exe</td>
   <td></td>
 </tr>
 <tr>
   <td>Shutdown</td>
-  <td>Shuts down the DocumentDB Emulator</td>
+  <td>Shuts down the Cosmos DB Emulator</td>
   <td>DocumentDB.LocalEmulator.exe /Shutdown</td>
   <td></td>
 </tr>
@@ -131,18 +131,18 @@ To view the list of options, type `DocumentDB.LocalEmulator.exe /?` at the comma
 </tr>
 </table>
 
-## Differences between the DocumentDB Emulator and Azure DocumentDB 
-Because the DocumentDB Emulator provides an emulated environment running on a local developer workstation, there are some differences in functionality between the emulator and an Azure DocumentDB account in the cloud:
+## Differences between the Cosmos DB Emulator and Azure Cosmos DB 
+Because the Cosmos DB Emulator provides an emulated environment running on a local developer workstation, there are some differences in functionality between the emulator and an Azure Cosmos DB account in the cloud:
 
-* The DocumentDB Emulator supports only a single fixed account and a well-known master key.  Key regeneration is not possible in the DocumentDB Emulator.
-* The DocumentDB Emulator is not a scalable service and will not support a large number of collections.
-* The DocumentDB Emulator does not simulate different [DocumentDB consistency levels](https://docs.microsoft.com/azure/documentdb/documentdb-consistency-levels).
-* The DocumentDB Emulator does not simulate [multi-region replication](https://docs.microsoft.com/azure/documentdb/documentdb-distribute-data-globally).
-* The DocumentDB Emulator does not support service quota overrides which may be available in the Azure DocumentDB service (e.g. document size limits, increased partitioned collection storage).
-* While the DocumentDB Emulator will return request charges similar to the Azure DocumentDB service, the emulator cannot be used to estimate provisioned throughput requirements for applications leveraging the Azure DocumentDB service. To accurately estimate production throughput needs, use the [DocumentDB capacity planner](https://www.documentdb.com/capacityplanner).
-* While the DocumentDB Emulator persists data, the emulator cannot be used to estimate data and index storage requirements for applications leveraging the Azure DocumentDB service. To accurately estimate production storage needs, use the [DocumentDB capacity planner](https://www.documentdb.com/capacityplanner).
+* The Cosmos DB Emulator supports only a single fixed account and a well-known master key.  Key regeneration is not possible in the Cosmos DB Emulator.
+* The Cosmos DB Emulator is not a scalable service and will not support a large number of collections.
+* The Cosmos DB Emulator does not simulate different [DocumentDB consistency levels](https://docs.microsoft.com/azure/documentdb/documentdb-consistency-levels).
+* The Cosmos DB Emulator does not simulate [multi-region replication](https://docs.microsoft.com/azure/documentdb/documentdb-distribute-data-globally).
+* The Cosmos DB Emulator does not support service quota overrides which may be available in the Azure Cosmos DB service (e.g. document size limits, increased partitioned collection storage).
+* While the Cosmos DB Emulator will return request charges similar to the Azure Cosmos DB service, the emulator cannot be used to estimate provisioned throughput requirements for applications leveraging the Azure Cosmos DB service. To accurately estimate production throughput needs, use the [Cosmos DB capacity planner](https://www.documentdb.com/capacityplanner).
+* While the Cosmos DB Emulator persists data, the emulator cannot be used to estimate data and index storage requirements for applications leveraging the Azure Cosmos DB service. To accurately estimate production storage needs, use the [Cosmos DB capacity planner](https://www.documentdb.com/capacityplanner).
 
 
 ## Next steps
-* To learn more about DocumentDB, see [Introduction to Azure DocumentDB](https://docs.microsoft.com/azure/documentdb/documentdb-introduction)
-* To start developing against the DocumentDB Emulator, download one of the [supported DocumentDB SDKs](https://docs.microsoft.com/azure/documentdb/documentdb-sdk-dotnet)
+* To learn more about Cosmos DB, see [Introduction to Azure Cosmos DB](https://docs.microsoft.com/azure/documentdb/documentdb-introduction)
+* To start developing against the Cosmos DB Emulator, download one of the [supported Cosmos DB SDKs](https://docs.microsoft.com/azure/documentdb/documentdb-sdk-dotnet)
