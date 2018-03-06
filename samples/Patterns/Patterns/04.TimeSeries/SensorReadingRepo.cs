@@ -24,6 +24,7 @@ namespace Patterns.TimeSeries
 
         public async Task CreateCollectionIfNotExistsAsync(String collectionName, int throughput, int expirationDays)
         {
+            //TIP: use a fine-grained PK like sensorId, not timestamp
             DocumentCollection collection = new DocumentCollection();
 
             collection.Id = collectionName;
@@ -48,6 +49,7 @@ namespace Patterns.TimeSeries
             collection.IndexingPolicy.ExcludedPaths.Clear();
             collection.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/*" });
 
+            //TIP: set TTL for data expiration
             collection.DefaultTimeToLive = (expirationDays * 86400);
 
             await this.client.CreateDocumentCollectionIfNotExistsAsync(
@@ -92,12 +94,14 @@ namespace Patterns.TimeSeries
 
         public async Task CreateCollectionsByHour()
         {
+            //TIP: pre-aggregate rollups vs. querying raw data when possible
             await CreateCollectionIfNotExistsAsync(RawReadingsCollectionName, 10000, 7);
             await CreateCollectionIfNotExistsAsync(HourlyReadingsCollectionName, 5000, 90);
         }
 
         public async Task SyncHourlyRollupCollectionAsync(List<Document> changes)
         {
+            //TIP: Use change feed to build time-based rollups
             Uri sourceCollectionUri = UriFactory.CreateDocumentCollectionUri(DatabaseName, RawReadingsCollectionName);
             Uri destCollectionUri = UriFactory.CreateDocumentCollectionUri(DatabaseName, HourlyReadingsCollectionName);
 

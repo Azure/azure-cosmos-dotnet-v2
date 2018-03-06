@@ -23,9 +23,11 @@ namespace Patterns.OneToOne
         {
             DocumentCollection collection = new DocumentCollection();
 
+            // TIP: ID may be a good choice for partition key
             collection.Id = CollectionName;
             collection.PartitionKey.Paths.Add("/id");
 
+            // TIP: Disable indexing if it's just KV lookup
             collection.IndexingPolicy.Automatic = false;
             collection.IndexingPolicy.IndexingMode = IndexingMode.None;
             collection.IndexingPolicy.IncludedPaths.Clear();
@@ -41,6 +43,7 @@ namespace Patterns.OneToOne
         {
             Uri documentUri = UriFactory.CreateDocumentUri(DatabaseName, CollectionName, playerId);
 
+            // TIP: Use GET over query when possible
             return await client.ReadDocumentAsync<Player>(
                 documentUri, 
                 new RequestOptions { PartitionKey = new PartitionKey(playerId) });
@@ -48,6 +51,7 @@ namespace Patterns.OneToOne
 
         public async Task AddPlayerAsync(Player player)
         {
+            // TIP: Use the atomic Upsert for Insert or Replace
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri(DatabaseName, CollectionName);
             await client.UpsertDocumentAsync(collectionUri, player);
         }
@@ -63,6 +67,7 @@ namespace Patterns.OneToOne
 
         public async Task UpdatePlayerAsync(Player updatedInfo)
         {
+            // TIP: Use donditional update with ETag
             Uri documentUri = UriFactory.CreateDocumentUri(DatabaseName, CollectionName, updatedInfo.Id);
 
             Player player = await client.ReadDocumentAsync<Player>(

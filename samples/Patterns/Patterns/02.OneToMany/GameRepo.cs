@@ -24,6 +24,7 @@ namespace Patterns.OneToMany
         {
             DocumentCollection collection = new DocumentCollection();
 
+            // TIP: If queries are known upfront, index just the properties you need
             collection.Id = CollectionName;
             collection.PartitionKey.Paths.Add("/playerId");
 
@@ -47,6 +48,7 @@ namespace Patterns.OneToMany
 
         public async Task<Game> GetGameAsync(String playerId, String gameId)
         {
+            // TIP: When partition key != id, ensure it is passed in via GET (not cross-partition query on gameId)
             Uri documentUri = UriFactory.CreateDocumentUri(DatabaseName, CollectionName, gameId);
 
             return await client.ReadDocumentAsync<Game>(
@@ -56,6 +58,7 @@ namespace Patterns.OneToMany
 
         public async Task<IEnumerable<Game>> GetGamesAsync(String playerId)
         {
+            // TIP: Favor single-partition queries (with pk in filter)
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri(DatabaseName, CollectionName);
             IDocumentQuery<Game> query = client.CreateDocumentQuery<Game>(collectionUri).Where(g => g.PlayerId == playerId).AsDocumentQuery();
 

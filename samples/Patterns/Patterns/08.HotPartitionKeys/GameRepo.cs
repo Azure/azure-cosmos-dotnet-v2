@@ -47,6 +47,7 @@ namespace Patterns.HotPartitionKeys
 
         public async Task<Game> GetGameAsync(String gameId)
         {
+            //TIP: If there is an order of magnitude difference between hot and cold data, build a second lookup collection for hot data
             Game game = null;
             try
             {
