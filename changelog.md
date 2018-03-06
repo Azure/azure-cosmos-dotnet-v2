@@ -1,6 +1,6 @@
 ## Changes in 1.21.0 : ##
 
-* Single NuGet package for .NET Framework and .NET Standard. [Microsoft.Azure.DocumentDB.Core](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB.Core/) package has been depreciated. 
+* Single NuGet package for .NET Framework and .NET Standard. [Microsoft.Azure.DocumentDB.Core](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB.Core/) package has been deprecated. 
 * Fixed KeyNotFoundException for cross partition order by queries in corner cases.
 * Fixed bug where JsonPropery attribute in select clause for LINQ queries was not being honored.
 
