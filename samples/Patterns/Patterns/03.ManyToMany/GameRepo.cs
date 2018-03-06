@@ -22,7 +22,7 @@ namespace Patterns.ManyToMany
             this.client = client;
         }
         
-        public async Task CreateCollectionIfNotExistsAsync()
+        public async Task CreatePlayerLookupCollectionIfNotExistsAsync()
         {
             DocumentCollection collection = new DocumentCollection();
 
@@ -72,6 +72,7 @@ namespace Patterns.ManyToMany
 
         public async Task<Game> GetGameInfrequentAsync(String gameId)
         {
+            //TIP: use cross-partition query for relatively infrequent queries. They're served from the index too
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri(DatabaseName, PlayerLookupCollectionName);
 
             FeedOptions feedOptions = new FeedOptions
@@ -95,20 +96,32 @@ namespace Patterns.ManyToMany
             return null;
         }
 
-        public async Task<Game> GetGameAsync(String gameId)
+        public async Task CreateGameLookupCollectionIfNotExistsAsync()
         {
-            Uri documentUri = UriFactory.CreateDocumentUri(DatabaseName, GameLookupCollectionName, gameId);
+            //TIP: Use a second collection pivoted by a different partition key if the mix is 50:50
+            DocumentCollection collection = new DocumentCollection();
 
-            return await client.ReadDocumentAsync<Game>(
-                documentUri,
-                new RequestOptions { PartitionKey = new PartitionKey(gameId) });
+            collection.Id = GameLookupCollectionName;
+            collection.PartitionKey.Paths.Add("/id");
+
+            collection.IndexingPolicy.Automatic = false;
+            collection.IndexingPolicy.IndexingMode = IndexingMode.None;
+            collection.IndexingPolicy.IncludedPaths.Clear();
+            collection.IndexingPolicy.ExcludedPaths.Clear();
+
+            await this.client.CreateDocumentCollectionIfNotExistsAsync(
+                UriFactory.CreateDatabaseUri(DatabaseName),
+                collection,
+                new RequestOptions { OfferThroughput = 10000 });
         }
 
         public async Task SyncGameLookupCollectionAsync(List<Document> changes)
         {
+            //TIP: Prefer change feed over double-writes
             Uri sourceCollectionUri = UriFactory.CreateDocumentCollectionUri(DatabaseName, PlayerLookupCollectionName);
             Uri destCollectionUri = UriFactory.CreateDocumentCollectionUri(DatabaseName, GameLookupCollectionName);
 
+            //TIP: Use change feed processor library for built-in checkpointing/load balancing/failure recovery
             Dictionary<String, String> checkpoints = new Dictionary<string, string>();
 
             while (true)
@@ -131,6 +144,8 @@ namespace Patterns.ManyToMany
                     while (query.HasMoreResults)
                     {
                         FeedResponse<Game> response = query.ExecuteNextAsync<Game>().Result;
+
+                        //TIP: Azure Functions, Spark Streaming also internally use change feed and provide primitives                    
                         foreach (Game changedGame in response)
                         {
                             await this.client.UpsertDocumentAsync(destCollectionUri, changedGame);
@@ -144,31 +159,19 @@ namespace Patterns.ManyToMany
             }
         }
 
+        public async Task<Game> GetGameAsync(String gameId)
+        {
+            Uri documentUri = UriFactory.CreateDocumentUri(DatabaseName, GameLookupCollectionName, gameId);
+
+            return await client.ReadDocumentAsync<Game>(
+                documentUri,
+                new RequestOptions { PartitionKey = new PartitionKey(gameId) });
+        }
+
         public async Task AddGameAsync(Game game)
         {
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri(DatabaseName, PlayerLookupCollectionName);
             await client.UpsertDocumentAsync(collectionUri, game);
-        }
-
-        public async Task RemoveGameAsync(String playerId, String gameId)
-        {
-            Uri documentUri = UriFactory.CreateDocumentUri(DatabaseName, PlayerLookupCollectionName, gameId);
-
-            await client.DeleteDocumentAsync(
-                documentUri,
-                new RequestOptions { PartitionKey = new PartitionKey(playerId) });
-        }
-
-        public async Task UpdateGameAsync(Game updatedInfo)
-        {
-            Uri documentUri = UriFactory.CreateDocumentUri(DatabaseName, PlayerLookupCollectionName, updatedInfo.Id);
-
-            Game game = await client.ReadDocumentAsync<Game>(
-                documentUri,
-                new RequestOptions { PartitionKey = new PartitionKey(updatedInfo.PlayerId) });
-
-            AccessCondition condition = new AccessCondition { Condition = game.ETag, Type = AccessConditionType.IfMatch };
-            await client.ReplaceDocumentAsync(documentUri, game, new RequestOptions { AccessCondition = condition });
         }
     }
 }

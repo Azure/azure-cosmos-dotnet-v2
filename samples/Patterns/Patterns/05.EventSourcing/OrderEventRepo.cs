@@ -23,6 +23,7 @@ namespace Patterns.EventSourcing
 
         public async Task CreateCollectionIfNotExistsAsync()
         {
+            //TIP: Consider the event-sourcing pattern if your workload is ~50% writes
             DocumentCollection collection = new DocumentCollection();
 
             collection.Id = EventsCollectionName;
@@ -58,12 +59,14 @@ namespace Patterns.EventSourcing
 
         public async Task AddEvent(OrderEvent orderEvent)
         {
+            //TIP: Insert of 1kb document is 5 RU (compared with replace = 10 RU)
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri(DatabaseName, EventsCollectionName);
             await client.CreateDocumentAsync(collectionUri, orderEvent);
         }
 
         public async Task<String> GetLatestState(String orderId)
         {
+            //TIP: Use query to reconstruct the latest state (can also support <= BeforeTimestamp)
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri(DatabaseName, EventsCollectionName);
 
             IDocumentQuery<String> query = client.CreateDocumentQuery<OrderEvent>(collectionUri)

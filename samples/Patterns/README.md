@@ -35,8 +35,8 @@
     * Single-partition query
     * Cross-partition query 
     * Read feed
-  * Bulk Insert > POST > PUT 
-  * TTL Delete > Bulk Delete > DELETE > PUT
+  * Bulk Insert (SP) > POST > PUT 
+  * TTL Delete > Bulk Delete (SP) > DELETE > PUT
   * Use change feed!
 
 ## Vanilla 1:1
@@ -45,9 +45,9 @@
   * AddPlayer
   * RemovePlayer
   * UpdatePlayer
-* Strawman: partition key = "id"
+* Strawman: partition key = `id`
 * Only GET, POST, PUT, and DELETE
-* Provisioned throughput = \Sigma (RUi * Ni)
+* Provisioned throughput = Sigma (RUi * Ni)
 * Bonus: Bulk Inserts
 * Bonus: Bulk Read (use read feed or change feed) for analytics 
 
@@ -62,7 +62,7 @@
 * GetGamesByPlayerId is a single-partition query: `SELECT * FROM c WHERE c.playerId = ‘p1’`
 
 ## What about M:N?
-* Multi-player gaming. Lookup by either game ID or player ID
+* Multi-player gaming. Lookup by either `gameId` or `playerId`
   * GetPlayerById(PlayerId)
   * GetGameById(GameId)
   * AddGame

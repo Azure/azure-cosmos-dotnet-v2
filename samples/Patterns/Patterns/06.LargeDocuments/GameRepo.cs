@@ -38,6 +38,8 @@ namespace Patterns.LargeDocuments
             collection.IndexingPolicy.IncludedPaths.Add(path);
 
             collection.IndexingPolicy.ExcludedPaths.Clear();
+
+            //TIP: Exclude large subtrees from indexing if not queried
             collection.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/bigGameState/*" });
 
             await this.client.CreateDocumentCollectionIfNotExistsAsync(
@@ -50,6 +52,7 @@ namespace Patterns.LargeDocuments
         {
             Uri documentUri = UriFactory.CreateDocumentUri(DatabaseName, GameCollectionName, gameId);
 
+            //TIP: Store infrequently accessed attributes in separate document (can also be blob storage)
             Game game = await client.ReadDocumentAsync<Game>(
                 documentUri, 
                 new RequestOptions { PartitionKey = new PartitionKey(playerId) });

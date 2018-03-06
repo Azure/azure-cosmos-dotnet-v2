@@ -61,6 +61,7 @@ namespace Patterns.LargePartitionKeys
         {
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri(DatabaseName, RawReadingsCollectionName);
 
+            //TIP: for hot keys, use a secondary random value to distribute writes
             Random random = new Random();
             reading.Id = TimeSpan.FromMilliseconds(reading.UnixTimestamp).ToString("o");
 
