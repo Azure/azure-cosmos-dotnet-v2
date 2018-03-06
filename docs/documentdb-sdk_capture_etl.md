@@ -1,3 +1,21 @@
+# Capture through diagnositc trace listener
+Traces are emitted with DocDBTrace source. Below sample app.config configuration captures the traces to a text listener
+<system.diagnostics>
+    <switches>
+      <add name="SourceSwitch" value="Verbose"/>
+    </switches>
+    <sources>
+      <source name="DocDBTrace" switchName="SourceSwitch" switchType="System.Diagnostics.SourceSwitch" >
+        <listeners>
+          <add name="MyTextListener" type="System.Diagnostics.TextWriterTraceListener" traceOutputOptions="DateTime,ProcessId,ThreadId" initializeData="CosmosDBTrace.txt"></add>
+       < /listeners>
+      </source>
+    </sources>
+  </system.diagnostics> 
+
+Please note that tracing everything will impact the application performance. Be selective and is possible collect them only when required. 
+
+
 # Capture the .net SDK trace in ETL file
 
 The Azure DocumentDB .NET SDK (from version 1.11.0) support capturing trace in ETL trace log file. The trace is emitted and captured using Windows ETW with very little overhead.
