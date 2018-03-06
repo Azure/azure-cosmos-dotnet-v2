@@ -58,6 +58,7 @@
     <Compile Include="IChangeFeedObserver.cs" />
     <Compile Include="IChangeFeedObserverFactory.cs" />
     <Compile Include="Internal\ChangeFeedObserverFactory.cs" />
+    <Compile Include="Internal\CollectionHelper.cs" />
     <Compile Include="Internal\DocumentLeaseStore\DocumentServiceLease.cs" />
     <Compile Include="Internal\DocumentLeaseStore\DocumentServiceLeaseManager.cs" />
     <Compile Include="Internal\DocumentLeaseStore\LeaseState.cs" />

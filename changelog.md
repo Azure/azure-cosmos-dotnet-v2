@@ -1,3 +1,39 @@
+## Changes in 1.21.0 : ##
+
+* Single NuGet package for .NET Framework and .NET Standard. [Microsoft.Azure.DocumentDB.Core](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB.Core/) package has been deprecated. 
+* Fixed KeyNotFoundException for cross partition order by queries in corner cases.
+* Fixed bug where JsonPropery attribute in select clause for LINQ queries was not being honored.
+
+## Changes in 1.20.2 : ##
+
+* Fixed bug that is hit under certain race conditions, that results in intermittent "Microsoft.Azure.Documents.NotFoundException: The read session is not available for the input session token" errors when using Session consistency level.
+
+## Changes in 1.20.1 : ##
+
+* Improved cross partition query performance when the MaxDegreeOfParallelism property is set to -1 in FeedOptions.
+* Added a new ToString() function to QueryMetrics.
+* Exposed partition statistics on reading collections.
+* Added PartitionKey property to ChangeFeedOptions.
+* Minor bug fixes.
+
+## Changes in 1.19.1 : ##
+
+* Adds the ability to specify unique indexes for the documents by using UniqueKeyPolicy property on the DocumentCollection.
+* Fixed a bug in which the custom JsonSerializer settings were not being honored for some queries and stored procedure execution.
+ 
+## Changes in 1.19.0 : ##
+
+* Branding change from Azure DocumentDB to Azure Cosmos DB in the API Reference documentation, metadata information in assemblies, and the NuGet package. 
+* Expose diagnostic information and latency from the response of requests sent with direct connectivity mode. The property names are RequestDiagnosticsString and RequestLatency on ResourceResponse class.
+* This SDK version requires the latest version of Azure Cosmos DB Emulator available for download from https://aka.ms/cosmosdb-emulator.
+
+## Changes in 1.18.1 : ##
+
+* Internal changes for Microsoft friends assemblies.
+
+## Changes in 1.18.0 : ##
+
+* Added several reliability fixes and improvements.
 
 ## Changes in 1.17.0 : ##
 
