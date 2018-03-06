@@ -3,7 +3,7 @@ This project provides a client tools or utilities in .NET that makes it easy to 
 
 Useful links:
 - [Get Started APP](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-get-started)
-- [Samples](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-dotnet-samples)\
+- [Samples](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-dotnet-samples)
 - [Github samples](https://github.com/Azure/azure-documentdb-dotnet/tree/master/samples)
 - [Introduction to Resource Model of Azure Cosmos DB Service]( https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-resources)
 - [Partitioning](https://docs.microsoft.com/en-us/azure/cosmos-db/partition-data)
@@ -13,25 +13,30 @@ Useful links:
 - [Capture traces](https://github.com/Azure/azure-documentdb-dotnet/blob/master/docs/documentdb-sdk_capture_etl.md)
 - [Release notes](https://github.com/Azure/azure-documentdb-dotnet/blob/master/changelog.md)
 
+
 ## Disclaimer
 The implementation in this project is intended for reference purpose only.
 
+
+## Minimum Requirements
+.Net 4.5
+
+
 ## Consuming the official Microsoft Azure Cosmos DB SDK
 From Package Manager Console
-    .NET Framework: Install-Package Microsoft.Azure.DocumentDB
-    .NET Standard: Install-Package Microsoft.Azure.DocumentDB.Core
-   
+
+    **Install-Package Microsoft.Azure.DocumentDB**
+   
 ## SDK release notes
 https://github.com/Azure/azure-documentdb-dotnet/blob/master/changelog.md 
 
 https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-sdk-dotnet
 
-## Minimum Requirements
-.Net 4.5
+## Performance tips
+https://docs.microsoft.com/en-us/azure/cosmos-db/performance-tips
+
 
 ## Samples
 https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-dotnet-samples is a good starting point.
-Also great source of samples can be found at https://github.com/Azure/azure-documentdb-dotnet/tree/master/samples
 
-## Performance tips
-https://docs.microsoft.com/en-us/azure/cosmos-db/performance-tips
+Also great source of samples can be found at https://github.com/Azure/azure-documentdb-dotnet/tree/master/samples
