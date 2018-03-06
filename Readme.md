@@ -5,6 +5,7 @@ Useful links:
 - [Get Started APP](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-get-started)
 - [Samples](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-dotnet-samples)
 - [Introduction to Resource Model of Azure Cosmos DB Service]( https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-resources)
+- [Partitioning](https://docs.microsoft.com/en-us/azure/cosmos-db/partition-data)
 - [Introduction to SQL API of Azure Cosmos DB Service](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-sql-query)
 - [SDK API](https://docs.microsoft.com/en-us/dotnet/api/overview/azure/cosmosdb?view=azure-dotnet)
 - [Using emulator](https://github.com/Azure/azure-documentdb-dotnet/blob/master/docs/documentdb-nosql-local-emulator.md)
