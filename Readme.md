@@ -3,7 +3,8 @@ This project provides a client tools or utilities in .NET that makes it easy to 
 
 Useful links:
 - [Get Started APP](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-get-started)
-- [Samples](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-dotnet-samples)
+- [Samples](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-dotnet-samples)\
+- [Github samples](https://github.com/Azure/azure-documentdb-dotnet/tree/master/samples)
 - [Introduction to Resource Model of Azure Cosmos DB Service]( https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-resources)
 - [Partitioning](https://docs.microsoft.com/en-us/azure/cosmos-db/partition-data)
 - [Introduction to SQL API of Azure Cosmos DB Service](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-sql-query)
