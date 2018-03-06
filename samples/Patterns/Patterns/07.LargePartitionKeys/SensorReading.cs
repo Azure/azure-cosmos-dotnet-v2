@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 
-namespace Patterns.TimeSeries
+namespace Patterns.LargePartitionKeys
 {
     class SensorReading
     {
@@ -10,6 +10,9 @@ namespace Patterns.TimeSeries
 
         [JsonProperty("sensorId")]
         public String SensorId { get; set; }
+
+        [JsonProperty("partitionKey")]
+        public String PartitionKey { get; set; }
 
         [JsonProperty("siteId")]
         public String SiteId { get; set; }

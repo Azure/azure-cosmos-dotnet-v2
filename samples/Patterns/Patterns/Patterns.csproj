@@ -59,12 +59,20 @@
     <Compile Include="02.OneToMany\GameRepo.cs" />
     <Compile Include="01.OneToOne\Player.cs" />
     <Compile Include="01.OneToOne\PlayerRepo.cs" />
+    <Compile Include="04.TimeSeries\SensorReadingRollup.cs" />
+    <Compile Include="04.TimeSeries\SensorReading.cs" />
+    <Compile Include="04.TimeSeries\SensorReadingRepo.cs" />
+    <Compile Include="05.EventSourcing\OrderEvent.cs" />
+    <Compile Include="05.EventSourcing\OrderEventRepo.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="06.LargeDocuments\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\Microsoft.Azure.DocumentDB.1.21.0\build\Microsoft.Azure.DocumentDB.targets" Condition="Exists('..\packages\Microsoft.Azure.DocumentDB.1.21.0\build\Microsoft.Azure.DocumentDB.targets')" />

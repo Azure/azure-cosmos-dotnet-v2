@@ -22,7 +22,7 @@ namespace Patterns.TimeSeries
             this.client = client;
         }
 
-        public async Task CreateCollectionIfNotExistsAsync(String collectionName, int throughput)
+        public async Task CreateCollectionIfNotExistsAsync(String collectionName, int throughput, int expirationDays)
         {
             DocumentCollection collection = new DocumentCollection();
 
@@ -47,6 +47,8 @@ namespace Patterns.TimeSeries
 
             collection.IndexingPolicy.ExcludedPaths.Clear();
             collection.IndexingPolicy.ExcludedPaths.Add(new ExcludedPath { Path = "/*" });
+
+            collection.DefaultTimeToLive = (expirationDays * 86400);
 
             await this.client.CreateDocumentCollectionIfNotExistsAsync(
                 UriFactory.CreateDatabaseUri(DatabaseName),
@@ -90,8 +92,8 @@ namespace Patterns.TimeSeries
 
         public async Task CreateCollectionsByHour()
         {
-            await CreateCollectionIfNotExistsAsync(RawReadingsCollectionName, 10000);
-            await CreateCollectionIfNotExistsAsync(HourlyReadingsCollectionName, 5000);
+            await CreateCollectionIfNotExistsAsync(RawReadingsCollectionName, 10000, 7);
+            await CreateCollectionIfNotExistsAsync(HourlyReadingsCollectionName, 5000, 90);
         }
 
         public async Task SyncHourlyRollupCollectionAsync(List<Document> changes)

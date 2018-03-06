@@ -1,7 +1,11 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace Patterns.ManyToMany
+namespace Patterns.HotPartitionKeys
 {
     class Game
     {
@@ -10,9 +14,6 @@ namespace Patterns.ManyToMany
 
         [JsonProperty("playerId")]
         public String PlayerId { get; set; }
-
-        [JsonProperty("gameId")]
-        public String GameId { get; set; }
 
         [JsonProperty("score")]
         public Double Score { get; set; }

@@ -50,7 +50,7 @@
 * Bonus: Bulk Inserts
 * Bonus: Bulk Read (use read feed or change feed) for analytics 
 
-## Vanilla 1:N
+## Also Vanilla 1:N
 * What if we need to support lookup of game state
   * GetGameByIds(PlayerId, GameId)
   * GetGamesByPlayerId(PlayerId)
@@ -60,7 +60,7 @@
 * GetGameByIds, AddGame, and RemoveGame are GET, POST, and DELETE
 * GetGamesByPlayerId is a single-partition query: `SELECT * FROM c WHERE c.playerId = ‘p1’`
 
-## Vanilla M:N
+## What about M:N?
 * Multi-player gaming. Lookup by either game ID or player ID
   * GetPlayerById(PlayerId)
   * GetGameById(GameId)
@@ -70,7 +70,7 @@
 * If mix is 50:50, then need to store two pivots of the same data by Player Id and Game Id
 * Double-writes vs. change feed for keeping copies up-to-date
 
-## Time series data
+## Time-series data
 * Ingest readings from sensors. Perform lookups by date time range
   * AddSensorReading(SensorId)
   * GetReadingsForTimeRange(StartTime, EndTime)

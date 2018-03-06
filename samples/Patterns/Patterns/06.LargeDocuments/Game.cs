@@ -1,7 +1,11 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace Patterns.ManyToMany
+namespace Patterns.LargeDocuments
 {
     class Game
     {
@@ -10,9 +14,6 @@ namespace Patterns.ManyToMany
 
         [JsonProperty("playerId")]
         public String PlayerId { get; set; }
-
-        [JsonProperty("gameId")]
-        public String GameId { get; set; }
 
         [JsonProperty("score")]
         public Double Score { get; set; }
@@ -25,5 +26,12 @@ namespace Patterns.ManyToMany
 
         [JsonProperty("_etag")]
         public String ETag { get; set; }
+
+        [JsonIgnore]
+        [JsonProperty("bigGameState")]
+        public Dictionary<String, Object> BigGameState { get; set; }
+
+        [JsonProperty("gameStateRefId")]
+        public String GameStateReferenceId { get; set; }
     }
 }
