@@ -34,7 +34,7 @@
     * GET
     * Single-partition query
     * Cross-partition query 
-    * Read feed
+    * Read feed (or) scan query
   * Bulk Insert (SP) > POST > PUT 
   * TTL Delete > Bulk Delete (SP) > DELETE > PUT
   * Use change feed!
@@ -115,7 +115,7 @@
   * Move large tenants to their own collections
   * If the per-document size is large, use the patterns for large documents
 
-## Patterns for hot spots: hot partition keys
+## Patterns for hot spots: frequent partition keys
 * Subset of keys much more frequently accessed than others
 * Popular item in retail catalog, common driver defect in Windows DnA telemetry
 * Patterns to manage hot partition keys
