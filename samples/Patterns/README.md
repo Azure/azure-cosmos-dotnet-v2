@@ -4,10 +4,11 @@
 * Cosmos DB makes it easy to build scalable applications
 * These patterns are exceptions to the rule!
 * Quick overview of concepts
-* The vanilla pattern
-* Time series pattern
-* Event sourcing pattern
-* Patterns for handling hot spots
+* Vanilla (1:1 and 1:N)
+* M:N 
+* Time-series data
+* Write heavy (Event sourcing)
+* Handling hot spots
 
 ## Basic Concepts
 * Documents: 
@@ -46,7 +47,7 @@
   * UpdatePlayer
 * Strawman: partition key = "id"
 * Only GET, POST, PUT, and DELETE
-* Provisioned throughput = S (RUi * Ni)
+* Provisioned throughput = \Sigma (RUi * Ni)
 * Bonus: Bulk Inserts
 * Bonus: Bulk Read (use read feed or change feed) for analytics 
 
