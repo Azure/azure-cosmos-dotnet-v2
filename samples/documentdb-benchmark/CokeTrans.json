@@ -1,0 +1,14 @@
+﻿{
+  "shardkey": "fffa",
+  "id": "G02-D06-a067ff",
+  "activityId": "fffa",
+  "version": 1,
+  "submitDt": "2017-01-01",
+  "transDt": "2017-01-01",
+  "finDt": "2017-01-01",
+  "key": "A",
+  "pcTotal": 100,
+  "pcAdj": 200,
+  "ucTotal": 110,
+  "ucAdj": 210
+}
