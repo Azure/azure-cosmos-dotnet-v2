@@ -1,3 +1,8 @@
+## Changes in [1.21.1](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/1.21.1) : ##
+
+* Fixed KeyNotFoundException for cross partition order by queries in corner cases.
+* Fixed bug where JsonPropery attribute in select clause for LINQ queries was not being honored.
+
 ## Changes in [1.20.2](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/1.20.2) : ##
 
 * Fixed bug that is hit under certain race conditions, that results in intermittent "Microsoft.Azure.Documents.NotFoundException: The read session is not available for the input session token" errors when using Session consistency level.
