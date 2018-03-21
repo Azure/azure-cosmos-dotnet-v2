@@ -21,6 +21,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleAppNetFrameworkNewPr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleAppNetFrameworkRefBothAndPassClient", "src\ConsoleAppNetFrameworkRefBothAndPassClient\ConsoleAppNetFrameworkRefBothAndPassClient.csproj", "{21CCB605-D31A-4394-8B3D-5F7A6448C034}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MVCAppNetFramework", "src\MVCAppNetFramework\MVCAppNetFramework.csproj", "{2B2705BD-9F20-41AD-AC85-9EF1452DBF17}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebAppNetCore", "src\WebAppNetCore\WebAppNetCore.csproj", "{BB8FFD3A-6723-481D-8122-92762EA1A6AD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -63,6 +67,14 @@ Global
 		{21CCB605-D31A-4394-8B3D-5F7A6448C034}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{21CCB605-D31A-4394-8B3D-5F7A6448C034}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{21CCB605-D31A-4394-8B3D-5F7A6448C034}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B2705BD-9F20-41AD-AC85-9EF1452DBF17}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B2705BD-9F20-41AD-AC85-9EF1452DBF17}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B2705BD-9F20-41AD-AC85-9EF1452DBF17}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B2705BD-9F20-41AD-AC85-9EF1452DBF17}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BB8FFD3A-6723-481D-8122-92762EA1A6AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BB8FFD3A-6723-481D-8122-92762EA1A6AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BB8FFD3A-6723-481D-8122-92762EA1A6AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BB8FFD3A-6723-481D-8122-92762EA1A6AD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
