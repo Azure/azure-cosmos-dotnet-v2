@@ -1,0 +1,17 @@
+﻿<Properties StartupConfiguration="{F2CC1A86-0045-49E2-852F-71025C94731F}|Default">
+  <MonoDevelop.Ide.ItemProperties.DocumentDBTodo.Droid AndroidDesignerPreferredTheme="Theme.DeviceDefault.NoActionBar.Fullscreen" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="DocumentDBTodoPage.xaml">
+    <Files>
+      <File FileName="TodoItemManager.cs" Line="117" Column="25" />
+      <File FileName="TodoItem.cs" Line="6" Column="15" />
+      <File FileName="DocumentDBTodoPage.xaml" Line="13" Column="12" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|iPhoneSimulator" />
+  <MonoDevelop.Ide.ItemProperties.DocumentDBTodo.iOS PreferredExecutionTarget="MonoDevelop.IPhone.IPhoneSimulatorTarget.F882DD02-AB25-456F-B8CF-2D98CF6676FE" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MultiItemStartupConfigurations />
+</Properties>
