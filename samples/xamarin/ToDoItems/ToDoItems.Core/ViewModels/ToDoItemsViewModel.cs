@@ -1,45 +1,39 @@
 ﻿using System;
-using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Collections.Generic;
 using Xamarin.Forms;
 namespace ToDoItems.Core
 {
-    public class ToDoItemsViewModel : BaseViewModel
-    {
-        public ObservableCollection<ToDoItem> ToDoItems { get; }
+	public class ToDoItemsViewModel : BaseViewModel
+	{
+		List<ToDoItem> todoItems;
+		public List<ToDoItem> ToDoItems { get => todoItems; set => SetProperty(ref todoItems, value); }
 
-        public ICommand RefreshCommand { get; }
+		public ICommand RefreshCommand { get; }
 
-        public ToDoItemsViewModel()
-        {
-            ToDoItems = new ObservableCollection<ToDoItem>();
-            RefreshCommand = new Command(async () => await ExecuteRefreshCommand());
-        }
+		public ToDoItemsViewModel()
+		{
+			ToDoItems = new List<ToDoItem>();
+			RefreshCommand = new Command(async () => await ExecuteRefreshCommand());
+		}
 
-        async Task ExecuteRefreshCommand()
-        {
-            if (IsBusy)
-                return;
+		async Task ExecuteRefreshCommand()
+		{
+			if (IsBusy)
+				return;
 
-            IsBusy = true;
+			IsBusy = true;
 
-            try
-            {
-                var items = await CosmosDBService.GetToDoItems();
+			try
+			{
+				ToDoItems = await CosmosDBService.GetToDoItems();
+			}
+			finally
+			{
+				IsBusy = false;
+			}
+		}
 
-                if (items != null && items.Count > 0)
-                {
-                    ToDoItems.Clear();
-                    items.ForEach(todo => ToDoItems.Add(todo));
-                }
-            }
-            finally
-            {
-                IsBusy = false;
-            }
-        }
-
-    }
+	}
 }

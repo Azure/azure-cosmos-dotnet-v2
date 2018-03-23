@@ -5,13 +5,15 @@
     x:Class="ToDoItems.Core.ToDoItemsPage"
     Title="{Binding Title}">
     <ContentPage.Content>
-        <ListView ItemsSource="{Binding ToDoItems}" 
-                  x:Name="todoItemsList">
-            <ListView.ItemTemplate>
-                <DataTemplate>
-                    <TextCell Text="{Binding Name}" />
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+        <StackLayout>
+            <ActivityIndicator IsRunning="{Binding IsBusy}" />
+            <ListView x:Name="todoItemsList" ItemsSource="{Binding ToDoItems}">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <TextCell Text="{Binding Name}" />
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </StackLayout>
     </ContentPage.Content>
 </ContentPage>

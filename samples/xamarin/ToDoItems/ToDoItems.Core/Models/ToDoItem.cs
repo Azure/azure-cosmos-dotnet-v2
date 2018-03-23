@@ -1,11 +1,64 @@
 ﻿using System;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 namespace ToDoItems.Core
 {
-    public class ToDoItem
-    {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public bool Completed { get; set; }
-    }
+	public class ToDoItem : INotifyPropertyChanged
+	{
+		public event PropertyChangedEventHandler PropertyChanged;
+
+		public string Id { get; set; }
+
+		string _name;
+		public string Name
+		{
+			get => _name;
+			set
+			{
+				if (_name == value)
+					return;
+
+				_name = value;
+
+				HandlePropertyChanged();
+			}
+		}
+
+		string _description;
+		public string Description
+		{
+			get => _description;
+			set
+			{
+				if (_description == value)
+					return;
+
+				_description = value;
+
+				HandlePropertyChanged();
+			}
+		}
+
+		bool _completed;
+		public bool Completed
+		{
+			get => _completed;
+			set
+			{
+				if (_completed == value)
+					return;
+
+				_completed = value;
+
+				HandlePropertyChanged();
+			}
+		}
+
+		void HandlePropertyChanged([CallerMemberName]string propertyName = "")
+		{
+			var eventArgs = new PropertyChangedEventArgs(propertyName);
+
+			PropertyChanged?.Invoke(this, eventArgs);
+		}
+	}
 }
