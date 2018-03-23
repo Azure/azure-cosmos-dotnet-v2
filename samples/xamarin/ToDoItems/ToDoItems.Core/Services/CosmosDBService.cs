@@ -28,7 +28,7 @@ namespace ToDoItems.Core
 
 			try
 			{
-				docClient = new DocumentClient(new Uri(Constants.CosmosEndpointUrl), Constants.CosmosAuthKey);
+				docClient = new DocumentClient(new Uri(APIKeys.CosmosEndpointUrl), APIKeys.CosmosAuthKey);
 				// Create the database
 				await docClient.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseName });
 

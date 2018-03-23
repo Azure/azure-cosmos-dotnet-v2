@@ -1,9 +1,9 @@
 ﻿using System;
 namespace ToDoItems.Core
 {
-	public class Constants
+	public class APIKeys
 	{
-		public Constants()
+		public APIKeys()
 		{
 		}
 

@@ -14,7 +14,7 @@
     <Folder Include="ViewModels\" />
     <Folder Include="Models\" />
     <Folder Include="Services\" />
-    <Folder Include="Helpes\" />
+    <Folder Include="Helpers\" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Pages\CompletedItemsPage.xaml.cs">
