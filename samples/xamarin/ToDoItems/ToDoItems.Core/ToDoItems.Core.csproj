@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Xamarin.Forms" Version="2.5.0.280555" />
+    <PackageReference Include="Microsoft.Azure.DocumentDB.Core" Version="1.9.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -13,6 +14,7 @@
     <Folder Include="ViewModels\" />
     <Folder Include="Models\" />
     <Folder Include="Services\" />
+    <Folder Include="Helpes\" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Pages\CompletedItemsPage.xaml.cs">

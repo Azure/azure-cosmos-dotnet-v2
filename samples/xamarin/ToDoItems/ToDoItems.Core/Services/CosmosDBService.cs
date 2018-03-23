@@ -2,56 +2,132 @@
 using System.Linq;
 using System.Threading.Tasks;
 
+using Microsoft.Azure.Documents;
+using Microsoft.Azure.Documents.Client;
+using System;
+using System.Data;
+using System.Diagnostics;
+using Microsoft.Azure.Documents.Linq;
+using Xamarin.Forms;
+
 namespace ToDoItems.Core
 {
 	public class CosmosDBService
 	{
-		public CosmosDBService()
+		static DocumentClient docClient = null;
+		static Uri docCollectionUri = null;
+
+
+		static readonly string databaseName = "TodoList";
+		static readonly string collectionName = "Items";
+
+		static async Task<bool> Initialize()
 		{
+			if (docClient != null)
+				return true;
+
+			try
+			{
+				docClient = new DocumentClient(new Uri(Constants.CosmosEndpointUrl), Constants.CosmosAuthKey);
+				// Create the database
+				await docClient.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseName });
+
+				// Create the collection - make sure to specify the RUs - has pricing implications
+				await docClient.CreateDocumentCollectionIfNotExistsAsync(
+					UriFactory.CreateDatabaseUri(databaseName),
+					new DocumentCollection { Id = collectionName },
+					new RequestOptions { OfferThroughput = 400 }
+				);
+
+				docCollectionUri = UriFactory.CreateDocumentCollectionUri(databaseName, collectionName);
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine(ex);
+
+				docClient = null;
+
+				return false;
+			}
+
+			return true;
 		}
-
-
-		static List<ToDoItem> tempItems = new List<ToDoItem>
-		{
-			new ToDoItem { Completed=false, Id="123", Name="First", Description="First Desc"},
-			new ToDoItem { Completed=false, Id="456", Name="Second", Description="Second Desc"},
-			new ToDoItem{ Completed=true, Id="789", Name="Third", Description = "Third Desc"}
-		};
 
 		public async static Task<List<ToDoItem>> GetToDoItems()
 		{
-			return await Task.FromResult(tempItems.Where(todo => todo.Completed == false).ToList());
+			var todos = new List<ToDoItem>();
+
+			if (!await Initialize())
+				return todos;
+
+			var todoQuery = docClient.CreateDocumentQuery<ToDoItem>(
+				docCollectionUri, new FeedOptions { MaxItemCount = -1 })
+									 .Where(todo => todo.Completed == false)
+									 .AsDocumentQuery();
+
+			while (todoQuery.HasMoreResults)
+			{
+				var queryResults = await todoQuery.ExecuteNextAsync<ToDoItem>();
+
+				todos.AddRange(queryResults);
+			}
+
+			return todos;
 		}
 
-		public static List<ToDoItem> GetCompletedToDoItems()
+		public async static Task<List<ToDoItem>> GetCompletedToDoItems()
 		{
-			return tempItems.Where(todo => todo.Completed == true).ToList();
+			var todos = new List<ToDoItem>();
+
+			if (!await Initialize())
+				return todos;
+
+			var completedToDoQuery = docClient.CreateDocumentQuery<ToDoItem>(
+				docCollectionUri, new FeedOptions { MaxItemCount = -1 })
+											  .Where(todo => todo.Completed == true)
+											  .AsDocumentQuery();
+
+			while (completedToDoQuery.HasMoreResults)
+			{
+				var queryResults = await completedToDoQuery.ExecuteNextAsync<ToDoItem>();
+
+				todos.AddRange(queryResults);
+			}
+
+			return todos;
 		}
 
-		public static void CompleteToDoItem(ToDoItem item)
+		public async static Task CompleteToDoItem(ToDoItem item)
 		{
-			var found = tempItems.First(todo => todo.Id == item.Id);
+			item.Completed = true;
 
-			found.Completed = true;
+			await UpdateToDoItem(item);
 		}
 
-		public static void InsertToDoItem(ToDoItem item)
+		public async static Task InsertToDoItem(ToDoItem item)
 		{
-			tempItems.Add(item);
+			if (!await Initialize())
+				return;
+
+			await docClient.CreateDocumentAsync(docCollectionUri, item);
 		}
 
-		public static void DeleteToDoItem(ToDoItem item)
+		public async static Task DeleteToDoItem(ToDoItem item)
 		{
-			tempItems.Remove(item);
+			if (!await Initialize())
+				return;
+
+			var docUri = UriFactory.CreateDocumentUri(databaseName, collectionName, item.Id);
+			await docClient.DeleteDocumentAsync(docUri);
 		}
 
-		public static void UpdateToDoItem(ToDoItem item)
+		public async static Task UpdateToDoItem(ToDoItem item)
 		{
-			var found = tempItems.First(todo => todo.Id == item.Id);
+			if (!await Initialize())
+				return;
 
-			found.Completed = item.Completed;
-			found.Description = item.Description;
-			found.Name = item.Name;
+			var docUri = UriFactory.CreateDocumentUri(databaseName, collectionName, item.Id);
+			await docClient.ReplaceDocumentAsync(docUri, item);
 		}
 	}
 }
