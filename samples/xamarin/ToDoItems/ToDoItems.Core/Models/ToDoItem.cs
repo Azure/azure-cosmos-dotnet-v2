@@ -1,6 +1,9 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+
 namespace ToDoItems.Core
 {
 	public class ToDoItem : INotifyPropertyChanged
@@ -8,6 +11,7 @@ namespace ToDoItems.Core
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		string _id;
+		[JsonProperty("id")]
 		public string Id
 		{
 			get => _id;
