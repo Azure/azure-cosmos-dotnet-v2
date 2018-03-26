@@ -26,16 +26,8 @@ namespace ToDoItems.Core
 		{
 			base.OnAppearing();
 
-			//todoItemsList.BeginRefresh();
-
 			vm.RefreshCommand.Execute(null);
-
-			//if (vm.ToDoItems == null || vm.ToDoItems.Count == 0)
-			//vm.RefreshCommand.Execute(null);
-			//todoItemsList.ItemsSource = await CosmosDBService.GetToDoItems();
-
 		}
-
 
 		protected async void listItemSelected(object sender, SelectedItemChangedEventArgs e)
 		{
