@@ -12,6 +12,7 @@ namespace ToDoItems.Core
 
 		public ICommand RefreshCommand { get; }
 
+
 		public ToDoItemsViewModel()
 		{
 			ToDoItems = new List<ToDoItem>();
@@ -34,6 +35,5 @@ namespace ToDoItems.Core
 				IsBusy = false;
 			}
 		}
-
 	}
 }

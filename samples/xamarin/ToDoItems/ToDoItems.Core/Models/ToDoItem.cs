@@ -7,7 +7,20 @@ namespace ToDoItems.Core
 	{
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		public string Id { get; set; }
+		string _id;
+		public string Id
+		{
+			get => _id;
+			set
+			{
+				if (_id == value)
+					return;
+
+				_id = value;
+
+				HandlePropertyChanged();
+			}
+		}
 
 		string _name;
 		public string Name

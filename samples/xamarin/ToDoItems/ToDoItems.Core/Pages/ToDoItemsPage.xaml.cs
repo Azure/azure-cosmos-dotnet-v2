@@ -46,5 +46,13 @@ namespace ToDoItems.Core
 
 			await Navigation.PushAsync(new ItemDetailPage(todoItem, false));
 		}
+
+		protected async void AddNewClicked(object sender, EventArgs e)
+		{
+			var toDo = new ToDoItem();
+			var todoPage = new ItemDetailPage(toDo, true);
+
+			await Navigation.PushModalAsync(new NavigationPage(todoPage));
+		}
 	}
 }

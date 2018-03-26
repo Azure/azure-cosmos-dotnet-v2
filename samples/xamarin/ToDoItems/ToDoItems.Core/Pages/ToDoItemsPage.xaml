@@ -16,4 +16,7 @@
             </ListView>
         </StackLayout>
     </ContentPage.Content>
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Add" Clicked="AddNewClicked" />
+    </ContentPage.ToolbarItems>
 </ContentPage>
