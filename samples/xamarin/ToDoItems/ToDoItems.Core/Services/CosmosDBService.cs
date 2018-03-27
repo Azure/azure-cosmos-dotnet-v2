@@ -12,122 +12,125 @@ using Xamarin.Forms;
 
 namespace ToDoItems.Core
 {
-	public class CosmosDBService
-	{
-		static DocumentClient docClient = null;
-		static Uri docCollectionUri = null;
+    public class CosmosDBService
+    {
+        static DocumentClient docClient = null;
 
+        static readonly string databaseName = "Tasks";
+        static readonly string collectionName = "Items";
 
-		static readonly string databaseName = "TodoList";
-		static readonly string collectionName = "Items";
+        static async Task<bool> Initialize()
+        {
+            if (docClient != null)
+                return true;
 
-		static async Task<bool> Initialize()
-		{
-			if (docClient != null)
-				return true;
+            try
+            {
+                docClient = new DocumentClient(new Uri(APIKeys.CosmosEndpointUrl), APIKeys.CosmosAuthKey);
 
-			try
-			{
-				docClient = new DocumentClient(new Uri(APIKeys.CosmosEndpointUrl), APIKeys.CosmosAuthKey);
-				// Create the database
-				await docClient.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseName });
+                // Create the database - this can also be done through the portal
+                await docClient.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseName });
 
-				// Create the collection - make sure to specify the RUs - has pricing implications
-				await docClient.CreateDocumentCollectionIfNotExistsAsync(
-					UriFactory.CreateDatabaseUri(databaseName),
-					new DocumentCollection { Id = collectionName },
-					new RequestOptions { OfferThroughput = 400 }
-				);
+                // Create the collection - make sure to specify the RUs - has pricing implications
+                // This can also be done through the portal
+                await docClient.CreateDocumentCollectionIfNotExistsAsync(
+                    UriFactory.CreateDatabaseUri(databaseName),
+                    new DocumentCollection { Id = collectionName },
+                    new RequestOptions { OfferThroughput = 400 }
+                );
 
-				docCollectionUri = UriFactory.CreateDocumentCollectionUri(databaseName, collectionName);
-			}
-			catch (Exception ex)
-			{
-				Debug.WriteLine(ex);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
 
-				docClient = null;
+                docClient = null;
 
-				return false;
-			}
+                return false;
+            }
 
-			return true;
-		}
+            return true;
+        }
 
-		public async static Task<List<ToDoItem>> GetToDoItems()
-		{
-			var todos = new List<ToDoItem>();
+        public async static Task<List<ToDoItem>> GetToDoItems()
+        {
+            var todos = new List<ToDoItem>();
 
-			if (!await Initialize())
-				return todos;
+            if (!await Initialize())
+                return todos;
 
-			var todoQuery = docClient.CreateDocumentQuery<ToDoItem>(
-				docCollectionUri, new FeedOptions { MaxItemCount = -1 })
-									 .Where(todo => todo.Completed == false)
-									 .AsDocumentQuery();
+            var todoQuery = docClient.CreateDocumentQuery<ToDoItem>(
+                UriFactory.CreateDocumentCollectionUri(databaseName, collectionName),
+                new FeedOptions { MaxItemCount = -1 })
+                .Where(todo => todo.Completed == false)
+                .AsDocumentQuery();
 
-			while (todoQuery.HasMoreResults)
-			{
-				var queryResults = await todoQuery.ExecuteNextAsync<ToDoItem>();
+            while (todoQuery.HasMoreResults)
+            {
+                var queryResults = await todoQuery.ExecuteNextAsync<ToDoItem>();
 
-				todos.AddRange(queryResults);
-			}
+                todos.AddRange(queryResults);
+            }
 
-			return todos;
-		}
+            return todos;
+        }
 
-		public async static Task<List<ToDoItem>> GetCompletedToDoItems()
-		{
-			var todos = new List<ToDoItem>();
+        public async static Task<List<ToDoItem>> GetCompletedToDoItems()
+        {
+            var todos = new List<ToDoItem>();
 
-			if (!await Initialize())
-				return todos;
+            if (!await Initialize())
+                return todos;
 
-			var completedToDoQuery = docClient.CreateDocumentQuery<ToDoItem>(
-				docCollectionUri, new FeedOptions { MaxItemCount = -1 })
-											  .Where(todo => todo.Completed == true)
-											  .AsDocumentQuery();
+            var completedToDoQuery = docClient.CreateDocumentQuery<ToDoItem>(
+                UriFactory.CreateDocumentCollectionUri(databaseName, collectionName),
+                new FeedOptions { MaxItemCount = -1 })
+                .Where(todo => todo.Completed == true)
+                .AsDocumentQuery();
 
-			while (completedToDoQuery.HasMoreResults)
-			{
-				var queryResults = await completedToDoQuery.ExecuteNextAsync<ToDoItem>();
+            while (completedToDoQuery.HasMoreResults)
+            {
+                var queryResults = await completedToDoQuery.ExecuteNextAsync<ToDoItem>();
 
-				todos.AddRange(queryResults);
-			}
+                todos.AddRange(queryResults);
+            }
 
-			return todos;
-		}
+            return todos;
+        }
 
-		public async static Task CompleteToDoItem(ToDoItem item)
-		{
-			item.Completed = true;
+        public async static Task CompleteToDoItem(ToDoItem item)
+        {
+            item.Completed = true;
 
-			await UpdateToDoItem(item);
-		}
+            await UpdateToDoItem(item);
+        }
 
-		public async static Task InsertToDoItem(ToDoItem item)
-		{
-			if (!await Initialize())
-				return;
+        public async static Task InsertToDoItem(ToDoItem item)
+        {
+            if (!await Initialize())
+                return;
 
-			await docClient.CreateDocumentAsync(docCollectionUri, item);
-		}
+            await docClient.CreateDocumentAsync(
+                UriFactory.CreateDocumentCollectionUri(databaseName, collectionName),
+                item);
+        }
 
-		public async static Task DeleteToDoItem(ToDoItem item)
-		{
-			if (!await Initialize())
-				return;
+        public async static Task DeleteToDoItem(ToDoItem item)
+        {
+            if (!await Initialize())
+                return;
 
-			var docUri = UriFactory.CreateDocumentUri(databaseName, collectionName, item.Id);
-			await docClient.DeleteDocumentAsync(docUri);
-		}
+            var docUri = UriFactory.CreateDocumentUri(databaseName, collectionName, item.Id);
+            await docClient.DeleteDocumentAsync(docUri);
+        }
 
-		public async static Task UpdateToDoItem(ToDoItem item)
-		{
-			if (!await Initialize())
-				return;
+        public async static Task UpdateToDoItem(ToDoItem item)
+        {
+            if (!await Initialize())
+                return;
 
-			var docUri = UriFactory.CreateDocumentUri(databaseName, collectionName, item.Id);
-			await docClient.ReplaceDocumentAsync(docUri, item);
-		}
-	}
+            var docUri = UriFactory.CreateDocumentUri(databaseName, collectionName, item.Id);
+            await docClient.ReplaceDocumentAsync(docUri, item);
+        }
+    }
 }

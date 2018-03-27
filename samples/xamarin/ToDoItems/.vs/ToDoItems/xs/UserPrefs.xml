@@ -1,26 +1,17 @@
 ﻿<Properties StartupConfiguration="{2EC080B3-2F15-447C-B040-7CB36C93062D}|Default">
-  <MonoDevelop.Ide.Workbench ActiveDocument="ToDoItems.Core/ViewModels/CompletedItemsViewModel.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="ToDoItems.Core/Services/CosmosDBService.cs">
     <Files>
-      <File FileName="ToDoItems.Core/Pages/CompletedItemsPage.xaml" Line="13" Column="44" />
-      <File FileName="ToDoItems.Core/ViewModels/CompletedItemsViewModel.cs" Line="38" Column="2" />
-      <File FileName="ToDoItems.Core/ViewModels/ToDoItemsViewModel.cs" Line="40" Column="50" />
+      <File FileName="ToDoItems.Core/Services/CosmosDBService.cs" Line="1" Column="1" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State name="__root__">
           <Node name="ToDoItems" expanded="True">
             <Node name="ToDoItems.Core" expanded="True">
-              <Node name="Models" expanded="True" />
-              <Node name="Pages" expanded="True">
-                <Node name="CompletedItemsPage.xaml" expanded="True" />
-                <Node name="ToDoItemsPage.xaml" expanded="True" />
-              </Node>
-              <Node name="Services" expanded="True" />
-              <Node name="ViewModels" expanded="True">
-                <Node name="CompletedItemsViewModel.cs" selected="True" />
+              <Node name="Services" expanded="True">
+                <Node name="CosmosDBService.cs" selected="True" />
               </Node>
             </Node>
-            <Node name="ToDoItems.iOS" expanded="True" />
           </Node>
         </State>
       </Pad>
@@ -39,9 +30,12 @@
     <BreakpointStore />
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.ItemProperties.ToDoItems.Android AndroidDesignerPreferredDevice="Nexus 4" PreferredExecutionTarget="Android.Android_Accelerated_x86" AndroidDesignerPreferredTheme="Theme.DeviceDefault" />
   <MultiItemStartupConfigurations />
   <MonoDevelop.Ide.ItemProperties.ToDoItems.iOS PreferredExecutionTarget="MonoDevelop.IPhone.IPhoneSimulatorTarget.F882DD02-AB25-456F-B8CF-2D98CF6676FE">
     <MonoDevelop.MacDev.AppleDevelopmentTeam />
   </MonoDevelop.Ide.ItemProperties.ToDoItems.iOS>
-  <MonoDevelop.Ide.ItemProperties.ToDoItems.Droid FirstBuild="True" AndroidDesignerPreferredTheme="Theme.DeviceDefault.NoActionBar.Fullscreen" />
+  <DisabledProjects>
+    <String>Droid/ToDoItems.Droid.csproj</String>
+  </DisabledProjects>
 </Properties>

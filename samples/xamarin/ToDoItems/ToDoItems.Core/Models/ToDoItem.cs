@@ -27,6 +27,7 @@ namespace ToDoItems.Core
 		}
 
 		string _name;
+		[JsonProperty("name")]
 		public string Name
 		{
 			get => _name;
@@ -42,6 +43,7 @@ namespace ToDoItems.Core
 		}
 
 		string _description;
+		[JsonProperty("description")]
 		public string Description
 		{
 			get => _description;
@@ -57,6 +59,7 @@ namespace ToDoItems.Core
 		}
 
 		bool _completed;
+		[JsonProperty("completed")]
 		public bool Completed
 		{
 			get => _completed;
