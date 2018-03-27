@@ -1,16 +1,24 @@
 ﻿<Properties StartupConfiguration="{2EC080B3-2F15-447C-B040-7CB36C93062D}|Default">
-  <MonoDevelop.Ide.Workbench ActiveDocument="ToDoItems.Core/Services/CosmosDBService.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="iOS/AppDelegate.cs">
     <Files>
-      <File FileName="ToDoItems.Core/Services/CosmosDBService.cs" Line="1" Column="1" />
+      <File FileName="ToDoItems.Core/Pages/ToDoItemsPage.xaml" Line="9" Column="32" />
+      <File FileName="ToDoItems.Core/Pages/ItemDetailPage.xaml" Line="8" Column="32" />
+      <File FileName="ToDoItems.Core/Pages/CompletedItemsPage.xaml" Line="8" Column="5" />
+      <File FileName="ToDoItems.Core/Pages/ToDoItemsPage.xaml.cs" Line="46" Column="1" />
+      <File FileName="ToDoItems.Core/App.cs" Line="16" Column="13" />
+      <File FileName="iOS/AppDelegate.cs" Line="25" Column="1" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State name="__root__">
           <Node name="ToDoItems" expanded="True">
             <Node name="ToDoItems.Core" expanded="True">
-              <Node name="Services" expanded="True">
-                <Node name="CosmosDBService.cs" selected="True" />
+              <Node name="Pages" expanded="True">
+                <Node name="ToDoItemsPage.xaml" expanded="True" />
               </Node>
+            </Node>
+            <Node name="ToDoItems.iOS" expanded="True">
+              <Node name="AppDelegate.cs" selected="True" />
             </Node>
           </Node>
         </State>
