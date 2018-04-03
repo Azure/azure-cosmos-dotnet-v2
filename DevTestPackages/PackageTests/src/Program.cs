@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 #if UseNetStandard
@@ -17,6 +18,9 @@ namespace ConsoleAppNetFrameworkRefNetFramework
     {        
         static void Main(string[] args)
         {
+            Console.WriteLine(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
+            Console.WriteLine(IntPtr.Size);
+
             var binDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
             var nativeDll = new List<string>() {
