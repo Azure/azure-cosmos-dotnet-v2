@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ContentPage 
+    xmlns="http://xamarin.com/schemas/2014/forms" 
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" 
+    xmlns:ios="clr-namespace:Xamarin.Forms.PlatformConfiguration.iOSSpecific;assembly=Xamarin.Forms.Core"
+    x:Class="ToDoItems.Core.ItemDetailPage"
+    Title="{Binding Title}"
+    ios:Page.UseSafeArea="true">
+    <ContentPage.Content>
+        <Grid ColumnSpacing="3" Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="3*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="100" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Label Text="Name" FontAttributes="Bold" VerticalTextAlignment="Center"
+                   Grid.Row="0" Grid.Column="0" />
+
+            <Entry Text="{Binding ToDoItem.Name}" Grid.Row="0" Grid.Column="1" />
+
+            <Label Text="Description" FontAttributes="Bold" VerticalTextAlignment="Center"
+                   Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" />
+
+            <Editor Text="{Binding ToDoItem.Description}" Grid.Row="2" Grid.Column="0" BackgroundColor="#fffbdb" 
+                   Grid.ColumnSpan="2" />
+
+
+            <Label Text="Completed" FontAttributes="Bold" VerticalTextAlignment="Center"
+                   Grid.Column="0" Grid.Row="3" />
+            <Switch Grid.Column="1" Grid.Row="3" IsToggled="{Binding ToDoItem.Completed}" Margin="15,0" />
+
+        </Grid>
+    </ContentPage.Content>
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Save" Command="{Binding SaveCommand}" />
+        <ToolbarItem Text="Cancel" Clicked="Handle_CancelClicked" />
+    </ContentPage.ToolbarItems>
+</ContentPage>

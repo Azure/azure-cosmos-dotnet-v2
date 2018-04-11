@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ContentPage 
+    xmlns="http://xamarin.com/schemas/2014/forms" 
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" 
+    xmlns:ios="clr-namespace:Xamarin.Forms.PlatformConfiguration.iOSSpecific;assembly=Xamarin.Forms.Core"
+    x:Class="ToDoItems.Core.ToDoItemsPage"
+    Title="{Binding Title}"
+    x:Name="OverallToDoPage"
+    ios:Page.UseSafeArea="true">
+    <ContentPage.Content>
+        <StackLayout>
+            <ActivityIndicator IsRunning="{Binding IsBusy}" />
+            <ListView x:Name="todoItemsList" ItemsSource="{Binding ToDoItems}">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <TextCell Text="{Binding Name}">
+                            <TextCell.ContextActions>
+                                <MenuItem Text="Complete" IsDestructive="false"
+                                          Command="{Binding Path=BindingContext.CompleteCommand, Source={x:Reference Name=OverallToDoPage}}" 
+                                          CommandParameter="{Binding .}" />
+                            </TextCell.ContextActions>
+                        </TextCell>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </StackLayout>
+    </ContentPage.Content>
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Add" Clicked="AddNewClicked" />
+    </ContentPage.ToolbarItems>
+</ContentPage>
