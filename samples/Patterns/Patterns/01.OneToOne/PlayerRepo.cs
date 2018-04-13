@@ -64,7 +64,7 @@ namespace Patterns.OneToOne
 
         public async Task UpdatePlayerAsync(Player updatedInfo)
         {
-            // TIP: Use donditional update with ETag
+            // TIP: Use conditional update with ETag
             Uri documentUri = UriFactory.CreateDocumentUri(DatabaseName, CollectionName, updatedInfo.Id);
 
             Player player = await client.ReadDocumentAsync<Player>(
