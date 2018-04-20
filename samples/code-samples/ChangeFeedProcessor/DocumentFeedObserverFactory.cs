@@ -11,21 +11,29 @@
 // </copyright>
 //---------------------------------------------------------------------------------
 
-namespace ChangeFeedProcessor
+namespace ChangeFeedMigrationSample
 {
-    using Microsoft.Azure.Documents.ChangeFeedProcessor.FeedProcessing;
+    using Microsoft.Azure.Documents.ChangeFeedProcessor;
+    using Microsoft.Azure.Documents.Client;
 
     /// <summary>
     /// Factory class to create instance of document feed observer. 
     /// </summary>
     public class DocumentFeedObserverFactory : IChangeFeedObserverFactory
     {
+        private DocumentClient client;
+        private DocumentCollectionInfo collectionInfo;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentFeedObserverFactory" /> class.
         /// Saves input DocumentClient and DocumentCollectionInfo parameters to class fields
         /// </summary>
-        public DocumentFeedObserverFactory()
+        /// <param name="destClient">Client connected to destination collection</param>
+        /// <param name="destCollInfo">Destination collection information</param>
+        public DocumentFeedObserverFactory(DocumentClient destClient, DocumentCollectionInfo destCollInfo)
         {
+            this.collectionInfo = destCollInfo;
+            this.client = destClient;
         }
 
         /// <summary>
@@ -34,8 +42,8 @@ namespace ChangeFeedProcessor
         /// <returns>DocumentFeedObserver with client and destination collection information</returns>
         public IChangeFeedObserver CreateObserver()
         {
-            DocumentFeedObserver newObserver = new DocumentFeedObserver();
-            return newObserver as IChangeFeedObserver;
+            DocumentFeedObserver newObserver = new DocumentFeedObserver(this.client, this.collectionInfo);
+            return newObserver;
         }
     }
 }

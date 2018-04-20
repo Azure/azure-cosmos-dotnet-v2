@@ -17,7 +17,6 @@ x64/
 build/
 [Bb]in/
 [Oo]bj/
-.vs/
 
 # Debug.config files
 *.Debug.config
