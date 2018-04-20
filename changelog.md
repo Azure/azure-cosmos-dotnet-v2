@@ -1,3 +1,9 @@
+## Changes in [1.22.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/1.21.1) : ##
+
+* Added ConsistencyLevel Property to FeedOptions.
+* Added JsonSerializerSettings to RequestOptions and FeedOptions.
+* Added EnableReadRequestsFallback to ConnectionPolicy.
+
 ## Changes in [1.21.1](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/1.21.1) : ##
 
 * Fixed KeyNotFoundException for cross partition order by queries in corner cases.
