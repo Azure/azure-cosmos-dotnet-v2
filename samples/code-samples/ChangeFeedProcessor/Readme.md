@@ -1,2 +1,2 @@
-If you are using Change FeedProcessor library earlier than 2 then please take a look at the code commit on 
+If you are using Change FeedProcessor library earlier than version 2 then please take a look at the code commit on 
 https://github.com/Azure/azure-documentdb-dotnet/tree/125976b573d3d87f9e5f3f518cc0161dc4d15045/samples/code-samples/ChangeFeedProcessor
