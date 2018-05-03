@@ -86,19 +86,20 @@ namespace ChangeFeedMigrationSample
         {
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("Change feed: PartitionId {0} total {1} doc(s)", context.PartitionKeyRangeId, Interlocked.Add(ref totalDocs, docs.Count));
+            var tasks = new List<Task>(docs.Count);
+
             foreach (Document doc in docs)
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine(doc.Id.ToString());
-               
+                Console.WriteLine(doc.Id);
 
                 if (this.destinationCollectionUri != null)
                 {
-                    this.client.UpsertDocumentAsync(this.destinationCollectionUri, doc);
+                    tasks.Add(this.client.UpsertDocumentAsync(this.destinationCollectionUri, doc));
                 }
             }
 
-            return Task.CompletedTask;
+            return Task.WhenAll(tasks);
         }
     }
 }
