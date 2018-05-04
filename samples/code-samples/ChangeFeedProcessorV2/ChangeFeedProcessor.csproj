@@ -54,8 +54,8 @@
     <StartupObject>ChangeFeedProcessor.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Azure.Documents.ChangeFeedProcessor, Version=1.3.2.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.Azure.DocumentDB.ChangeFeedProcessor.1.3.2\lib\net452\Microsoft.Azure.Documents.ChangeFeedProcessor.dll</HintPath>
+    <Reference Include="Microsoft.Azure.Documents.ChangeFeedProcessor, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.Azure.DocumentDB.ChangeFeedProcessor.2.0.0-beta\lib\net451\Microsoft.Azure.Documents.ChangeFeedProcessor.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Azure.Documents.Client, Version=1.21.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.Azure.DocumentDB.1.21.1\lib\net45\Microsoft.Azure.Documents.Client.dll</HintPath>

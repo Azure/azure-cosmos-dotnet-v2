@@ -11,7 +11,7 @@
 // </copyright>
 //---------------------------------------------------------------------------------
 
-namespace ChangeFeedMigrationSample
+namespace ChangeFeedProcessor
 {
     using System;
     using System.Configuration;
@@ -58,7 +58,7 @@ namespace ChangeFeedMigrationSample
         {
             Console.WriteLine("Change Feed Processor client Started at: " + DateTime.Now.ToShortTimeString());
             Program newApp = new Program();
-            newApp.MainAsync().Wait();             
+            newApp.MainAsync().Wait();
         }
 
         /// <summary>
@@ -119,7 +119,7 @@ namespace ChangeFeedMigrationSample
                     UriFactory.CreateDatabaseUri(databaseName),
                     new DocumentCollection { Id = collectionName },
                     new RequestOptions { OfferThroughput = throughput });
-            }     
+            }
         }
 
         /// <summary>
@@ -160,14 +160,14 @@ namespace ChangeFeedMigrationSample
 
             // Customizable change feed option and host options 
             ChangeFeedOptions feedOptions = new ChangeFeedOptions();
-         
+
             // ie customize StartFromBeginning so change feed reads from beginning
             // can customize MaxItemCount, PartitonKeyRangeId, RequestContinuation, SessionToken and StartFromBeginning
             feedOptions.StartFromBeginning = true;
-         
+
 
             ChangeFeedHostOptions feedHostOptions = new ChangeFeedHostOptions();
-          
+
             // ie. customizing lease renewal interval to 15 seconds
             // can customize LeaseRenewInterval, LeaseAcquireInterval, LeaseExpirationInterval, FeedPollDelay 
             feedHostOptions.LeaseRenewInterval = TimeSpan.FromSeconds(15);

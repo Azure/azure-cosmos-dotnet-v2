@@ -75,3 +75,7 @@ samples/xamarin/ToDoItems/.vs/ToDoItems/xs/UserPrefs.xml
 samples/code-samples/ChangeFeedProcessor/.vs/ChangeFeedProcessor/v15/sqlite3/db.lock
 samples/code-samples/ChangeFeedProcessor/.vs/ChangeFeedProcessor/v15/Server/sqlite3/storage.ide
 samples/code-samples/ChangeFeedProcessor/.vs/ChangeFeedProcessor/v15/Server/sqlite3/db.lock
+samples/code-samples/ChangeFeedProcessor/.vs/ChangeFeedProcessor/v15/sqlite3/storage.ide-wal
+samples/code-samples/ChangeFeedProcessor/.vs/ChangeFeedProcessor/v15/sqlite3/storage.ide-shm
+samples/code-samples/ChangeFeedProcessor/.vs/ChangeFeedProcessor/v15/Server/sqlite3/storage.ide-wal
+samples/code-samples/ChangeFeedProcessor/.vs/ChangeFeedProcessor/v15/Server/sqlite3/storage.ide-shm
