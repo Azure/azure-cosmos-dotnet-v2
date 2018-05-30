@@ -66,8 +66,8 @@ namespace DocumentDB.Sample.MultiModel
                 // Skamania -> Clark
                 "g.V('Skamania').AddE('neighbor').Property('inter-state', 'false').To(g.V('Clark'))",
 
-                // Clark -> Multinomah
-                "g.V('Clark').AddE('neighbor').Property('inter-state', 'true').To(g.V('Multinomah'))",
+                // Clark -> Multnomah
+                "g.V('Clark').AddE('neighbor').Property('inter-state', 'true').To(g.V('Multnomah'))",
 
                 // Adams -> Grant
                 "g.V('Adams').AddE('neighbor').Property('inter-state', 'false').To(g.V('Grant'))"
@@ -95,8 +95,8 @@ namespace DocumentDB.Sample.MultiModel
                 //2. All neighbors of Clark where inter-state = false (connecting between states)
                 "g.V('Clark').outE().has('inter-state', 'true')",
 
-                //3. Find the path from King County till Multinomah  -- DFS  (King->Pierce->Lewis->Cowlitz->Clark->Multinomah)
-                "g.V('King').repeat(out()).until(hasId('Multinomah')).path().limit(1)"
+                //3. Find the path from King County till Multnomah  -- DFS  (King->Pierce->Lewis->Cowlitz->Clark->Multnomah)
+                "g.V('King').repeat(out()).until(hasId('Multnomah')).path().limit(1)"
             };
 
             foreach (string queryText in queries)

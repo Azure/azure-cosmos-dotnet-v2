@@ -29,7 +29,7 @@ namespace DocumentDB.Sample.MultiModel
             await this.client.CreateDocumentAsync(this.collectionLink, new County() { Name = "Skamania", Population = 11066, Seat = "Stevenson", State = "WA" });
 
             await this.client.CreateDocumentAsync(this.collectionLink, new County() { Name = "Baker", Population = 16510, Seat = "Baker City", State = "OR" });
-            await this.client.CreateDocumentAsync(this.collectionLink, new County() { Name = "Multinomah", Population = 790670, Seat = "Portland", State = "OR" });
+            await this.client.CreateDocumentAsync(this.collectionLink, new County() { Name = "Multnomah", Population = 790670, Seat = "Portland", State = "OR" });
         }
 
         public async Task QueryCountyAsync()
