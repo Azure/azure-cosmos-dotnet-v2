@@ -53,21 +53,6 @@ namespace DocumentDB.Sample.MultiModel
                 // 2. Query 
                 await documentModel.QueryCountyAsync();
             }
-
-            // Graph Operations
-            //----------------------
-            {
-                GraphModel graphModel = new GraphModel(client, collection);
-
-                //0. Add new nodes
-                await graphModel.AddNodesAsync();
-
-                // 1. Add neighbors
-                await graphModel.AddEdgesAsync();
-
-                // 2. Query
-                await graphModel.QueryAsync();
-            }
         }
 
         private static async Task<DocumentCollection> CreateCollectionIfNotExistsAsync(DocumentClient client)
