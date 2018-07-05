@@ -95,7 +95,7 @@ namespace Patterns.OneToMany
                 new RequestOptions { PartitionKey = new PartitionKey(updatedInfo.PlayerId) });
 
             AccessCondition condition = new AccessCondition { Condition = game.ETag, Type = AccessConditionType.IfMatch };
-            await client.ReplaceDocumentAsync(documentUri, game, new RequestOptions { AccessCondition = condition });
+            await client.ReplaceDocumentAsync(documentUri, updatedInfo, new RequestOptions { AccessCondition = condition });
         }
     }
 }
