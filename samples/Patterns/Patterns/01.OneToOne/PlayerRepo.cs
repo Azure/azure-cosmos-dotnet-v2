@@ -72,7 +72,7 @@ namespace Patterns.OneToOne
                 new RequestOptions { PartitionKey = new PartitionKey(updatedInfo.Id) });
 
             AccessCondition condition = new AccessCondition { Condition = player.ETag, Type = AccessConditionType.IfMatch };
-            await client.ReplaceDocumentAsync(documentUri, player, new RequestOptions { AccessCondition = condition });
+            await client.ReplaceDocumentAsync(documentUri, updatedInfo, new RequestOptions { AccessCondition = condition });
         }
     }
 }
