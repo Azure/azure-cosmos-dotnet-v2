@@ -8,6 +8,7 @@
     using System.Linq;
     using System.Net;
     using System.Threading.Tasks;
+    using System.Collections.Generic;
 
     // ----------------------------------------------------------------------------------------------------------
     // Prerequistes - 
@@ -47,7 +48,7 @@
     //                                        of new documents to this sproc. Consult this sample for an example
     //                                        of a BulkInsert stored procedure. 
     // ----------------------------------------------------------------------------------------------------------
-    
+
     public class Program
     {
         private static readonly string databaseName = "samples";
@@ -166,7 +167,7 @@
             // Note that Reads require a partition key to be spcified. This can be skipped if your collection is not
             // partitioned i.e. does not have a partition key definition during creation.
             var response = await client.ReadDocumentAsync(
-                UriFactory.CreateDocumentUri(databaseName, collectionName, "SalesOrder1"), 
+                UriFactory.CreateDocumentUri(databaseName, collectionName, "SalesOrder1"),
                 new RequestOptions { PartitionKey = new PartitionKey("Account1") });
 
             // You can measure the throughput consumed by any operation by inspecting the RequestCharge property
@@ -184,12 +185,28 @@
             //******************************************************************************************************************
             Console.WriteLine("\n1.3 - Reading all documents in a collection");
 
-            foreach (Document document in await client.ReadDocumentFeedAsync(
-                UriFactory.CreateDocumentCollectionUri(databaseName, collectionName), 
-                new FeedOptions { MaxItemCount = 10 }))
+            foreach (Document document in await ReadAllDocumentsInCollectionAsync(client,
+                UriFactory.CreateDocumentCollectionUri(databaseName, collectionName)
+                ))
             {
                 Console.WriteLine(document);
             }
+        }
+
+        private static async Task<List<dynamic>> ReadAllDocumentsInCollectionAsync(DocumentClient client, Uri collectionSelfLink)
+        {
+            //A helper function to read all documents in a collection using a continuation token
+            List<dynamic> documents = new List<dynamic>();
+
+            string continuationToken = null;
+            do
+            {
+                FeedResponse<dynamic> feedResponseOfProducts = await client.ReadDocumentFeedAsync(collectionSelfLink, new FeedOptions() { RequestContinuation = continuationToken });
+                documents.AddRange(feedResponseOfProducts);
+                continuationToken = feedResponseOfProducts.ResponseContinuation;
+            } while (continuationToken != null);
+
+            return documents;
         }
 
         private static SalesOrder QueryDocuments()
@@ -231,7 +248,7 @@
 
             order.ShippedDate = DateTime.UtcNow;
             ResourceResponse<Document> response = await client.ReplaceDocumentAsync(
-                UriFactory.CreateDocumentUri(databaseName, collectionName, order.Id), 
+                UriFactory.CreateDocumentUri(databaseName, collectionName, order.Id),
                 order);
 
             var updated = response.Resource;
@@ -346,8 +363,9 @@
             var collectionLink = UriFactory.CreateDocumentCollectionUri(databaseName, collectionName);
 
             // Create a dynamic object
-            dynamic salesOrder = new { 
-                id = "_SalesOrder5", 
+            dynamic salesOrder = new
+            {
+                id = "_SalesOrder5",
                 AccountNumber = "NewUser01",
                 PurchaseOrderNumber = "PO18009186470",
                 OrderDate = DateTime.UtcNow,
@@ -363,9 +381,9 @@
             Console.WriteLine("Request charge of operation: {0}", response.RequestCharge);
 
             response = await client.ReadDocumentAsync(
-                UriFactory.CreateDocumentUri(databaseName, collectionName, "_SalesOrder5"), 
+                UriFactory.CreateDocumentUri(databaseName, collectionName, "_SalesOrder5"),
                 new RequestOptions { PartitionKey = new PartitionKey("NewUser01") });
-            
+
             var readDocument = response.Resource;
 
             //update a dynamic object by just creating a new Property on the fly
@@ -460,7 +478,7 @@
 
             readDoc = response.Resource;
             Console.WriteLine("Read doc with StatusCode of {0}", response.StatusCode);
-            
+
             // Get the document again with conditional access set, no document should be returned
             var accessCondition = new AccessCondition
             {
@@ -469,7 +487,7 @@
             };
 
             response = await client.ReadDocumentAsync(
-                UriFactory.CreateDocumentUri(databaseName, collectionName, "SalesOrder2"), 
+                UriFactory.CreateDocumentUri(databaseName, collectionName, "SalesOrder2"),
                 new RequestOptions
                 {
                     AccessCondition = accessCondition,
@@ -483,7 +501,7 @@
             response = await client.ReplaceDocumentAsync(readDoc);
 
             response = await client.ReadDocumentAsync(
-                UriFactory.CreateDocumentUri(databaseName, collectionName, "SalesOrder2"), 
+                UriFactory.CreateDocumentUri(databaseName, collectionName, "SalesOrder2"),
                 new RequestOptions
                 {
                     AccessCondition = accessCondition,
@@ -505,7 +523,7 @@
                 });
 
             SalesOrder querySalesOrder = client.CreateDocumentQuery<SalesOrder>(
-                UriFactory.CreateDocumentCollectionUri(databaseName, collectionName), new FeedOptions {  })
+                UriFactory.CreateDocumentCollectionUri(databaseName, collectionName), new FeedOptions { })
                 .Where(so => so.AccountNumber == "Account1")
                 .AsEnumerable()
                 .First();
