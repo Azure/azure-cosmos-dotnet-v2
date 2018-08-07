@@ -1,0 +1,14 @@
+{
+  "bindings": [
+    {
+      "type": "cosmosDBTrigger",
+      "name": "input",
+      "direction": "in",
+      "leaseCollectionName": "leases",
+      "connectionStringSetting": "IoTTrigger_ConnectionString",
+      "databaseName": "IoT",
+      "collectionName": "IoT",
+      "createLeaseCollectionIfNotExists": true
+    }
+  ]
+}

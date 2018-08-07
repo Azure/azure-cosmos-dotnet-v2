@@ -33,7 +33,7 @@ namespace ChangeFeedProcessor
         private int leaseThroughput = int.Parse(ConfigurationManager.AppSettings["leaseThroughput"]);
 
         private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-        private readonly ChangeFeedProcessorBuilder builder = new ChangeFeedProcessorBuilder();
+ 
 
 
         /// <summary>
@@ -130,8 +130,8 @@ namespace ChangeFeedProcessor
             // ie. customizing lease renewal interval to 15 seconds
             // can customize LeaseRenewInterval, LeaseAcquireInterval, LeaseExpirationInterval, FeedPollDelay 
             feedProcessorOptions.LeaseRenewInterval = TimeSpan.FromSeconds(15);
-
-            this.builder
+            ChangeFeedProcessorBuilder builder = new ChangeFeedProcessorBuilder();
+            builder
                 .WithHostName(hostName)
                 .WithFeedCollection(documentCollectionInfo)
                 .WithLeaseCollection(leaseCollectionInfo)
@@ -140,7 +140,7 @@ namespace ChangeFeedProcessor
 
             //    .WithObserver<DocumentFeedObserver>();  or just pass a observer
 
-            var result = await this.builder.BuildAsync();
+            var result = await builder.BuildAsync();
             await result.StartAsync();
             Console.Read();
             await result.StopAsync();
