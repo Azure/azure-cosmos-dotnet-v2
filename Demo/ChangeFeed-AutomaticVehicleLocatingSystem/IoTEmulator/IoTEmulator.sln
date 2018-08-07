@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27128.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "src", "src\src.csproj", "{26B05D23-0E72-40B8-8F3D-8AE47449063F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureCosmosDBLib", "AzureCosmosDBLib\AzureCosmosDBLib.csproj", "{51627AFE-DBEE-467F-863E-9DE66B68C7AB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{26B05D23-0E72-40B8-8F3D-8AE47449063F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{26B05D23-0E72-40B8-8F3D-8AE47449063F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{26B05D23-0E72-40B8-8F3D-8AE47449063F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{26B05D23-0E72-40B8-8F3D-8AE47449063F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{51627AFE-DBEE-467F-863E-9DE66B68C7AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51627AFE-DBEE-467F-863E-9DE66B68C7AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51627AFE-DBEE-467F-863E-9DE66B68C7AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51627AFE-DBEE-467F-863E-9DE66B68C7AB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {69C03CB8-2144-49F0-98B8-7E9A2D88C61E}
+	EndGlobalSection
+EndGlobal

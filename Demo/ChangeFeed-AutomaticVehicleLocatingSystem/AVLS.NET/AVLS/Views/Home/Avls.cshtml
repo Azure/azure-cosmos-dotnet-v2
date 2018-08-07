@@ -1,0 +1,73 @@
+﻿
+<script type='text/javascript' src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.1.1.min.js"></script>
+<script type='text/javascript' src='http://www.bing.com/api/maps/mapcontrol?branch=experimental'></script>
+
+@{
+    ViewBag.Title = "Contoso Life Saver";
+}
+
+<div id="mainframe" style="position:fixed; display:flex; flex-direction:row;min-height: 100%; height:100%;  font-weight:lighter ;width:100%;font-family:'Segoe UI'">
+    <div id="leftpane" style="float:left;  width:100%;  /* Minimum height for modern browsers */ ">
+        <div id="myMap" style=' display:flex; width:100%; height:100%;'></div>
+    </div>
+
+    <div id="rightpane" style="
+         position:relative;
+         float: left;
+         width: 0%;
+         background-color: rgba(0, 116, 199, 0.85);
+         align-content: center;
+         vertical-align: central;
+         border-left-style: outset;
+         border-left-width: 5px;
+         border-left-color: rgba(0, 116, 199, 0.25);
+         padding-left: 45px;
+         background-clip:padding-box";>
+
+        <div style="flex-direction:row; position:absolute; bottom:60px;">
+            <input type="submit" id="btnStart" value="Start" onclick="OnStart()"
+                   style="height:40px;  font-family: 'Segoe UI Semibold';  border:none;  padding-left:5px;
+                    width:150px; font-size: 15px; color:rgba(0, 116, 199, 0.85); background-color: white" />
+
+            <input type="submit" id="btnStop" value="Stop" onclick="OnStop()"
+                   style="height:40px;  font-family: 'Segoe UI Semibold';   left:40px; border:none;  padding-left:5px;
+                    width:150px; font-size: 15px; color:rgba(0, 116, 199, 0.85); background-color: white" />
+        </div>
+
+    </div>
+</div>
+
+
+<script>
+    var _bingMap;
+    var timer;
+    window.onload = function () {
+      UpdateMap();
+      timer = setInterval(UpdateMap, 50);
+    }
+
+    function UpdateMap() {
+        var url = "/Home/GetNumbers";
+        $.get(url, null, function (data) {
+            var result;
+            if (data) {
+                result = JSON.parse(data);
+            }
+            if (_bingMap === undefined) {
+                _bingMap = new BingMap();
+            }
+            _bingMap.DrawMap(result); //{ "lat": "40.7145500183105", "long": "-74.0071411132813", "carId": "ABC 432" }
+        });
+    }
+
+    function OnStart() {
+         timer = setInterval(UpdateMap, 10000);
+        
+    }
+
+    function OnStop() {
+        clearInterval(timer);
+    }
+
+
+</script>
