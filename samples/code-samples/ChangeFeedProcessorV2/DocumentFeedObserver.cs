@@ -1,13 +1,13 @@
-﻿//--------------------------------------------------------------------------------- 
+﻿//---------------------------------------------------------------------------------
 // <copyright file="DocumentFeedObserver.cs" company="Microsoft">
-// Microsoft (R)  Azure SDK 
-// Software Development Kit 
-//  
-// Copyright (c) Microsoft Corporation. All rights reserved.   
-// 
-// THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,  
-// EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES  
-// OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.  
+// Microsoft (R)  Azure SDK
+// Software Development Kit
+//
+// Copyright (c) Microsoft Corporation. All rights reserved.
+//
+// THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,
+// EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES
+// OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
 // </copyright>
 //---------------------------------------------------------------------------------
 
@@ -19,12 +19,11 @@ namespace ChangeFeedProcessor
     using System.Threading.Tasks;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.ChangeFeedProcessor.FeedProcessing;
-    using Microsoft.Azure.Documents.Client;
 
     /// <summary>
-    /// This class implements the IChangeFeedObserver interface and is used to observe 
-    /// changes on change feed. ChangeFeedEventHost will create as many instances of 
-    /// this class as needed. 
+    /// This class implements the IChangeFeedObserver interface and is used to observe
+    /// changes from the change feed. ChangeFeedEventHost will create as many instances of
+    /// this class as needed.
     /// </summary>
     public class DocumentFeedObserver : IChangeFeedObserver
     {
@@ -32,20 +31,17 @@ namespace ChangeFeedProcessor
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentFeedObserver" /> class.
-        /// Saves input DocumentClient and DocumentCollectionInfo parameters to class fields
         /// </summary>
-        /// <param name="client"> Client connected to destination collection </param>
-        /// <param name="destCollInfo"> Destination collection information </param>
         public DocumentFeedObserver()
         {
 
         }
 
         /// <summary>
-        /// Called when change feed observer is opened; 
-        /// this function prints out observer partition key id. 
+        /// Called when change feed observer is opened; this function prints out the
+        /// observer's partition key id.
         /// </summary>
-        /// <param name="context">The context specifying partition for this observer, etc.</param>
+        /// <param name="context">The context specifying the partition for this observer, etc.</param>
         /// <returns>A Task to allow asynchronous execution</returns>
         public Task OpenAsync(IChangeFeedObserverContext context)
         {
@@ -55,10 +51,10 @@ namespace ChangeFeedProcessor
         }
 
         /// <summary>
-        /// Called when change feed observer is closed; 
-        /// this function prints out observer partition key id and reason for shut down. 
+        /// Called when change feed observer is closed; this function prints out the
+        /// observer's partition key id and reason for shut down.
         /// </summary>
-        /// <param name="context">The context specifying partition for this observer, etc.</param>
+        /// <param name="context">The context specifying the partition for this observer, etc.</param>
         /// <param name="reason">Specifies the reason the observer is closed.</param>
         /// <returns>A Task to allow asynchronous execution</returns>
         public Task CloseAsync(IChangeFeedObserverContext context, ChangeFeedObserverCloseReason reason)
@@ -70,6 +66,13 @@ namespace ChangeFeedProcessor
         }
 
 
+        /// <summary>
+        /// Called when there is a batch of changes to be processed.
+        /// </summary>
+        /// <param name="context">The context specifying the partition for this observer, etc.</param>
+        /// <param name="docs">The documents changed.</param>
+        /// <param name="cancellationToken">Token to signal that the parition processing is going to finish.</param>
+        /// <returns>A Task to allow asynchronous execution</returns>
         public Task ProcessChangesAsync(IChangeFeedObserverContext context, IReadOnlyList<Document> docs, CancellationToken cancellationToken)
         {
             Console.ForegroundColor = ConsoleColor.Green;

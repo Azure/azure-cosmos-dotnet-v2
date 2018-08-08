@@ -1,4 +1,16 @@
-﻿
+﻿//---------------------------------------------------------------------------------
+// <copyright file="Program.cs" company="Microsoft">
+// Microsoft (R)  Azure SDK
+// Software Development Kit
+//
+// Copyright (c) Microsoft Corporation. All rights reserved.
+//
+// THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,
+// EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES
+// OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
+// </copyright>
+//---------------------------------------------------------------------------------
+
 namespace ChangeFeedProcessor
 {
     using System;
@@ -10,9 +22,6 @@ namespace ChangeFeedProcessor
     using Microsoft.Azure.Documents.ChangeFeedProcessor.Logging;
     using Microsoft.Azure.Documents.Client;
 
-
-
-    /// ------------------------------------------------------------------------------------------------
     public class Program
     {
         // Modify EndPointUrl and PrimaryKey to connect to your own subscription
@@ -23,7 +32,7 @@ namespace ChangeFeedProcessor
         private int monitoredThroughput = int.Parse(ConfigurationManager.AppSettings["monitoredThroughput"]);
 
         // optional setting to store lease collection on different account
-        // set lease Uri, secretKey and DbName to same as monitored if both collections 
+        // set lease Uri, secretKey and DbName to same as monitored if both collections
         // are on the same account
 
         private string leaseUri = ConfigurationManager.AppSettings["leaseUri"];
@@ -33,15 +42,12 @@ namespace ChangeFeedProcessor
         private int leaseThroughput = int.Parse(ConfigurationManager.AppSettings["leaseThroughput"]);
 
         private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
- 
-
 
         /// <summary>
         ///  Main program function; called when program runs
         /// </summary>
         /// <param name="args">Command line parameters (not used)</param>
-        /// 
-
+        ///
         public static void Main(string[] args)
         {
             string hostName = "HostName " + DateTime.Now.Ticks.ToString();
@@ -57,15 +63,17 @@ namespace ChangeFeedProcessor
             using (tracelogProvider.OpenNestedContext(hostName))
             {
                 LogProvider.SetCurrentLogProvider(tracelogProvider);
-                // After this, create IChangeFeedProcessor instance and start/stop it.
+                // After this, create IChangeFeedProcessor instance and
+                // start/stop it.
             }
             Program newApp = new Program();
             newApp.MainAsync().Wait();
         }
 
         /// <summary>
-        /// Main Async function; checks for or creates monitored/lease collections and runs
-        /// Change Feed Host (RunChangeFeedHostAsync)
+        /// Main Async function; checks for or creates monitored/lease
+        /// collections and runs Change Feed Host
+        /// (<see cref="RunChangeFeedHostAsync" />)
         /// </summary>
         /// <returns>A Task to allow asynchronous execution</returns>
         private async Task MainAsync()
@@ -90,8 +98,9 @@ namespace ChangeFeedProcessor
 
 
         /// <summary>
-        /// Registers change feed observer to update changes read on change feed to destination 
-        /// collection. Deregisters change feed observer and closes process when enter key is pressed
+        /// Registers a change feed observer to update changes read on
+        /// change feed to destination collection. Deregisters change feed
+        /// observer and closes process when enter key is pressed
         /// </summary>
         /// <returns>A Task to allow asynchronous execution</returns>
 
@@ -99,7 +108,7 @@ namespace ChangeFeedProcessor
         {
             string hostName = Guid.NewGuid().ToString();
 
-            // monitored collection info 
+            // monitored collection info
             DocumentCollectionInfo documentCollectionInfo = new DocumentCollectionInfo
             {
                 Uri = new Uri(this.monitoredUri),
@@ -120,7 +129,7 @@ namespace ChangeFeedProcessor
             ChangeFeedProcessorOptions feedProcessorOptions = new ChangeFeedProcessorOptions();
 
             // ie. customizing lease renewal interval to 15 seconds
-            // can customize LeaseRenewInterval, LeaseAcquireInterval, LeaseExpirationInterval, FeedPollDelay 
+            // can customize LeaseRenewInterval, LeaseAcquireInterval, LeaseExpirationInterval, FeedPollDelay
             feedProcessorOptions.LeaseRenewInterval = TimeSpan.FromSeconds(15);
             feedProcessorOptions.StartFromBeginning = true;
             ChangeFeedProcessorBuilder builder = new ChangeFeedProcessorBuilder();
@@ -141,10 +150,13 @@ namespace ChangeFeedProcessor
 
 
         /// <summary>
-        /// Checks whether collections exists. Creates new collection if collection does not exist 
-        /// WARNING: CreateCollectionIfNotExistsAsync will create a new 
-        /// with reserved throughput which has pricing implications. For details
-        /// visit: https://azure.microsoft.com/en-us/pricing/details/cosmos-db/
+        /// Checks whether a collections exists. Creates a new collection if
+        /// the collection does not exist.
+        /// <para>WARNING: CreateCollectionIfNotExistsAsync will create a
+        /// new collection with reserved throughput which has pricing
+        /// implications. For details visit:
+        /// https://azure.microsoft.com/en-us/pricing/details/cosmos-db/
+        /// </para>
         /// </summary>
         /// <param name="endPointUri">End point URI for account </param>
         /// <param name="secretKey">Primary key to access the account </param>
@@ -154,21 +166,21 @@ namespace ChangeFeedProcessor
         /// <returns>A Task to allow asynchronous execution</returns>
         public async Task CreateCollectionIfNotExistsAsync(string endPointUri, string secretKey, string databaseName, string collectionName, int throughput)
         {
-            // connecting client 
+            // connecting client
             using (DocumentClient client = new DocumentClient(new Uri(endPointUri), secretKey))
             {
                 await client.CreateDatabaseIfNotExistsAsync(new Database { Id = databaseName });
 
-                // create collection if it does not exist 
-                // WARNING: CreateDocumentCollectionIfNotExistsAsync will create a new 
-                // with reserved throughput which has pricing implications. For details
-                // visit: https://azure.microsoft.com/en-us/pricing/details/cosmos-db/
+                // create collection if it does not exist
+                // WARNING: CreateDocumentCollectionIfNotExistsAsync will
+                // create a new collection with reserved throughput which
+                // has pricing implications. For details visit:
+                // https://azure.microsoft.com/en-us/pricing/details/cosmos-db/
                 await client.CreateDocumentCollectionIfNotExistsAsync(
                     UriFactory.CreateDatabaseUri(databaseName),
                     new DocumentCollection { Id = collectionName },
                     new RequestOptions { OfferThroughput = throughput });
             }
         }
-
     }
 }
