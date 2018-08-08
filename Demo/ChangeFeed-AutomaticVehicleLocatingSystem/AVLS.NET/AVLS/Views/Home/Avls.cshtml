@@ -39,12 +39,19 @@
 
 
 <script>
+
     var _bingMap;
     var timer;
+
     window.onload = function () {
       UpdateMap();
       timer = setInterval(UpdateMap, 50);
     }
+
+    //Every 50 ms this method 
+    //This method calls controller method /Home/GetNumbers which in turn check the queue. 
+    //Data comes in this format:
+    //{ "lat": "40.7145500183105", "long": "-74.0071411132813", "carId": "ABC 432" }
 
     function UpdateMap() {
         var url = "/Home/GetNumbers";
@@ -56,13 +63,12 @@
             if (_bingMap === undefined) {
                 _bingMap = new BingMap();
             }
-            _bingMap.DrawMap(result); //{ "lat": "40.7145500183105", "long": "-74.0071411132813", "carId": "ABC 432" }
+            _bingMap.DrawMap(result); //
         });
     }
 
     function OnStart() {
          timer = setInterval(UpdateMap, 10000);
-        
     }
 
     function OnStop() {

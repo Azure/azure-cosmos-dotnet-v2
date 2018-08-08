@@ -7,8 +7,8 @@
     <ProjectGuid>{26B05D23-0E72-40B8-8F3D-8AE47449063F}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>IotPumpData</RootNamespace>
-    <AssemblyName>IotPumpData</AssemblyName>
+    <RootNamespace>IoTEmulator</RootNamespace>
+    <AssemblyName>IoTEmulator</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
