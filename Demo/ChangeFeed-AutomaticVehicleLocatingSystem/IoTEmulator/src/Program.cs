@@ -57,9 +57,10 @@ namespace IotEmulator
                 id = Guid.NewGuid().ToString(),
                 iotid = "AA",
                 pk = Guid.NewGuid().ToString(),
+                //for demo these lat and long are fixed. 
                 lat = 47.639002,
-                longitude = -122.128196,//r.Next(100),
-                carid ="AAA",
+                longitude = -122.128196, 
+                carid ="AAA", 
                 timestamp = _timestamp
             };
 

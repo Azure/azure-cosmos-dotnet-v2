@@ -11,14 +11,14 @@ namespace AVLS.Controllers
 {
     public class HomeController : Controller
     {
+        CloudQueue trafficQueue;
         public HomeController()
         {
             CloudStorageAccount storageAccount = CloudStorageAccount.Parse(CloudConfigurationManager.GetSetting("StorageConnectionString"));
             CloudQueueClient queueClient = storageAccount.CreateCloudQueueClient();
             trafficQueue = queueClient.GetQueueReference("trafficqueue");
-             
         }
-        CloudQueue trafficQueue;
+
         public ActionResult Index()
         {
             return View();
@@ -27,22 +27,28 @@ namespace AVLS.Controllers
         public ActionResult About()
         {
             ViewBag.Message = "Your application description page.";
-
             return View();
         }
 
         public ActionResult Contact()
         {
             ViewBag.Message = "Your contact page.";
-
             return View();
         }
+
 
         public ActionResult Avls()
         {
             return View();
         }
 
+        /// <summary>
+        /// This method is callee directly from html page Avls.cshtml
+        /// Gets the message from trafficQueue. Each message keeps the lat and long of the spot where accident happened.
+        /// </summary>
+        /// <param name="consistency"></param>
+        /// <returns></returns>
+        /// 
         public string GetNumbers(string consistency)
         {
             CloudQueueMessage retrievedMessage = trafficQueue.GetMessage();
@@ -52,7 +58,7 @@ namespace AVLS.Controllers
                 return retrievedMessage.AsString;
             }
             else
-                return null; // "{ \"lat\": 40.7145500183105, \"long\":  - 74.0071411132813, \"carId\": \"ABC 432\" }";
+                return null;  
         }
     }
 }
