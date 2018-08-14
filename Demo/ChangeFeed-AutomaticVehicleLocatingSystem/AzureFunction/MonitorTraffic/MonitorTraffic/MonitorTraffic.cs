@@ -19,7 +19,7 @@ namespace MonitorTraffic
 
             Microsoft.WindowsAzure.Storage.Queue.CloudQueueClient queueClient;
             Microsoft.WindowsAzure.Storage.Queue.CloudQueue queue;
-            Microsoft.WindowsAzure.Storage.CloudStorageAccount storageAccount = Microsoft.WindowsAzure.Storage.CloudStorageAccount.Parse("DefaultEndpointsProtocol=https;AccountName=scmrstorage;AccountKey=FtW5Qlz/5rWiqX0MPlGO0X2anGs5t7ea/H/ZkdcIEHlTA9isEinpscnuuhw8GwKR+7+Eo2IDRG1jwdMoDsRTqg==;EndpointSuffix=core.windows.net");
+            Microsoft.WindowsAzure.Storage.CloudStorageAccount storageAccount = Microsoft.WindowsAzure.Storage.CloudStorageAccount.Parse("DefaultEndpointsProtocol=https;AccountName=scmrstorage;AccountKey={youraccountKey};EndpointSuffix=core.windows.net");
             queueClient = storageAccount.CreateCloudQueueClient();
             queue = queueClient.GetQueueReference("trafficqueue");
 
