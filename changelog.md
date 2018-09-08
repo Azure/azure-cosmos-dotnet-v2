@@ -1,3 +1,12 @@
+## Changes in [2.0.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.0.0) : ##
+
+* Added request cancellation support.
+* Added SetCurrentLocation to ConnectionPolicy, which automatically populates the preferred locations based on the region.
+* Fixed Bug in Cross Partition Queries with Min/Max and a filter that matches no documents on an individual partition.
+* DocumentClient methods now have parity with IDocumentClient.
+* Updated direct TCP transport stack to reduce the number of connections established.
+* Added support for Direct Mode TCP for non-Windows clients.
+
 ## Changes in [2.0.0-preview2](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.0.0-preview2) : ##
 
 * Added request cancellation support.
