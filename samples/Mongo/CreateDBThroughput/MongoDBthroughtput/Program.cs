@@ -14,13 +14,13 @@ namespace MongoDBthroughtput
     class Program
     {
         static MongoClient _mongoClient;
-        static string _databaseName = "DB9";
+        static string _databaseName = "DB";
         static string _collectionName = "IoT";
         static IMongoDatabase _mdb;
+
         static void Main(string[] args)
         {
-            string connectionString =
-  @"mongodb://rafat-mongo:AqQyR3Qd6FgK5UEQb34dj7h1PE7gQzBOh0bHI5vFj3FChAHKIwOdyfuGtwDm1pOOz9MyL72mTiSHA7czyB9aUQ==@rafat-mongo.documents.azure.com:10255/?ssl=true&replicaSet=globaldb";
+            string connectionString = "YourConnectionString";
             MongoClientSettings settings = MongoClientSettings.FromUrl(
               new MongoUrl(connectionString)
             );
@@ -38,6 +38,7 @@ namespace MongoDBthroughtput
         /*
          * Create database with offerThroughput
          */
+
         private static void CreateDatabase()
         {
             try
