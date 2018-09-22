@@ -1,3 +1,8 @@
+## Changes in [2.1.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.1.0) : ##
+
+* Added Multi-region write support.
+* Cross partition query performance improvements with TOP and MaxBufferedItemCount.
+
 ## Changes in [2.0.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.0.0) : ##
 
 * Added request cancellation support.
