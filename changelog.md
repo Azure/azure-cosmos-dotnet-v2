@@ -1,3 +1,7 @@
+## Changes in [2.1.1](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.1.1) : ##
+
+* Added more resilience to Multi-region request transient failures.   
+
 ## Changes in [2.1.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.1.0) : ##
 
 * Added Multi-region write support.
