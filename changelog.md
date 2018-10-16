@@ -1,3 +1,7 @@
+## Changes in [2.1.3](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.1.3) : ##
+
+* Updated System.Net.Security to 4.3.2.
+
 ## Changes in [2.1.2](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.1.2) : ##
 
 * Diagnostic tracing improvements.
