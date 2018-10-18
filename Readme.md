@@ -5,6 +5,7 @@ Useful links:
 - [Get Started APP](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-get-started)
 - [Samples](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-dotnet-samples)
 - [Github samples](https://github.com/Azure/azure-documentdb-dotnet/tree/master/samples)
+- [MultiMaster samples](https://github.com/markjbrown/azure-cosmosdb-dotnet/tree/master/samples/MultiMaster)
 - [Resource Model of Azure Cosmos DB Service]( https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-resources)
 - [Cosmos DB Resource URI](https://docs.microsoft.com/en-us/rest/api/documentdb/documentdb-resource-uri-syntax-for-rest)
 - [Partitioning](https://docs.microsoft.com/en-us/azure/cosmos-db/partition-data)
