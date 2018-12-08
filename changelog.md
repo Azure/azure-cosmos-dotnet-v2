@@ -1,3 +1,13 @@
+## Changes in [2.2.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.2.0) : ##
+
+* For direct/TPC transport diagnostics, added TransportException, an internal exception type of the SDK. When present in exception messages, this type prints additional information for troubleshooting client connectivity problems.
+
+* Added new constuctor overload which takes a HttpMessageHandler, a HTTP handler stack to use for sending HttpClient requests (e.g., HttpClientHandler).
+
+* Fix bug where header with null values were not being handled properly.
+
+* Improved collection cache validation.
+
 ## Changes in [2.1.3](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.1.3) : ##
 
 * Updated System.Net.Security to 4.3.2.
