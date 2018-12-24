@@ -1,3 +1,11 @@
+## Changes in [2.2.1](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.2.1) : ##
+
+* Improvement in retry logic during failover for StoredProcedure execute calls.
+
+* Made DocumentClientEventSource singleton. 
+
+* Fix GatewayAddressCache timeout not honoring ConnectionPolicy RequestTimeout.
+
 ## Changes in [2.2.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.2.0) : ##
 
 * For direct/TCP transport diagnostics, added TransportException, an internal exception type of the SDK. When present in exception messages, this type prints additional information for troubleshooting client connectivity problems.
