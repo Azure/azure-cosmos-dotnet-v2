@@ -68,7 +68,7 @@ namespace Patterns.TimeSeries
         public async Task<IEnumerable<SensorReading>> GetSensorReadingsForTimeRangeAsync(String sensorId, DateTime startTime, DateTime endTime)
         {
             double startTimeMillis = GetEpochTimeMillis(startTime);
-            double endTimeMillis = GetEpochTimeMillis(startTime);
+            double endTimeMillis = GetEpochTimeMillis(endTime);
 
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri(DatabaseName, RawReadingsCollectionName);
 
