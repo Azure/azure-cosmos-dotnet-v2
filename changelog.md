@@ -1,3 +1,8 @@
+## Changes in [2.2.2](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.2.2) : ##
+
+* Added environment variable setting “POCOSerializationOnly”.
+* Removed DocumentDB.Spatial.Sql.dll and now included in Microsoft.Azure.Documents.ServiceInterop.dll
+
 ## Changes in [2.2.1](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.2.1) : ##
 
 * Improvement in retry logic during failover for StoredProcedure execute calls.
