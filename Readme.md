@@ -37,11 +37,10 @@ https://docs.microsoft.com/azure/cosmos-db/sql-api-sdk-dotnet
 ## Performance tips
 https://docs.microsoft.com/azure/cosmos-db/performance-tips
 
+## Diagnose and troubleshooting issues
+https://docs.microsoft.com/azure/cosmos-db/troubleshoot-dot-net-sdk
 
 ## Samples
 https://docs.microsoft.com/azure/cosmos-db/sql-api-dotnet-samples is a good starting point.
-
-## Diagnose and troubleshooting issues
-https://docs.microsoft.com/azure/cosmos-db/troubleshoot-dot-net-sdk
 
 Also great source of samples can be found at https://github.com/Azure/azure-documentdb-dotnet/tree/master/samples
