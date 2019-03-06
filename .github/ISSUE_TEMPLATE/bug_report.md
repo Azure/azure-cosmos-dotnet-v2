@@ -5,20 +5,22 @@ about: Create a report to help us improve
 ---
 
 **Describe the bug**
-A clear and concise description of what the bug is.
+<!-- A clear and concise description of what the bug is. -->
+
 
 **To Reproduce**
-Steps to reproduce the behavior. If you can include code snippets or links to repositories containing a repro of the issue that can helps us in detecting the scenario it would speed up the resolution.
+<!-- Steps to reproduce the behavior. If you can include code snippets or links to repositories containing a repro of the issue that can helps us in detecting the scenario it would speed up the resolution. -->
 
 **Expected behavior**
-A clear and concise description of what you expected to happen.
+<!-- A clear and concise description of what you expected to happen.-->
 
 **Actual behavior**
-Provide a description of the actual behavior observed. 
+<!-- Provide a description of the actual behavior observed. -->
 
 **Environment summary**
+
 SDK Version:
-OS Version (e.g. Windows, Linux, MacOSX)
+OS Version (e.g. Windows, Linux, MacOSX): 
 
 **Additional context**
-Add any other context about the problem here (for example, complete stack traces or logs).
+<!-- Add any other context about the problem here (for example, complete stack traces or logs).-->
