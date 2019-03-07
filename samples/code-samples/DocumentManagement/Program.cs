@@ -184,12 +184,18 @@
             //******************************************************************************************************************
             Console.WriteLine("\n1.3 - Reading all documents in a collection");
 
-            foreach (Document document in await client.ReadDocumentFeedAsync(
-                UriFactory.CreateDocumentCollectionUri(databaseName, collectionName), 
-                new FeedOptions { MaxItemCount = 10 }))
+            string continuationToken = null;
+            do
             {
-                Console.WriteLine(document);
-            }
+                var feed = await client.ReadDocumentFeedAsync(
+                    UriFactory.CreateDocumentCollectionUri(databaseName, collectionName),
+                    new FeedOptions { MaxItemCount = 10, RequestContinuation = continuationToken });
+                continuationToken = feed.ResponseContinuation;
+                foreach (Document document in feed)
+                {
+                    Console.WriteLine(document);
+                }
+            } while (continuationToken != null);
         }
 
         private static SalesOrder QueryDocuments()
