@@ -1,3 +1,7 @@
+## Changes in [2.2.3](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.2.3) : ##
+
+* Diagnostics improvements
+
 ## Changes in [2.2.2](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.2.2) : ##
 
 * Added environment variable setting “POCOSerializationOnly”.
