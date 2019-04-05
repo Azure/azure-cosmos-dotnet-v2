@@ -1,3 +1,7 @@
+## Changes in [2.3.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.3.0) : ##
+
+* Added IdleTcpConnectionTimeout, OpenTcpConnectionTimeout, MaxRequestsPerTcpConnection and MaxTcpConnectionsPerEndpoint to ConnectionPolicy.
+
 ## Changes in [2.2.3](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.2.3) : ##
 
 * Diagnostics improvements
