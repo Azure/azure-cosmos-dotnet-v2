@@ -1,3 +1,13 @@
+## Changes in [2.4.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.4.0) : ##
+
+* SDK’s System.Net.Http version matches what is defined in the NuGet package
+* Increased decimal precision size for LINQ queries.
+* Added new classes CompositePath, CompositePathSortOrder, SpatialSpec, SpatialType and PartitionKeyDefinitionVersion
+* Added TimeToLivePropertyPath to DocumentCollection
+* Added CompositeIndexes and SpatialIndexes to IndexPolicy
+* Added Version to PartitionKeyDefinition
+* Added None to PartitionKey
+
 ## Changes in [2.3.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.3.0) : ##
 
 * Added IdleTcpConnectionTimeout, OpenTcpConnectionTimeout, MaxRequestsPerTcpConnection and MaxTcpConnectionsPerEndpoint to ConnectionPolicy.
