@@ -1,7 +1,5 @@
-## Changes in [2.5.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.5.0) : ##
+## Changes in [2.4.1](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.4.1) : ##
 
-* Allow write requests to fallback to a different region if the original one fails
-* Add session retry policy for write request
 * Fixes tracing race condition for queries which caused empty pages
 
 ## Changes in [2.4.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.4.0) : ##
