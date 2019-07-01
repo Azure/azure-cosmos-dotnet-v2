@@ -1,6 +1,6 @@
 ## Changes in [2.4.2](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.4.2) : ##
 
-* Made assembly version and file version same as nuget version.
+* Made assembly version and file version same as nuget package version.
 
 ## Changes in [2.4.1](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.4.1) : ##
 
