@@ -1,3 +1,9 @@
+## Changes in [2.5.1](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.5.1) : ##
+
+* SDK’s System.Net.Http version now matches what is defined in the NuGet package
+* Allow write requests to fallback to a different region if the original one fails
+* Add session retry policy for write request
+
 ## Changes in [2.4.2](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.4.2) : ##
 
 * Made assembly version and file version same as nuget package version.
@@ -8,7 +14,6 @@
 
 ## Changes in [2.4.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.4.0) : ##
 
-* SDK’s System.Net.Http version matches what is defined in the NuGet package
 * Increased decimal precision size for LINQ queries.
 * Added new classes CompositePath, CompositePathSortOrder, SpatialSpec, SpatialType and PartitionKeyDefinitionVersion
 * Added TimeToLivePropertyPath to DocumentCollection
