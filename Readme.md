@@ -1,7 +1,7 @@
-# Microsoft Azure Cosmos DB .NET v2 SDK
+# Microsoft Azure Cosmos DB .NET SDK Version 2
 This project provides a client tools or utilities in .NET that makes it easy to interact with Azure Cosmos DB. Azure cosmos DB is published with nuget name [Microsoft.Azure.DocumentDB](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/). 
 
-## Microsoft Azure Cosmos DB .NET v3 SDK is GA
+## Microsoft Azure Cosmos DB .NET SDK Version 3 is GA
 Please try out the new [v3 SDK](https://github.com/Azure/azure-cosmos-dotnet-v3).
 
 ## Useful links:
