@@ -67,7 +67,8 @@
 ## Changes in [2.1.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.1.0) : ##
 
 * Added Multi-region write support.
-* Cross partition query performance improvements with TOP and MaxBufferedItemCount.
+* Cross partition query performance improvements with TOP.
+* Fixed bug where MaxBufferedItemCount was not being honored causing out of memory issues.
 
 ## Changes in [2.0.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.0.0) : ##
 
