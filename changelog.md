@@ -1,3 +1,8 @@
+## Changes in [2.6.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.6.0) : ##
+
+* Added PortReusePolicy to ConnectionPolicy
+* Fixed ntdll!RtlGetVersion TypeLoadException issue when SDK is used in a UWP app
+
 ## Changes in [2.5.1](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.5.1) : ##
 
 * SDK’s System.Net.Http version now matches what is defined in the NuGet package
