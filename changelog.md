@@ -1,3 +1,11 @@
+## Changes in [2.7.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.7.0) : ##
+
+* Added support for arrays and objects in order by queries
+* Handle effective partition key collisions
+* Added LINQ support for multiple OrderBy operators with ThenBy operator
+* Custom serialization settings are now applied to all upsert and replace operations
+* Fixed AysncCache deadlock issue so that it will work with a single-threaded task scheduler
+
 ## Changes in [2.6.0](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/2.6.0) : ##
 
 * Added PortReusePolicy to ConnectionPolicy
