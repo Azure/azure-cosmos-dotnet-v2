@@ -192,13 +192,13 @@
 - Fix for an issue that occasionally causes a WebException: The remote name could not be resolved.
 - Added the support for directly reading a typed document by adding new overloads to ReadDocumentAsync API.
 
-## <a name="1.12.1"/> 1.12.1 : ##
+## <a name="1.12.1"/> 1.12.1 ##
 - Added LINQ support for aggregation queries (COUNT, MIN, MAX, SUM, and AVG).
 - Fix for a memory leak issue for the ConnectionPolicy object caused by the use of event handler.
 - Fix for an issue wherein UpsertAttachmentAsync was not working when ETag was used.
 - Fix for an issue wherein cross partition order-by query continuation was not working when sorting on string field.
 
-## <a name="1.12.10/> 1.12.0 ##
+## <a name="1.12.0/> 1.12.0 ##
 - Added support for aggregation queries (COUNT, MIN, MAX, SUM, and AVG). See [Aggregation support](https://docs.microsoft.com/en-us/azure/documentdb/documentdb-sql-query#Aggregates).
 - Lowered minimum throughput on partitioned collections from 10,100 RU/s to 2500 RU/s.
 
@@ -362,7 +362,7 @@
 - Guid support in LINQ provider.
 - UDF support in LINQ.
 
-## Changes in 1.0.0 ##
+## <a name="1.1.0"/> 1.0.0 ##
 - GA SDK.
 
 ## Release & Retirement dates
@@ -414,7 +414,6 @@ Any requests to Azure Cosmos DB using a retired SDK are rejected by the service.
 | [1.13.2](#1.13.2) |April 19, 2017 |August 30, 2020 |
 | [1.13.1](#1.13.1) |March 29, 2017 |August 30, 2020 |
 | [1.13.0](#1.13.0) |March 24, 2017 |August 30, 2020 |
-| [1.12.2](#1.12.2) |March 20, 2017 |August 30, 2020 |
 | [1.12.1](#1.12.1) |March 14, 2017 |August 30, 2020 |
 | [1.12.0](#1.12.0) |February 15, 2017 |August 30, 2020 |
 | [1.11.4](#1.11.4) |February 06, 2017 |August 30, 2020 |
