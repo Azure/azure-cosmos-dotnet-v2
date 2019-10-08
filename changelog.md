@@ -198,7 +198,7 @@
 - Fix for an issue wherein UpsertAttachmentAsync was not working when ETag was used.
 - Fix for an issue wherein cross partition order-by query continuation was not working when sorting on string field.
 
-## <a name="1.12.0/> 1.12.0 ##
+## <a name="1.12.0"/> 1.12.0 ##
 - Added support for aggregation queries (COUNT, MIN, MAX, SUM, and AVG). See [Aggregation support](https://docs.microsoft.com/en-us/azure/documentdb/documentdb-sql-query#Aggregates).
 - Lowered minimum throughput on partitioned collections from 10,100 RU/s to 2500 RU/s.
 
