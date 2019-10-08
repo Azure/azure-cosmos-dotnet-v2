@@ -362,7 +362,7 @@
 - Guid support in LINQ provider.
 - UDF support in LINQ.
 
-## <a name="1.1.0"/> 1.0.0 ##
+## <a name="1.0.0"/> 1.0.0 ##
 - GA SDK.
 
 ## Release & Retirement dates
