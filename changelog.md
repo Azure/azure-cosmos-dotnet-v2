@@ -1,3 +1,7 @@
+## <a name="2.8.0"/> 2.8.0 ##
+
+* Added RequestDiagnosticsString to FeedResponse
+
 ## <a name="2.7.0"/> 2.7.0 ##
 
 * Added support for arrays and objects in order by queries
