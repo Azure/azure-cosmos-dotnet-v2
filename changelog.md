@@ -1,4 +1,4 @@
-## <a name="2.8.0"/> 2.8.0 ##
+## <a name="2.8.1"/> 2.8.1 ##
 
 * Added RequestDiagnosticsString to FeedResponse
 
@@ -384,6 +384,7 @@ Any requests to Azure Cosmos DB using a retired SDK are rejected by the service.
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
+| [2.8.1](#2.8.1) |October 11, 2019 |--- |
 | [2.7.0](#2.7.0) |September 23, 2019 |--- |
 | [2.6.0](#2.6.0) |August 30, 2019 |--- |
 | [2.5.1](#2.5.1) |July  02, 2019 |--- |
