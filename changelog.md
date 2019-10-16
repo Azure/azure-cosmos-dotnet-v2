@@ -203,7 +203,7 @@
 - Fix for an issue wherein cross partition order-by query continuation was not working when sorting on string field.
 
 ## <a name="1.12.0"/> 1.12.0 ##
-- Added support for aggregation queries (COUNT, MIN, MAX, SUM, and AVG). See [Aggregation support](https://docs.microsoft.com/en-us/azure/documentdb/documentdb-sql-query#Aggregates).
+- Added support for aggregation queries (COUNT, MIN, MAX, SUM, and AVG). See [Aggregation support](https://docs.microsoft.com/azure/cosmos-db/sql-query-aggregates).
 - Lowered minimum throughput on partitioned collections from 10,100 RU/s to 2500 RU/s.
 
 ## <a name="1.11.4"/> 1.11.4 ##
