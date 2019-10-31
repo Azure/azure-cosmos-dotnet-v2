@@ -1,3 +1,7 @@
+## <a name="2.9.0"/> 2.9.0 ##
+
+* Add Support for [GROUP BY](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-query-group-by) queries
+
 ## <a name="2.8.1"/> 2.8.1 ##
 
 * Added RequestDiagnosticsString to FeedResponse
@@ -384,6 +388,7 @@ Any requests to Azure Cosmos DB using a retired SDK are rejected by the service.
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
+| [2.9.0](#2.9.0) |October 30, 2019 |--- |
 | [2.8.1](#2.8.1) |October 11, 2019 |--- |
 | [2.7.0](#2.7.0) |September 23, 2019 |--- |
 | [2.6.0](#2.6.0) |August 30, 2019 |--- |
