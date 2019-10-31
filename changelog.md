@@ -1,6 +1,6 @@
 ## <a name="2.9.0"/> 2.9.0 ##
 
-* Add Support for [GROUP BY](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-query-group-by) queries
+* Add support for [GROUP BY](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-query-group-by) queries
 
 ## <a name="2.8.1"/> 2.8.1 ##
 
