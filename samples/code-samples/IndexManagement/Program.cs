@@ -395,17 +395,19 @@ namespace DocumentDB.Samples.IndexManagement
         {
             try
             {
-                IDocumentQuery<dynamic> documentQuery = client.CreateDocumentQuery(
+                using (IDocumentQuery<dynamic> documentQuery = client.CreateDocumentQuery(
                     collection.SelfLink,
                     query,
                     new FeedOptions
                     {
                         PopulateQueryMetrics = true,
                         MaxItemCount = -1
-                    }).AsDocumentQuery();
+                    }).AsDocumentQuery())
+                {
 
-                FeedResponse<dynamic> response = await documentQuery.ExecuteNextAsync();
-                return new QueryStats(response.Count, response.RequestCharge);
+                    FeedResponse<dynamic> response = await documentQuery.ExecuteNextAsync();
+                    return new QueryStats(response.Count, response.RequestCharge);
+                }
             }
             catch (Exception e)
             {
