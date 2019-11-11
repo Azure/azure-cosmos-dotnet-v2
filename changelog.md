@@ -5,6 +5,7 @@
 ## <a name="2.8.1"/> 2.8.1 ##
 
 * Added RequestDiagnosticsString to FeedResponse
+* Fixed serialization settings for upsert and replace document
 
 ## <a name="2.7.0"/> 2.7.0 ##
 
