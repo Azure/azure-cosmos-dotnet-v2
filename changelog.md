@@ -1,6 +1,6 @@
 ## <a name="2.9.0"/> 2.9.0 ##
 
-* Add support for [GROUP BY](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-query-group-by) queries
+* Add support for [GROUP BY](https://docs.microsoft.com/azure/cosmos-db/sql-query-group-by) queries
 
 ## <a name="2.8.1"/> 2.8.1 ##
 
@@ -230,7 +230,7 @@
 
 ## <a name="1.11.0"/> 1.11.0 ##
 
-- Support for new classes and methods to process the [change feed](https://docs.microsoft.com/en-us/azure/documentdb/documentdb-change-feed) of documents within a collection. 
+- Support for new classes and methods to process the [change feed](https://docs.microsoft.com/azure/documentdb/documentdb-change-feed) of documents within a collection. 
 - Support for cross-partition query continuation and some perf improvements for cross-partition queries.
 - Addition of CreateDatabaseIfNotExistsAsync and CreateDocumentCollectionIfNotExistsAsync methods.
 - LINQ support for system functions: IsDefined, IsNull and IsPrimitive.
