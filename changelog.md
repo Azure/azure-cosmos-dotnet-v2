@@ -1,6 +1,10 @@
+## <a name="2.9.2"/> 2.9.2 ##
+
+* Fixed non ascii character in order by continuation token
+
 ## <a name="2.9.1"/> 2.9.1 ##
 
-Fix  Microsoft.Azure.Documents.ServiceInterop.dll graceful fallback bug [Issue #750](https://github.com/Azure/azure-cosmos-dotnet-v2/issues/750)
+* Fix  Microsoft.Azure.Documents.ServiceInterop.dll graceful fallback bug [Issue #750](https://github.com/Azure/azure-cosmos-dotnet-v2/issues/750)
 
 ## <a name="2.9.0"/> 2.9.0 ##
 
@@ -393,6 +397,7 @@ Any requests to Azure Cosmos DB using a retired SDK are rejected by the service.
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
+| [2.9.2](#2.9.2) |November 15, 2019 |--- |
 | [2.9.1](#2.9.1) |November 13, 2019 |--- |
 | [2.9.0](#2.9.0) |October 30, 2019 |--- |
 | [2.8.1](#2.8.1) |October 11, 2019 |--- |
