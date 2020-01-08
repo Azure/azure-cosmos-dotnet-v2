@@ -66,3 +66,24 @@ The Azure Cosmos DB .NET SDK (from version 1.11.0) support capturing trace in ET
  4.  Open the etl file you have captured, you might need to hit F5 to refresh it.
 
 ## You can send the ETL file to the Cosmos DB team for analysis. 
+
+
+# Removing DefaultTraceListener
+By default DefaultTraceListener is included and also not threadsafe (more overhead).
+To remove DefaultTraceListener please use below configurationo on app.config
+
+```xml
+<configuration>
+  <system.diagnostics>
+    <sources>
+      <source name="DocDBTrace" switchName="SourceSwitch" switchType="System.Diagnostics.SourceSwitch" >
+        <listeners>
+          <clear/>
+        </listeners>
+      </source>
+    </sources>
+  </system.diagnostics> 
+<configuration>
+```
+
+### NOTE: app.config is only supported in .NET FX not .NET core.
