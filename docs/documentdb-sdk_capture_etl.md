@@ -1,4 +1,4 @@
-# Capture through diagnositc trace listener
+# Capture through diagnostic trace listener
 Traces are emitted with DocDBTrace source. Below sample app.config configuration captures the traces to a text listener
 
 ```xml
