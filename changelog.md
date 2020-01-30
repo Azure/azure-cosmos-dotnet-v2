@@ -304,7 +304,7 @@
 
 ## <a name="1.6.2"/> 1.6.2 ##
 
-- Implemented [partitioned collections](https://github.com/Azure/azure-content-pr/blob/master/articles/documentdb/documentdb-partition-data.md) and [user-defined performance levels](https://github.com/Azure/azure-content-pr/blob/master/articles/documentdb/documentdb-performance-levels.md). 
+- Implemented [partitioned collections](https://docs.microsoft.com/azure/cosmos-db/partitioning-overview) and user-defined performance levels. 
 
 ## <a name="1.5.3"/> 1.5.3 ##
 
