@@ -1,3 +1,8 @@
+## <a name="2.9.3"/> 2.9.3 ##
+
+* Add support for creating geometry collections
+* Add support to specify bounding box for geometry spatial index
+
 ## <a name="2.9.2"/> 2.9.2 ##
 
 * Fixed non ascii character in order by continuation token
