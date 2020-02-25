@@ -7,7 +7,7 @@
 * Fixed timer pool leak in Direct TCP mode
 * Fixed broken links in documentation
 * Too large of header now traces the header sizes
-* QueryPlanOnly to not use sessiontoken
+* Reduced header size by excluding session token in get query plan calls
 
 ## <a name="2.9.2"/> 2.9.2 ##
 
