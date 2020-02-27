@@ -20,6 +20,7 @@
 ## <a name="2.9.0"/> 2.9.0 ##
 
 * Add support for [GROUP BY](https://docs.microsoft.com/azure/cosmos-db/sql-query-group-by) queries
+* Query now retrieves query plan before execution in order to ensure consistent behavior between single partition and cross partition queries.
 
 ## <a name="2.8.1"/> 2.8.1 ##
 
