@@ -5,6 +5,7 @@
 * Add EnableTcpConnectionEndpointRediscovery to ConnectionPolicy
 * Fixed RuntimeBinderException for various query operations
 * Fixed permission serialization to include the Token
+* Improve retry logic for transient region failures
 
 ## <a name="2.9.4"/> 2.9.4 ##
 
