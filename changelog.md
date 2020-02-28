@@ -1,3 +1,10 @@
+## <a name="2.10.0"/> 2.10.0 ##
+
+* Add support for creating geometry collections
+* Add support to specify bounding box for geometry spatial index
+* Add EnableTcpConnectionEndpointRediscovery to ConnectionPolicy
+* Fixed RuntimeBinderException for various query operations
+
 ## <a name="2.9.4"/> 2.9.4 ##
 
 * Fixed partition key not being honored for non windows x64 clients
