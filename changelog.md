@@ -4,6 +4,7 @@
 * Add support to specify bounding box for geometry spatial index
 * Add EnableTcpConnectionEndpointRediscovery to ConnectionPolicy
 * Fixed RuntimeBinderException for various query operations
+* Fixed permission serialization to include the Token
 
 ## <a name="2.9.4"/> 2.9.4 ##
 
