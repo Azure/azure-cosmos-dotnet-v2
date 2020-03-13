@@ -6,7 +6,7 @@
 
 * Add support for creating geometry collections
 * Add support to specify bounding box for geometry spatial index
-* Add EnableTcpConnectionEndpointRediscovery to ConnectionPolicy
+* Add EnableTcpConnectionEndpointRediscovery to ConnectionPolicy which enables invalidation of addresses based upon connection close notifications
 * Fixed aggregate query RuntimeBinderException 'Cannot convert type'
 * Fixed permission serialization to include the Token
 * Improve retry logic for transient region failures where the SDK cannot connect to a specific endpoint and gets HttpException.
