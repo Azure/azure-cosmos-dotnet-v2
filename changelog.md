@@ -1,9 +1,13 @@
+## <a name="2.10.1"/> 2.10.1 ##
+
+* Fix null reference exceptions when doing a query. This is fixes a bug in the fallback logic when the Microsoft.Azure.Documents.ServiceInterop.dll is not found.
+
 ## <a name="2.10.0"/> 2.10.0 ##
 
 * Add support for creating geometry collections
 * Add support to specify bounding box for geometry spatial index
 * Add EnableTcpConnectionEndpointRediscovery to ConnectionPolicy
-* Fixed RuntimeBinderException for various query operations
+* Fixed aggregate query RuntimeBinderException 'Cannot convert type'
 * Fixed permission serialization to include the Token
 * Improve retry logic for transient region failures
 
