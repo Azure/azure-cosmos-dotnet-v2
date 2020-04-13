@@ -1,16 +1,16 @@
 ﻿using System;
 namespace ToDoItems.Core
 {
-	public class APIKeys
-	{
-		public APIKeys()
-		{
-		}
+    public class APIKeys
+    {
+        public APIKeys()
+        {
+        }
 
-#error Create a CosmosDB SQL Database and enter the URL here
-		public static readonly string CosmosEndpointUrl = "** YOUR URL HERE **";
+#error Enter the URL of your Azure Cosmos DB endpoint here
+        public static readonly string CosmosEndpointUrl = "";
 
-#error Create a CosmosDB SQL Database and enter the authorization key here
-		public static readonly string CosmosAuthKey = "** YOUR AUTH KEY HERE **";
-	}
+#error Enter the read/write authentication key of your Azure Cosmos DB endpoint here
+        public static readonly string CosmosAuthKey = "";
+    }
 }

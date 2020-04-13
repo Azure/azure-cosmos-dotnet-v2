@@ -42,6 +42,22 @@ namespace ToDoItems.Core
 			}
 		}
 
+		string _category;
+		[JsonProperty("category")]
+		public string Category
+		{
+			get => _category;
+			set
+			{
+				if (_category == value)
+					return;
+
+				_category = value;
+
+				HandlePropertyChanged();
+			}
+		}
+		
 		string _description;
 		[JsonProperty("description")]
 		public string Description
@@ -59,7 +75,7 @@ namespace ToDoItems.Core
 		}
 
 		bool _completed;
-		[JsonProperty("completed")]
+		[JsonProperty("isComplete")]
 		public bool Completed
 		{
 			get => _completed;

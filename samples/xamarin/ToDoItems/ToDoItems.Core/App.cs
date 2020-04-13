@@ -1,6 +1,6 @@
 ﻿using System;
 using Xamarin.Forms;
-using Xamarin.Forms.PlatformConfiguration.iOSSpecific;
+//using Xamarin.Forms.PlatformConfiguration.iOSSpecific;
 
 namespace ToDoItems.Core
 {
@@ -14,7 +14,7 @@ namespace ToDoItems.Core
                 BarBackgroundColor = Color.FromHex("#2082fa"),
                 BarTextColor = Color.White
             };
-            toDoNavPage.On<Xamarin.Forms.PlatformConfiguration.iOS>().SetPrefersLargeTitles(true);
+            //toDoNavPage.On<Xamarin.Forms.PlatformConfiguration.iOS>().SetPrefersLargeTitles(true);
 
             var completedNavPage = new Xamarin.Forms.NavigationPage(new CompletedItemsPage())
             {
@@ -22,7 +22,7 @@ namespace ToDoItems.Core
                 BarBackgroundColor = Color.FromHex("#2082fa"),
                 BarTextColor = Color.White
             };
-            completedNavPage.On<Xamarin.Forms.PlatformConfiguration.iOS>().SetPrefersLargeTitles(true);
+            //completedNavPage.On<Xamarin.Forms.PlatformConfiguration.iOS>().SetPrefersLargeTitles(true);
 
             var mainTabbedPage = new TabbedPage
             {

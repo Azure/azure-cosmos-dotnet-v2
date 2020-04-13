@@ -6,23 +6,39 @@
     x:Class="ToDoItems.Core.ToDoItemsPage"
     Title="{Binding Title}"
     x:Name="OverallToDoPage"
-    ios:Page.UseSafeArea="true">
+    ios:Page.UseSafeArea="true"
+    Visual="Material">
     <ContentPage.Content>
         <StackLayout>
             <ActivityIndicator IsRunning="{Binding IsBusy}" />
-            <ListView x:Name="todoItemsList" ItemsSource="{Binding ToDoItems}">
-                <ListView.ItemTemplate>
+            <CollectionView ItemsSource="{Binding ToDoItems}">
+                <CollectionView.ItemTemplate>
                     <DataTemplate>
-                        <TextCell Text="{Binding Name}">
-                            <TextCell.ContextActions>
-                                <MenuItem Text="Complete" IsDestructive="false"
+                        <StackLayout Padding="10,0,10,5">
+                            <Frame HasShadow="True">
+                                <StackLayout>
+                                    <Label Text="{Binding Name, StringFormat='Task Name: {0}'}" FontSize="Medium" FontAttributes="Bold"/>
+                                    <Label Text="{Binding Category, StringFormat='Category: {0}'}" FontSize="Medium" FontAttributes="Bold"/>
+                                    <Label Text="{Binding Description}" FontSize="Small"/>
+                                    <Button Text="Mark Complete" 
                                           Command="{Binding Path=BindingContext.CompleteCommand, Source={x:Reference Name=OverallToDoPage}}" 
                                           CommandParameter="{Binding .}" />
-                            </TextCell.ContextActions>
-                        </TextCell>
+                                </StackLayout>
+                            </Frame>
+                        </StackLayout>
                     </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
+                </CollectionView.ItemTemplate>
+                <CollectionView.EmptyViewTemplate>
+                    <DataTemplate>
+                        <StackLayout>
+                            <Label HorizontalOptions="Center" VerticalOptions="CenterAndExpand"
+                                    FontSize="Large"
+                                    TextColor="Black"
+                                    Text="Hit the add button to add some data" />
+                        </StackLayout>
+                    </DataTemplate>
+                </CollectionView.EmptyViewTemplate>
+            </CollectionView>
         </StackLayout>
     </ContentPage.Content>
     <ContentPage.ToolbarItems>

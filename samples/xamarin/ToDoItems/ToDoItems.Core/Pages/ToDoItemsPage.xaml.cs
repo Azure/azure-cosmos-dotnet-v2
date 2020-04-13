@@ -16,9 +16,7 @@ namespace ToDoItems.Core
             vm = new ToDoItemsViewModel();
             BindingContext = vm;
 
-            todoItemsList.ItemSelected += listItemSelected;
-            todoItemsList.ItemTapped += (sender, args) => todoItemsList.SelectedItem = null;
-
+            
             vm.Title = "To Do Items";
         }
 

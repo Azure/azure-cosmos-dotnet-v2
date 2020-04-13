@@ -6,7 +6,13 @@ namespace ToDoItems.Core
 {
 	public class ItemDetailViewModel : BaseViewModel
 	{
-		public bool IsNew { get; set; }
+		bool isNew;
+		public bool IsNew {
+			get => isNew;
+			set => SetProperty(ref isNew, value);
+		}
+
+
 		public ToDoItem ToDoItem { get; set; }
 		public ICommand SaveCommand { get; }
 

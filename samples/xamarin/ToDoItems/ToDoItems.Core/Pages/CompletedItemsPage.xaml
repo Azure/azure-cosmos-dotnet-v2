@@ -5,17 +5,37 @@
     xmlns:ios="clr-namespace:Xamarin.Forms.PlatformConfiguration.iOSSpecific;assembly=Xamarin.Forms.Core"
     x:Class="ToDoItems.Core.CompletedItemsPage"
     Title="{Binding Title}"
-    ios:Page.UseSafeArea="true">
+    ios:Page.UseSafeArea="true"
+    Visual="Material">
     <ContentPage.Content>
         <StackLayout>
             <ActivityIndicator IsRunning="{Binding IsBusy}" />
-            <ListView ItemsSource="{Binding CompletedToDos}">
-                <ListView.ItemTemplate>
+            <CollectionView ItemsSource="{Binding CompletedToDos}">
+                <CollectionView.ItemTemplate>
                     <DataTemplate>
-                        <TextCell Text="{Binding Name}" />
+                        <StackLayout Padding="10,0,10,5">
+                            <Frame HasShadow="True">
+                                <StackLayout>
+                                    <Label Text="{Binding Name, StringFormat='Task Name: {0}'}" FontSize="Medium" FontAttributes="Bold"/>
+                                    <Label Text="{Binding Category, StringFormat='Category: {0}'}" FontSize="Medium" FontAttributes="Bold"/>
+                                    <Label Text="{Binding Description}" FontSize="Small"/>
+
+                                </StackLayout>
+                            </Frame>
+                        </StackLayout>
                     </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
+                </CollectionView.ItemTemplate>
+                <CollectionView.EmptyViewTemplate>
+                    <DataTemplate>
+                        <StackLayout>
+                            <Label HorizontalOptions="Center" VerticalOptions="CenterAndExpand"
+                                    FontSize="Large"
+                                    TextColor="Black"
+                                    Text="There are no completed items" />
+                        </StackLayout>
+                    </DataTemplate>
+                </CollectionView.EmptyViewTemplate>
+            </CollectionView>
         </StackLayout>
     </ContentPage.Content>
 </ContentPage>
