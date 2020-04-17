@@ -1,3 +1,7 @@
+## <a name="2.10.3"/> 2.10.3 ##
+
+* Fix socket exception thrown from TCP connection closure under edge cases for closed connection
+
 ## <a name="2.10.1"/> 2.10.1 ##
 
 * Fix null reference exceptions when doing a query. This is fixes a bug in the fallback logic when the Microsoft.Azure.Documents.ServiceInterop.dll is not found.
