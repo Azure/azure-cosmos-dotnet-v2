@@ -78,6 +78,7 @@
 * Added CompositeIndexes and SpatialIndexes to IndexPolicy
 * Added Version to PartitionKeyDefinition
 * Added None to PartitionKey
+* Fix a bug to properly handle non-JSON payload that would cause JsonReaderException
 
 ## <a name="2.3.0"/> 2.3.0 ##
 
