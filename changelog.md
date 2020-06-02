@@ -1,3 +1,7 @@
+## <a name="2.11.0"/> 2.11.0 ##
+
+* Added RequestDiagnosticsString property to the StoredProcedureResponse
+
 ## <a name="2.10.3"/> 2.10.3 ##
 
 * Fix socket exception thrown from TCP connection closure under edge cases for closed connection
