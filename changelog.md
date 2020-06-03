@@ -1,6 +1,7 @@
 ## <a name="2.11.0"/> 2.11.0 ##
 
-* Added RequestDiagnosticsString property to the StoredProcedureResponse
+* Add RequestDiagnosticsString property to the StoredProcedureResponse
+* Fix SetCurrentLocation to use correct order of regions
 
 ## <a name="2.10.3"/> 2.10.3 ##
 
