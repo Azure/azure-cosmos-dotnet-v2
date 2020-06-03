@@ -1,7 +1,7 @@
 ## <a name="2.11.0"/> 2.11.0 ##
 
 * Add RequestDiagnosticsString property to the StoredProcedureResponse
-* Fix improved accurancy of heuristics applied to ConnectionPolicy.SetCurrentLocation
+* Fix to improve the accurancy of heuristics applied to ConnectionPolicy.SetCurrentLocation
 
 ## <a name="2.10.3"/> 2.10.3 ##
 
