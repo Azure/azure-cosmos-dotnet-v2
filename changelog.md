@@ -2,6 +2,7 @@
 
 * Add RequestDiagnosticsString property to the StoredProcedureResponse
 * Fix to improve the accurancy of heuristics applied to ConnectionPolicy.SetCurrentLocation
+* Connectivity errors on .NET core using Direct + TCP mode now includes CPU usage history.
 
 ## <a name="2.10.3"/> 2.10.3 ##
 
