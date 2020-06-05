@@ -2,7 +2,7 @@
 
 * Add RequestDiagnosticsString property to the StoredProcedureResponse
 * Fix to improve the accurancy of heuristics applied to ConnectionPolicy.SetCurrentLocation
-* CPU tracking on connectivity errors while using Direct/TCP now works on non-Windows environments.
+* CPU tracking on connectivity errors while using Direct/TCP now works for .NET Core projects
 
 ## <a name="2.10.3"/> 2.10.3 ##
 
