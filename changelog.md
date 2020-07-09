@@ -2,7 +2,7 @@
 
 * Fix CPU issues related to usage of ConnectionPolicy.EnableTcpConnectionEndpointRediscovery
 * Fix PartitionKey not being correctly passed on GROUP BY queries
-
+* Fix possible StackOverflowException in retry scenario by adding Task.Yeild. Related [fix for .NET Core 3](https://github.com/dotnet/coreclr/pull/23152)
 
 ## <a name="2.11.0"/> 2.11.0
 
