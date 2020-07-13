@@ -26,6 +26,7 @@
 * Fixed aggregate query RuntimeBinderException 'Cannot convert type'
 * Fixed permission serialization to include the Token
 * Improve retry logic for transient region failures where the SDK cannot connect to a specific endpoint and gets HttpException.
+* Improve latency by reducing default RequestTimeout from 60 seconds to 10 seconds
 
 ### <a name="2.9.4"/> 2.9.4
 
