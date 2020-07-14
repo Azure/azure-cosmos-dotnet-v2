@@ -1,3 +1,7 @@
+### <a name="2.11.2"/> 2.11.2
+
+* Fix user session token in query FeedOption for request level session consistency
+
 ### <a name="2.11.1"/> 2.11.1
 
 * Fix CPU issues related to usage of ConnectionPolicy.EnableTcpConnectionEndpointRediscovery
