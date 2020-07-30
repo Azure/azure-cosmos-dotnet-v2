@@ -434,17 +434,11 @@
 - GA SDK.
 
 ## Release & Retirement dates
-Microsoft provides notification at least **12 months** in advance of retiring an SDK in order to smooth the transition to a newer/supported version.
 
-New features and functionality and optimizations are only added to the current SDK, as such it is recommended that you always upgrade to the latest SDK version as early as possible. 
+Microsoft provides notification at least **12 months** in advance of retiring an SDK in order to smooth the transition to a newer/supported version. New features and functionality and optimizations are only added to the current SDK, as such it is recommended that you always upgrade to the latest SDK version as early as possible. 
 
-Any requests to Azure Cosmos DB using a retired SDK are rejected by the service.
+After 31 August 2022, Azure Cosmos DB will no longer make bug fixes, add new features, and provide support to versions 1.x of the Azure Cosmos DB .NET or .NET Core SDK for SQL API. If you prefer not to upgrade, requests sent from version 1.x of the SDK will continue to be served by the Azure Cosmos DB service.
 
-> [!WARNING]
-> All versions **1.x** of the .NET SDK for SQL API will be retired on **August 30, 2020**.
-> 
->
-<br/>
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
