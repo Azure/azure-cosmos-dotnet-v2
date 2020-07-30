@@ -1,6 +1,7 @@
 ### <a name="2.11.3"/> 2.11.3
 
 * Added a cross-region retry mechanism for requests with transient connectivity issues to a particular region. This retry mechanism uses (and requires) the user's defined `ConnectionPolicy.PreferredLocations` preference list.
+* Added diagnostics information to operation canceled exceptions.
 
 ### <a name="2.11.2"/> 2.11.2
 
