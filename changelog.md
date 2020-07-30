@@ -1,3 +1,7 @@
+### <a name="2.11.4"/> 2.11.4
+
+* Fix PortReuseMode setting in connection policy to be honored by DocumentClient.
+
 ### <a name="2.11.3"/> 2.11.3
 
 * Added a cross-region retry mechanism for requests with transient connectivity issues to a particular region. This retry mechanism uses (and requires) the user's defined `ConnectionPolicy.PreferredLocations` preference list.
@@ -442,6 +446,7 @@ After 31 August 2022, Azure Cosmos DB will no longer make bug fixes, add new fea
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
+| [2.11.4](#2.11.4) |July 30, 2020 |--- |
 | [2.11.3](#2.11.3) |July 29, 2020 |--- |
 | [2.11.2](#2.11.2) |July 14, 2020 |--- |
 | [2.11.1](#2.11.1) |July 1, 2020 |--- |
