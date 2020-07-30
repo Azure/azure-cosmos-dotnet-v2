@@ -1,3 +1,8 @@
+### <a name="2.11.3"/> 2.11.3
+
+* Added a cross-region retry mechanism for requests with transient connectivity issues to a particular region. This retry mechanism uses (and requires) the user's defined `ConnectionPolicy.PreferredLocations` preference list.
+* Added diagnostics information to operation canceled exceptions.
+
 ### <a name="2.11.2"/> 2.11.2
 
 * Fix user session token in query FeedOption for request level session consistency
@@ -443,6 +448,8 @@ Any requests to Azure Cosmos DB using a retired SDK are rejected by the service.
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
+| [2.11.3](#2.11.3) |July 29, 2020 |--- |
+| [2.11.2](#2.11.2) |July 14, 2020 |--- |
 | [2.11.1](#2.11.1) |July 1, 2020 |--- |
 | [2.9.2](#2.9.2) |November 15, 2019 |--- |
 | [2.9.1](#2.9.1) |November 13, 2019 |--- |
