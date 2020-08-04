@@ -1,3 +1,8 @@
+### <a name="2.11.5"/> 2.11.5
+
+* Improved detection of regional failover scenarios during query operations.
+* Improved resiliency during transient ReadSessionNotAvailable scenarios. 
+
 ### <a name="2.11.4"/> 2.11.4
 
 * Fix PortReuseMode setting in connection policy to be honored by DocumentClient.
@@ -446,6 +451,7 @@ After 31 August 2022, Azure Cosmos DB will no longer make bug fixes, add new fea
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
+| [2.11.5](#2.11.5) |August 4, 2020 |--- |
 | [2.11.4](#2.11.4) |July 30, 2020 |--- |
 | [2.11.3](#2.11.3) |July 29, 2020 |--- |
 | [2.11.2](#2.11.2) |July 14, 2020 |--- |
