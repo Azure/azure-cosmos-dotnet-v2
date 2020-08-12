@@ -1,3 +1,7 @@
+### <a name="2.11.6"></a> 2.11.6
+
+* Adds optimization to reduce header size by excluding session token for stored procedures, triggers, and user defined functions.
+
 ### <a name="2.11.5"></a> 2.11.5
 
 * Improved detection of regional failover scenarios during query operations.
