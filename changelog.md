@@ -1,6 +1,6 @@
 ### <a name="2.11.6"></a> 2.11.6
 
-* Adds optimization to reduce header size by excluding session token for stored procedures, triggers, and user defined functions.
+* Fixes "request headers is too long" for CRUD operations on stored procedures, triggers, and user defined functions
 
 ### <a name="2.11.5"></a> 2.11.5
 
@@ -455,6 +455,7 @@ After 31 August 2022, Azure Cosmos DB will no longer make bug fixes, add new fea
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
+| [2.11.6](#2.11.6) |August 12, 2020 |--- |
 | [2.11.5](#2.11.5) |August 4, 2020 |--- |
 | [2.11.4](#2.11.4) |July 30, 2020 |--- |
 | [2.11.3](#2.11.3) |July 29, 2020 |--- |
