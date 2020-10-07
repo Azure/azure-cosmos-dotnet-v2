@@ -1,3 +1,9 @@
+### <a name="2.12.0"></a> 2.12.0
+
+* Improved detection of regional outages for query operations that require obtaining a query plan.
+* Improved CPU utilization during connectivity events when using ConnectionPolicy.EnableTcpConnectionEndpointRediscovery.
+* Added RegexMatch system function for queries.
+
 ### <a name="2.11.6"></a> 2.11.6
 
 * Fixes "request headers is too long" for CRUD operations on stored procedures, triggers, and user defined functions
@@ -455,6 +461,7 @@ After 31 August 2022, Azure Cosmos DB will no longer make bug fixes, add new fea
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
+| [2.12.0](#2.12.0) |October 7, 2020 |--- |
 | [2.11.6](#2.11.6) |August 12, 2020 |--- |
 | [2.11.5](#2.11.5) |August 4, 2020 |--- |
 | [2.11.4](#2.11.4) |July 30, 2020 |--- |
