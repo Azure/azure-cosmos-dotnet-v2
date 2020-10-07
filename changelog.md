@@ -1,3 +1,9 @@
+### <a name="2.12.0"></a> 2.12.0
+
+* Improved detection of regional outages for query operations that require obtaining a query plan.
+* Improved CPU utilization during connectivity events when using ConnectionPolicy.EnableTcpConnectionEndpointRediscovery.
+* Added RegexMatch system function for queries.
+
 ### <a name="2.11.6"></a> 2.11.6
 
 * Fixes "request headers is too long" for CRUD operations on stored procedures, triggers, and user defined functions
