@@ -461,6 +461,7 @@ After 31 August 2022, Azure Cosmos DB will no longer make bug fixes, add new fea
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
+| [2.12.0](#2.12.0) |October 7, 2020 |--- |
 | [2.11.6](#2.11.6) |August 12, 2020 |--- |
 | [2.11.5](#2.11.5) |August 4, 2020 |--- |
 | [2.11.4](#2.11.4) |July 30, 2020 |--- |
