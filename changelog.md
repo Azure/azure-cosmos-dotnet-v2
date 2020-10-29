@@ -3,6 +3,7 @@
 * Improved detection of regional outages for query operations that require obtaining a query plan.
 * Improved CPU utilization during connectivity events when using ConnectionPolicy.EnableTcpConnectionEndpointRediscovery.
 * Added RegexMatch system function for queries.
+* Improved performance for Direct + TCP connection by adding pooling to frequently allocated objects
 
 ### <a name="2.11.6"></a> 2.11.6
 
