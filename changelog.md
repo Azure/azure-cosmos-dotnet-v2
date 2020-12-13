@@ -1,3 +1,12 @@
+### <a name="2.13.0"></a> 2.13.0
+
+* Improved Session token parsing performance
+* Improved Direct + TCP response header performance
+* Improved performance by caching some environment variables
+* Fixed nuspec to include System.ValueTuple dependency 
+* Improved session token mismatch retry policy by extending maximum timeout from 50ms to 500ms. This will reduce failures returned to applications.
+* Fixed a regression introduced in 2.10.0 that causes "Microsoft.Azure.Documents.NotFoundException: The read session is not available for the input session token" exceptions to be returned to users.
+
 ### <a name="2.12.0"></a> 2.12.0
 
 * Improved detection of regional outages for query operations that require obtaining a query plan.
