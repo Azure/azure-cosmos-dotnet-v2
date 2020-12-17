@@ -1,3 +1,7 @@
+### <a name="2.13.1"></a> 2.13.1
+
+* Fixed an issue where Continuation header was sent even when it was absent.
+
 ### <a name="2.13.0"></a> 2.13.0
 
 * Improved Session token parsing performance
