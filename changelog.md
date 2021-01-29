@@ -24,7 +24,7 @@
 
 ### <a name="2.11.5"></a> 2.11.5
 
-* Fixed a bug that caused ConnectionPolicy TCP configuration to not be honored.
+* Fixed a bug that caused the following ConnectionPolicy options to be ignored. `IdleTcpConnectionTimeout`, `OpenTcpConnectionTimeout`, `MaxRequestsPerTcpConnection`, `MaxTcpPartitionCount`, `MaxTcpConnectionsPerEndpoint`, `MaxTcpConnectionsPerEndpoint`, `PortReuseMode`, `EnableTcpConnectionEndpointRediscovery`.
 * Improved detection of regional failover scenarios during query operations.
 * Improved resiliency during transient ReadSessionNotAvailable scenarios. 
 
