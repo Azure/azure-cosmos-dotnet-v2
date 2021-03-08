@@ -26,7 +26,8 @@
 
 * Fixed a bug that caused the following ConnectionPolicy options to be ignored. `IdleTcpConnectionTimeout`, `OpenTcpConnectionTimeout`, `MaxRequestsPerTcpConnection`, `MaxTcpPartitionCount`, `MaxTcpConnectionsPerEndpoint`, `MaxTcpConnectionsPerEndpoint`, `PortReuseMode`, `EnableTcpConnectionEndpointRediscovery`.
 * Improved detection of regional failover scenarios during query operations.
-* Improved resiliency during transient ReadSessionNotAvailable scenarios. 
+* Improved resiliency during transient ReadSessionNotAvailable scenarios.
+* Added a internal DocumentClientOperationCanceledException that wraps OperationCanceledException to include diagnostic information in the ToString() to help root cause issues. 
 
 ### <a name="2.11.4"></a> 2.11.4
 
