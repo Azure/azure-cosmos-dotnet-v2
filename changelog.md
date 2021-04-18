@@ -1,3 +1,12 @@
+### <a name="2.14.0"></a> 2.14.0
+
+* Add PopulateIndexMetrics for query to FeedOptions
+* Add backend request duration in milliseconds (BELatencyMs) to RequestDiagnosticsString
+* Improved performance by reducing string allocations
+* Improved performance on .NET framework by disabling HTTP Nagle
+* Fixed race condition in direct + tcp mode causing SDK generated internal server errors and invalid operation exceptions 
+* Fixed to many connections to be created concurrently in direct + tcp
+
 ### <a name="2.13.1"></a> 2.13.1
 
 * Fixed an issue where Continuation header was sent even when it was absent.
