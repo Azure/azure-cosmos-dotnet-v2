@@ -5,7 +5,7 @@
 * Improved performance by reducing string allocations
 * Improved performance on .NET framework by disabling HTTP Nagle
 * Fixed race condition in direct + tcp mode causing SDK generated internal server errors and invalid operation exceptions 
-* Fixed to many connections to be created concurrently in direct + tcp
+* Fixed race condition in direct + tcp mode causing unncessary connections to be created by concurrent requests 
 
 ### <a name="2.13.1"></a> 2.13.1
 
