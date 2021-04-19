@@ -1,7 +1,7 @@
 ### <a name="2.14.0"></a> 2.14.0
 
-* Add PopulateIndexMetrics to FeedOptions
-* Add backend request duration in milliseconds (BELatencyMs) to RequestDiagnosticsString
+* Added PopulateIndexMetrics to FeedOptions which allows users to get index usage metrics during testing to improve query performance.
+* Added backend request duration in milliseconds (BELatencyMs) to RequestDiagnosticsString
 * Improved allocations on Direct/TCP
 * Improved latency for Gateway mode users on .NET Framework by disabling Nagle algorithm
 * Fixed race condition in direct + tcp mode causing SDK generated internal server errors and invalid operation exceptions 
