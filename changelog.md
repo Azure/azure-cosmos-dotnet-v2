@@ -1,3 +1,12 @@
+### <a name="2.14.0"></a> 2.14.0
+
+* Added PopulateIndexMetrics to FeedOptions which allows users to get index usage metrics during testing to improve query performance.
+* Added backend request duration in milliseconds (BELatencyMs) to RequestDiagnosticsString
+* Improved allocations on Direct/TCP
+* Improved latency for Gateway mode users on .NET Framework by disabling Nagle algorithm
+* Fixed race condition in direct + tcp mode causing SDK generated internal server errors and invalid operation exceptions 
+* Fixed race condition in direct + tcp mode causing unncessary connections to be created by concurrent requests 
+
 ### <a name="2.13.1"></a> 2.13.1
 
 * Fixed an issue where Continuation header was sent even when it was absent.
@@ -91,24 +100,24 @@
 
 * Fix  Microsoft.Azure.Documents.ServiceInterop.dll graceful fallback bug [Issue #750](https://github.com/Azure/azure-cosmos-dotnet-v2/issues/750)
 
-### <a name="2.9.0"> 2.9.0 ##
+### <a name="2.9.0"></a> 2.9.0
 
 * Add support for [GROUP BY](https://docs.microsoft.com/azure/cosmos-db/sql-query-group-by) queries
 * Query now retrieves query plan before execution in order to ensure consistent behavior between single partition and cross partition queries.
 
-### <a name="2.8.1"></a> 2.8.1 ##
+### <a name="2.8.1"></a> 2.8.1
 
 * Added RequestDiagnosticsString to FeedResponse
 * Fixed serialization settings for upsert and replace document
 
-### <a name="2.7.0"></a> 2.7.0 ##
+### <a name="2.7.0"></a> 2.7.0
 
 * Added support for arrays and objects in order by queries
 * Handle effective partition key collisions
 * Added LINQ support for multiple OrderBy operators with ThenBy operator
 * Fixed AysncCache deadlock issue so that it will work with a single-threaded task scheduler
 
-### <a name="2.6.0"></a> 2.6.0 ##
+### <a name="2.6.0"></a> 2.6.0
 
 * Added PortReusePolicy to ConnectionPolicy
 * Fixed ntdll!RtlGetVersion TypeLoadException issue when SDK is used in a UWP app
@@ -477,6 +486,7 @@ After 31 August 2022, Azure Cosmos DB will no longer make bug fixes, add new fea
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
+| [2.14.0](#2.14.0) |April 16, 2021 |--- |
 | [2.12.0](#2.12.0) |October 7, 2020 |--- |
 | [2.11.6](#2.11.6) |August 12, 2020 |--- |
 | [2.11.5](#2.11.5) |August 4, 2020 |--- |
