@@ -6,6 +6,7 @@
 * Improved latency for Gateway mode users on .NET Framework by disabling Nagle algorithm
 * Fixed race condition in direct + tcp mode causing SDK generated internal server errors and invalid operation exceptions 
 * Fixed race condition in direct + tcp mode causing unncessary connections to be created by concurrent requests 
+
 ### <a name="2.13.1"></a> 2.13.1
 
 * Fixed an issue where Continuation header was sent even when it was absent.
