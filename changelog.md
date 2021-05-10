@@ -1,6 +1,9 @@
-### <a name="2.14.0"></a> 2.14.0
+### <a name="2.14.1"></a> 2.14.1
 
 * Added PopulateIndexMetrics to FeedOptions which allows users to get index usage metrics during testing to improve query performance.
+
+### <a name="2.14.0"></a> 2.14.0
+
 * Added backend request duration in milliseconds (BELatencyMs) to RequestDiagnosticsString
 * Improved allocations on Direct/TCP
 * Improved latency for Gateway mode users on .NET Framework by disabling Nagle algorithm
@@ -486,6 +489,7 @@ After 31 August 2022, Azure Cosmos DB will no longer make bug fixes, add new fea
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
+| [2.14.1](#2.14.1) |May 10, 2021 |--- |
 | [2.14.0](#2.14.0) |April 16, 2021 |--- |
 | [2.12.0](#2.12.0) |October 7, 2020 |--- |
 | [2.11.6](#2.11.6) |August 12, 2020 |--- |
