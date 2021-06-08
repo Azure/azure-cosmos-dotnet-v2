@@ -4,10 +4,10 @@ Traces are emitted with DocDBTrace source. Below sample app.config configuration
 ```xml
 <system.diagnostics>
     <switches>
-      <add name="SourceSwitch" value="Verbose"/>
+      <add name="ClientSwitch" value="Verbose"/>
     </switches>
     <sources>
-      <source name="DocDBTrace" switchName="SourceSwitch" switchType="System.Diagnostics.SourceSwitch" >
+      <source name="DocDBTrace" switchName="ClientSwitch" switchType="System.Diagnostics.SourceSwitch" >
         <listeners>
           <add name="MyTextListener" type="System.Diagnostics.TextWriterTraceListener" traceOutputOptions="DateTime,ProcessId,ThreadId" initializeData="CosmosDBTrace.txt"></add>
        < /listeners>
