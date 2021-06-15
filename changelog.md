@@ -1,3 +1,13 @@
+## Recommended version
+
+The **minimum recommended version is [2.14.0](#2.14.0)**.
+
+Make sure that your applications, when using the .NET V2 SDK, are using at least the version described here to have all the critical fixes.
+
+Any known issues or regressions detected on that version are listed in the [known regressions](#known-regressions) section.
+
+## Release notes
+
 ### <a name="2.14.1"></a> 2.14.1
 
 * Added PopulateIndexMetrics to FeedOptions which allows users to get index usage metrics during testing to improve query performance.
@@ -105,7 +115,7 @@
 
 ### <a name="2.9.0"></a> 2.9.0
 
-* Add support for [GROUP BY](https://docs.microsoft.com/azure/cosmos-db/sql-query-group-by) queries
+* Add support for [GROUP BY](sql-query-group-by.md) queries
 * Query now retrieves query plan before execution in order to ensure consistent behavior between single partition and cross partition queries.
 
 ### <a name="2.8.1"></a> 2.8.1
@@ -314,7 +324,7 @@
 - Fix for an issue wherein cross partition order-by query continuation was not working when sorting on string field.
 
 ### <a name="1.12.0"></a> 1.12.0
-- Added support for aggregation queries (COUNT, MIN, MAX, SUM, and AVG). See [Aggregation support](https://docs.microsoft.com/azure/cosmos-db/sql-query-aggregates).
+- Added support for aggregation queries (COUNT, MIN, MAX, SUM, and AVG). See [Aggregation support](sql-query-aggregates.md).
 - Lowered minimum throughput on partitioned collections from 10,100 RU/s to 2500 RU/s.
 
 ### <a name="1.11.4"></a> 1.11.4
@@ -336,7 +346,7 @@
 
 ### <a name="1.11.0"></a> 1.11.0
 
-- Support for new classes and methods to process the [change feed](https://docs.microsoft.com/azure/documentdb/documentdb-change-feed) of documents within a collection. 
+- Support for new classes and methods to process the [change feed](change-feed.md) of documents within a collection. 
 - Support for cross-partition query continuation and some perf improvements for cross-partition queries.
 - Addition of CreateDatabaseIfNotExistsAsync and CreateDocumentCollectionIfNotExistsAsync methods.
 - LINQ support for system functions: IsDefined, IsNull and IsPrimitive.
@@ -403,7 +413,7 @@
 
 ### <a name="1.6.2"></a> 1.6.2
 
-- Implemented [partitioned collections](https://docs.microsoft.com/azure/cosmos-db/partitioning-overview) and user-defined performance levels. 
+- Implemented [partitioned collections](partitioning-overview.md) and user-defined performance levels. 
 
 ### <a name="1.5.3"></a> 1.5.3
 
@@ -479,6 +489,13 @@
 
 ### <a name="1.0.0"></a> 1.0.0
 - GA SDK.
+
+## Known regressions
+
+Below is a list of any know regressions or issues affecting the [recommended minimum version](#recommended-version):
+
+* When executing queries and using Direct mode but the SDK needs to obtain the Query Plan from Gateway (more details on the [performance guide](performance-tips.md#hosting-recommendations)), the query execution will also go through Gateway instead of honoring Direct mode.
+* When using Direct mode with an account with multiple write locations, the SDK might not detect when a region is added to the account. The background process that [refreshes the account information](troubleshoot-sdk-availability.md#adding-a-region-to-an-account) fails to start.
 
 ## Release & Retirement dates
 
