@@ -115,7 +115,7 @@ Any known issues detected on that version are listed in the [known issues](#know
 
 ### <a name="2.9.0"></a> 2.9.0
 
-* Add support for [GROUP BY](sql-query-group-by.md) queries
+* Add support for [GROUP BY](/azure/cosmos-db/sql-query-aggregate-functions) queries
 * Query now retrieves query plan before execution in order to ensure consistent behavior between single partition and cross partition queries.
 
 ### <a name="2.8.1"></a> 2.8.1
