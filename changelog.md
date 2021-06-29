@@ -1,12 +1,21 @@
 ## <a name="recommended-version"></a> Recommended version
 
-The **minimum recommended version is [2.14.0](#2.14.0)**.
+The **minimum recommended version is [2.15.0](#2.15.0)**.
 
 Make sure that your applications, when using the .NET V2 SDK, are using at least the version described here to have all the critical fixes.
 
 Any known issues detected on that version are listed in the [known issues](#known-issues) section.
 
 ## Release notes
+### <a name="2.15.0"></a> 2.15.0
+
+* Added Direct + TCP transport pipeline diagnostics to RequestDiagnosticsString
+* Added optimization to reduce header size by only sending session token for the specific partition
+* Added cold start optimization to go to `ConnectionPolicy.PreferredLocations` in parallel instead of waiting for each region to timeout/fail in serial if primary region is down.
+* Added ConnectionPolicy.QueryPlanGenerationMode that can skip or require the Windows Native x64(ServiceInterop.dll) query plan generation
+* Fixed query plan generation if an unexpected exception happens when loading the Windows Native x64(ServiceInterop.dll). Now correctly falls back to gateway.
+* Fixed availability issue that could block failover scenarios when CancellationToken was cancelling during the failover attempt.
+
 ### <a name="2.14.1"></a> 2.14.1
 
 * Added PopulateIndexMetrics to FeedOptions which allows users to get index usage metrics during testing to improve query performance.
