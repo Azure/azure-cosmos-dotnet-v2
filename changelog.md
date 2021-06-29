@@ -14,7 +14,7 @@ Any known issues detected on that version are listed in the [known issues](#know
 * Added cold start optimization to go to `ConnectionPolicy.PreferredLocations` in parallel instead of waiting for each region to timeout/fail in serial if primary region is down.
 * Added ConnectionPolicy.QueryPlanGenerationMode that can skip or require the Windows Native x64(ServiceInterop.dll) query plan generation
 * Fixed query plan generation if an unexpected exception happens when loading the Windows Native x64(ServiceInterop.dll). Now correctly falls back to gateway.
-* Fixed availability issue caused by SDK caches not getting refreshed after the passed in CancellationToken was cancelled.
+* Fixed availability issue that could block failover scenarios when CancellationToken was cancelling during the failover attempt.
 
 ### <a name="2.14.1"></a> 2.14.1
 
