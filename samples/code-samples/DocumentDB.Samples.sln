@@ -40,6 +40,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Geospatial", "Geospatial\Ge
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChangeFeed", "ChangeFeed\ChangeFeed.csproj", "{7FA488B0-ECAC-4614-94BD-4570FDBACBF3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoScale", "AutoScale\AutoScale.csproj", "{231FEC93-AD66-4EBF-860E-9C1F6B4EDDF9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -86,6 +88,10 @@ Global
 		{7FA488B0-ECAC-4614-94BD-4570FDBACBF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7FA488B0-ECAC-4614-94BD-4570FDBACBF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7FA488B0-ECAC-4614-94BD-4570FDBACBF3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{231FEC93-AD66-4EBF-860E-9C1F6B4EDDF9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{231FEC93-AD66-4EBF-860E-9C1F6B4EDDF9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{231FEC93-AD66-4EBF-860E-9C1F6B4EDDF9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{231FEC93-AD66-4EBF-860E-9C1F6B4EDDF9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
