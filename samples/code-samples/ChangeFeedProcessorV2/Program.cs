@@ -109,7 +109,7 @@ namespace ChangeFeedProcessor
             string hostName = Guid.NewGuid().ToString();
 
             // monitored collection info
-            DocumentCollectionInfo documentCollectionInfo = new DocumentCollectionInfo
+            var documentCollectionInfo = new DocumentCollectionInfo
             {
                 Uri = new Uri(this.monitoredUri),
                 MasterKey = this.monitoredSecretKey,
@@ -117,22 +117,23 @@ namespace ChangeFeedProcessor
                 CollectionName = this.monitoredCollectionName
             };
 
-
-            DocumentCollectionInfo leaseCollectionInfo = new DocumentCollectionInfo
+            var leaseCollectionInfo = new DocumentCollectionInfo
             {
                 Uri = new Uri(this.leaseUri),
                 MasterKey = this.leaseSecretKey,
                 DatabaseName = this.leaseDbName,
                 CollectionName = this.leaseCollectionName
             };
-            DocumentFeedObserverFactory docObserverFactory = new DocumentFeedObserverFactory();
-            ChangeFeedProcessorOptions feedProcessorOptions = new ChangeFeedProcessorOptions();
 
-            // ie. customizing lease renewal interval to 15 seconds
+            // eg. customizing lease renewal interval to 15 seconds
             // can customize LeaseRenewInterval, LeaseAcquireInterval, LeaseExpirationInterval, FeedPollDelay
-            feedProcessorOptions.LeaseRenewInterval = TimeSpan.FromSeconds(15);
-            feedProcessorOptions.StartFromBeginning = true;
-            ChangeFeedProcessorBuilder builder = new ChangeFeedProcessorBuilder();
+            var feedProcessorOptions = new ChangeFeedProcessorOptions
+            {
+                LeaseRenewInterval = TimeSpan.FromSeconds(15),
+                StartFromBeginning = true
+            };
+
+            var builder = new ChangeFeedProcessorBuilder();
             builder
                 .WithHostName(hostName)
                 .WithFeedCollection(documentCollectionInfo)
