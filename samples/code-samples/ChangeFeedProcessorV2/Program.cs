@@ -41,6 +41,8 @@ namespace ChangeFeedProcessor
         private string leaseCollectionName = ConfigurationManager.AppSettings["leaseCollectionName"];
         private int leaseThroughput = int.Parse(ConfigurationManager.AppSettings["leaseThroughput"]);
 
+        private static string hostName = Environment.MachineName + "@" + DateTime.Now.Ticks.ToString();
+
         private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
         /// <summary>
@@ -50,8 +52,6 @@ namespace ChangeFeedProcessor
         ///
         public static void Main(string[] args)
         {
-            string hostName = "HostName " + DateTime.Now.Ticks.ToString();
-
             if (args.Length == 1)
             {
                 hostName = args[0];
@@ -106,8 +106,6 @@ namespace ChangeFeedProcessor
 
         public async Task RunChangeFeedHostAsync()
         {
-            string hostName = Guid.NewGuid().ToString();
-
             // monitored collection info
             DocumentCollectionInfo documentCollectionInfo = new DocumentCollectionInfo
             {
@@ -116,7 +114,6 @@ namespace ChangeFeedProcessor
                 DatabaseName = this.monitoredDbName,
                 CollectionName = this.monitoredCollectionName
             };
-
 
             DocumentCollectionInfo leaseCollectionInfo = new DocumentCollectionInfo
             {
@@ -147,7 +144,6 @@ namespace ChangeFeedProcessor
             Console.Read();
             await result.StopAsync();
         }
-
 
         /// <summary>
         /// Checks whether a collections exists. Creates a new collection if
