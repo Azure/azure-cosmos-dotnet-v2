@@ -85,10 +85,10 @@
 
             Console.WriteLine("Inserting 2 new documents");
             await client.CreateDocumentAsync(
-                collectionUri, 
+                collectionUri,
                 new DeviceReading { DeviceId = "xsensr-201", MetricType = "Temperature", Unit = "Celsius", MetricValue = 1000 });
             await client.CreateDocumentAsync(
-                collectionUri, 
+                collectionUri,
                 new DeviceReading { DeviceId = "xsensr-212", MetricType = "Pressure", Unit = "psi", MetricValue = 1000 });
 
             // Returns only the two documents created above.
@@ -117,7 +117,7 @@
             do
             {
                 FeedResponse<PartitionKeyRange> pkRangesResponse = await client.ReadPartitionKeyRangeFeedAsync(
-                    collectionUri, 
+                    collectionUri,
                     new FeedOptions { RequestContinuation = pkRangesResponseContinuation });
 
                 partitionKeyRanges.AddRange(pkRangesResponse);
@@ -130,7 +130,7 @@
                 string continuation = null;
                 checkpoints.TryGetValue(pkRange.Id, out continuation);
 
-                IDocumentQuery<Document> query = client.CreateDocumentChangeFeedQuery(
+                using (var query = client.CreateDocumentChangeFeedQuery(
                     collectionUri,
                     new ChangeFeedOptions
                     {
@@ -140,19 +140,21 @@
                         MaxItemCount = -1,
                         // Set reading time: only show change feed results modified since StartTime
                         StartTime = DateTime.Now - TimeSpan.FromSeconds(30)
-                    });
-
-                while (query.HasMoreResults)
+                    }))
                 {
-                    FeedResponse<DeviceReading> readChangesResponse = query.ExecuteNextAsync<DeviceReading>().Result;
 
-                    foreach (DeviceReading changedDocument in readChangesResponse)
+                    while (query.HasMoreResults)
                     {
-                        Console.WriteLine("\tRead document {0} from the change feed.", changedDocument.Id);
-                        numChangesRead++;
-                    }
+                        FeedResponse<DeviceReading> readChangesResponse = query.ExecuteNextAsync<DeviceReading>().Result;
 
-                    checkpoints[pkRange.Id] = readChangesResponse.ResponseContinuation;
+                        foreach (DeviceReading changedDocument in readChangesResponse)
+                        {
+                            Console.WriteLine("\tRead document {0} from the change feed.", changedDocument.Id);
+                            numChangesRead++;
+                        }
+
+                        checkpoints[pkRange.Id] = readChangesResponse.ResponseContinuation;
+                    }
                 }
             }
 

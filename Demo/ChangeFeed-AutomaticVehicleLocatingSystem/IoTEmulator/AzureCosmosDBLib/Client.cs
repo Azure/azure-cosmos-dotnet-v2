@@ -91,19 +91,20 @@
 
         public static async Task<IEnumerable<T>> GetItemsAsync(Expression<Func<T, bool>> predicate, string documentId)
         {
-            IDocumentQuery<T> query = client.CreateDocumentQuery<T>(UriFactory.CreateDocumentUri(_database, _collection, documentId),
+            using (var query = client.CreateDocumentQuery<T>(UriFactory.CreateDocumentUri(_database, _collection, documentId),
                 new FeedOptions { MaxItemCount = -1 })
                 .Where(predicate)
-                .AsDocumentQuery();
-
-            List<T> results = new List<T>();
-            while (query.HasMoreResults)
+                .AsDocumentQuery())
             {
-                
-                results.AddRange(await query.ExecuteNextAsync<T>());
-            }
+                List<T> results = new List<T>();
+                while (query.HasMoreResults)
+                {
 
-            return results;
+                    results.AddRange(await query.ExecuteNextAsync<T>());
+                }
+
+                return results;
+            }
         }
 
         public static async Task<Document> CreateItemAsync(T item)

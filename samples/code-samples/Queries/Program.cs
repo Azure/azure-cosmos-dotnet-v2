@@ -203,29 +203,32 @@
             var query =
                 from f in client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                 where f.Id == "AndersenFamily" || f.Address.City == "NY"
-                select new { Name = f.LastName, City = f.Address.City };
+                select new { Name = f.LastName, f.Address.City };
 
-            var query2 = client.CreateDocumentQuery<Family>(
-                collectionUri,
-                new FeedOptions { MaxItemCount = 1, EnableCrossPartitionQuery = true })
-                .Where(d => d.LastName == "Andersen")
-                .Select(f => new { Name = f.LastName })
-                .AsDocumentQuery();
-
-            foreach (var item in query.ToList())
+            using (var query2 = client.CreateDocumentQuery<Family>(
+                 collectionUri,
+                 new FeedOptions { MaxItemCount = 1, EnableCrossPartitionQuery = true })
+                 .Where(d => d.LastName == "Andersen")
+                 .Select(f => new { Name = f.LastName })
+                 .AsDocumentQuery())
             {
-                Console.WriteLine("The {0} family live in {1}", item.Name, item.City);
+
+                foreach (var item in query.ToList())
+                {
+                    Console.WriteLine("The {0} family live in {1}", item.Name, item.City);
+                }
             }
 
             // LINQ Lambda -- Id == "value" OR City == "value"
             query = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                        .Where(f => f.Id == "AndersenFamily" || f.Address.City == "NY")
-                       .Select(f => new { Name = f.LastName, City = f.Address.City });
+                       .Select(f => new { Name = f.LastName, f.Address.City });
 
             foreach (var item in query)
             {
                 Console.WriteLine("The {0} family live in {1}", item.Name, item.City);
             }
+
 
             // SQL -- Id == "value" OR City == "value"
             var q = client.CreateDocumentQuery(collectionUri,
@@ -687,52 +690,58 @@
             // using AsDocumentQuery you get access to whether or not the query HasMoreResults
             // If it does, just call ExecuteNextAsync until there are no more results
             // No need to supply a continuation token here as the server keeps track of progress
-            var query = client.CreateDocumentQuery<Family>(collectionUri, options).AsDocumentQuery();
-            while (query.HasMoreResults)
+            using (var query = client.CreateDocumentQuery<Family>(collectionUri, options).AsDocumentQuery())
             {
-                foreach (Family family in await query.ExecuteNextAsync())
+                while (query.HasMoreResults)
                 {
-                    families.Add(family);
+                    foreach (Family family in await query.ExecuteNextAsync())
+                    {
+                        families.Add(family);
+                    }
                 }
             }
-
             // The above sample works fine whilst in a loop as above, but 
             // what if you load a page of 1 record and then in a different 
             // Session at a later stage want to continue from where you were?
             // well, now you need to capture the continuation token 
             // and use it on subsequent queries
 
-            query = client.CreateDocumentQuery<Family>(
+            string continuation;
+
+            using (var query = client.CreateDocumentQuery<Family>(
                 collectionUri,
-                new FeedOptions { MaxItemCount = 1, EnableCrossPartitionQuery = true }).AsDocumentQuery();
-
-            var feedResponse = await query.ExecuteNextAsync<Family>();
-            string continuation = feedResponse.ResponseContinuation;
-
-            foreach (var f in feedResponse.AsEnumerable().OrderBy(f => f.Id))
+                new FeedOptions { MaxItemCount = 1, EnableCrossPartitionQuery = true }).AsDocumentQuery())
             {
-                if (f.Id != "AndersenFamily") throw new ApplicationException("Should only be the first family");
+
+                var feedResponse = await query.ExecuteNextAsync<Family>();
+                continuation = feedResponse.ResponseContinuation;
+
+                foreach (var f in feedResponse.AsEnumerable().OrderBy(f => f.Id))
+                {
+                    if (f.Id != "AndersenFamily") throw new ApplicationException("Should only be the first family");
+                }
             }
 
             // Now the second time around use the contiuation token you got
             // and start the process from that point
-            query = client.CreateDocumentQuery<Family>(
+            using (var query = client.CreateDocumentQuery<Family>(
                 collectionUri,
                 new FeedOptions
                 {
                     MaxItemCount = 1,
                     RequestContinuation = continuation,
                     EnableCrossPartitionQuery = true
-                }).AsDocumentQuery();
-
-            feedResponse = await query.ExecuteNextAsync<Family>();
-
-            foreach (var f in feedResponse.AsEnumerable().OrderBy(f => f.Id))
+                }).AsDocumentQuery())
             {
-                if (f.Id != "WakefieldFamily") throw new ApplicationException("Should only be the second family");
+
+                var feedResponse = await query.ExecuteNextAsync<Family>();
+
+                foreach (var f in feedResponse.AsEnumerable().OrderBy(f => f.Id))
+                {
+                    if (f.Id != "WakefieldFamily") throw new ApplicationException("Should only be the second family");
+                }
             }
         }
-
         private static async Task QueryPartitionedCollectionInParallelAsync(Uri collectionUri)
         {
             // The .NET client automatically iterates through all the pages of query results 
@@ -751,15 +760,16 @@
                 EnableCrossPartitionQuery = true
             };
 
-            var query = client.CreateDocumentQuery<Family>(collectionUri, queryText, options).AsDocumentQuery();
-            while (query.HasMoreResults)
+            using (var query = client.CreateDocumentQuery<Family>(collectionUri, queryText, options).AsDocumentQuery())
             {
-                foreach (Family family in await query.ExecuteNextAsync().ConfigureAwait(false))
+                while (query.HasMoreResults)
                 {
-                    familiesSerial.Add(family);
+                    foreach (Family family in await query.ExecuteNextAsync().ConfigureAwait(false))
+                    {
+                        familiesSerial.Add(family);
+                    }
                 }
             }
-
             Assert("Parallel Query expected two families", familiesSerial.ToList().Count == 2);
 
             // 1 maximum parallel tasks, 1 dedicated asynchrousnous task to continuously make REST calls
@@ -771,18 +781,19 @@
                 EnableCrossPartitionQuery = true
             };
 
-            query = client.CreateDocumentQuery<Family>(collectionUri, options).AsDocumentQuery();
-            while (query.HasMoreResults)
+            using (var query = client.CreateDocumentQuery<Family>(collectionUri, options).AsDocumentQuery())
             {
-                foreach (Family family in await query.ExecuteNextAsync())
+                while (query.HasMoreResults)
                 {
-                    familiesParallel1.Add(family);
+                    foreach (Family family in await query.ExecuteNextAsync())
+                    {
+                        familiesParallel1.Add(family);
+                    }
                 }
             }
 
             Assert("Parallel Query expected two families", familiesParallel1.ToList().Count == 2);
             AssertSequenceEqual("Parallel query returns result out of order compared to serial execution", familiesSerial, familiesParallel1);
-
 
             // 10 maximum parallel tasks, a maximum of 10 dedicated asynchrousnous tasks to continuously make REST calls
             List<Family> familiesParallel10 = new List<Family>();
@@ -793,12 +804,14 @@
                 EnableCrossPartitionQuery = true
             };
 
-            query = client.CreateDocumentQuery<Family>(collectionUri, options).AsDocumentQuery();
-            while (query.HasMoreResults)
+            using (var query = client.CreateDocumentQuery<Family>(collectionUri, options).AsDocumentQuery())
             {
-                foreach (Family family in await query.ExecuteNextAsync())
+                while (query.HasMoreResults)
                 {
-                    familiesParallel10.Add(family);
+                    foreach (Family family in await query.ExecuteNextAsync())
+                    {
+                        familiesParallel10.Add(family);
+                    }
                 }
             }
 
@@ -824,12 +837,14 @@
                 EnableCrossPartitionQuery = true
             };
 
-            var query = client.CreateDocumentQuery<Family>(collectionUri, queryText, options).AsDocumentQuery();
-            while (query.HasMoreResults)
-            {
-                foreach (Family family in await query.ExecuteNextAsync())
+            using (var query = client.CreateDocumentQuery<Family>(collectionUri, queryText, options).AsDocumentQuery())
+            { 
+                while (query.HasMoreResults)
                 {
-                    familiesSerial.Add(family);
+                    foreach (Family family in await query.ExecuteNextAsync())
+                    {
+                        familiesSerial.Add(family);
+                    }
                 }
             }
 
@@ -847,12 +862,14 @@
             // using AsDocumentQuery you get access to whether or not the query HasMoreResults
             // If it does, just call ExecuteNextAsync until there are no more results
             // No need to supply a continuation token here as the server keeps track of progress
-            query = client.CreateDocumentQuery<Family>(collectionUri, queryText, options).AsDocumentQuery();
-            while (query.HasMoreResults)
-            {
-                foreach (Family family in await query.ExecuteNextAsync())
+            using (var query = client.CreateDocumentQuery<Family>(collectionUri, queryText, options).AsDocumentQuery())
+            { 
+                while (query.HasMoreResults)
                 {
-                    familiesParallel1.Add(family);
+                    foreach (Family family in await query.ExecuteNextAsync())
+                    {
+                        familiesParallel1.Add(family);
+                    }
                 }
             }
 
@@ -868,12 +885,14 @@
                 EnableCrossPartitionQuery = true
             };
 
-            query = client.CreateDocumentQuery<Family>(collectionUri, queryText, options).AsDocumentQuery();
-            while (query.HasMoreResults)
-            {
-                foreach (Family family in await query.ExecuteNextAsync())
+            using (var query = client.CreateDocumentQuery<Family>(collectionUri, queryText, options).AsDocumentQuery())
+            { 
+                while (query.HasMoreResults)
                 {
-                    familiesParallel10.Add(family);
+                    foreach (Family family in await query.ExecuteNextAsync())
+                    {
+                        familiesParallel10.Add(family);
+                    }
                 }
             }
 
