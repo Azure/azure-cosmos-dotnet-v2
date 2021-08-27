@@ -8,13 +8,10 @@ Any known issues detected on that version are listed in the [known issues](#know
 
 ## Release notes
 ### <a name="2.16.0"></a> 2.16.0
-* Added system usage information to all RequestDiagnosticsString
-* Added new system usage to include memory usage
-* Added specific message for ThreadStarvatation detection
-* Added body size to transport diagnostics string
-* Fixed security issue by bumping WinHttpHandler to 4.5.4
-* Fixed security issue with ServiceInterop.dll
-* Fixes failover mechanic on GetDatabaseAccount call
+* Added memory, thread starvation, and response body size to RequestDiagnosticsString
+* Fixed CVE-2017-0247 issue by bumping WinHttpHandler to 4.5.4
+* Fixed ServiceInterop.dll to be BinSkim compliant by adding [/guard](https://docs.microsoft.com/cpp/build/reference/guard-enable-control-flow-guard?view=msvc-160) [/Qspectre](https://docs.microsoft.com/cpp/build/reference/guard-enable-control-flow-guard?view=msvc-160) flags
+* Fixes failover mechanic that could prevent the detection of a region going offline during GetDatabaseAccount operations
 
 ### <a name="2.15.0"></a> 2.15.0
 
