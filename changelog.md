@@ -7,6 +7,15 @@ Make sure that your applications, when using the .NET V2 SDK, are using at least
 Any known issues detected on that version are listed in the [known issues](#known-issues) section.
 
 ## Release notes
+### <a name="2.16.0"></a> 2.16.0
+* Added system usage information to all RequestDiagnosticsString
+* Added new system usage to include memory usage
+* Added specific message for ThreadStarvatation detection
+* Added body size to transport diagnostics string
+* Fixed security issue by bumping WinHttpHandler to 4.5.4
+* Fixed security issue with ServiceInterop.dll
+* Fixes failover mechanic on GetDatabaseAccount call
+
 ### <a name="2.15.0"></a> 2.15.0
 
 * Added Direct + TCP transport pipeline diagnostics to RequestDiagnosticsString
