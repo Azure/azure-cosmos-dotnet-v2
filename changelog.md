@@ -1,10 +1,7 @@
-## <a name="recommended-version"></a> Recommended version
 
-The **minimum recommended version is [2.15.0](#2.15.0)**.
+## <a name="recommended-version"></a> Recommended version (Deprecated)
 
-Make sure that your applications, when using the .NET V2 SDK, are using at least the version described here to have all the critical fixes.
-
-Any known issues detected on that version are listed in the [known issues](#known-issues) section.
+Because version 3 of the Azure Cosmos DB .NET SDK includes updated features and improved performance, we’ll retire version 2.x of this SDK on 31 August 2024.  As a result, you’ll need to update your SDK to version 3 by that date. We recommend following the [instructions](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/migrate-dotnet-v3?tabs=dotnet-v3) to migrate to Azure Cosmos DB .NET SDK version 3.
 
 ## Release notes
 ### <a name="2.16.0"></a> 2.16.0
@@ -517,39 +514,41 @@ Below is a list of any know issues affecting the [recommended minimum version](#
 
 Microsoft provides notification at least **12 months** in advance of retiring an SDK in order to smooth the transition to a newer/supported version. New features and functionality and optimizations are only added to the current SDK, as such it is recommended that you always upgrade to the latest SDK version as early as possible. 
 
-After 31 August 2022, Azure Cosmos DB will no longer make bug fixes, add new features, and provide support to versions 1.x of the Azure Cosmos DB .NET or .NET Core SDK for SQL API. If you prefer not to upgrade, requests sent from version 1.x of the SDK will continue to be served by the Azure Cosmos DB service.
+Azure Cosmos DB will no longer make bug fixes, add new features, and provide support to versions 1.x and 2.x of the Azure Cosmos DB .NET or .NET Core SDK for SQL API. If you prefer not to upgrade, requests sent from version 1.x or 2.x of the SDK will continue to be served by the Azure Cosmos DB service.  We recommend following the [instructions](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/migrate-dotnet-v3?tabs=dotnet-v3) to migrate to the latest version of the Azure Cosmos DB .NET SDK.
 
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
-| [2.14.1](#2.14.1) |May 10, 2021 |--- |
-| [2.14.0](#2.14.0) |April 16, 2021 |--- |
-| [2.12.0](#2.12.0) |October 7, 2020 |--- |
-| [2.11.6](#2.11.6) |August 12, 2020 |--- |
-| [2.11.5](#2.11.5) |August 4, 2020 |--- |
-| [2.11.4](#2.11.4) |July 30, 2020 |--- |
-| [2.11.3](#2.11.3) |July 29, 2020 |--- |
-| [2.11.2](#2.11.2) |July 14, 2020 |--- |
-| [2.11.1](#2.11.1) |July 1, 2020 |--- |
-| [2.9.2](#2.9.2) |November 15, 2019 |--- |
-| [2.9.1](#2.9.1) |November 13, 2019 |--- |
-| [2.9.0](#2.9.0) |October 30, 2019 |--- |
-| [2.8.1](#2.8.1) |October 11, 2019 |--- |
-| [2.7.0](#2.7.0) |September 23, 2019 |--- |
-| [2.6.0](#2.6.0) |August 30, 2019 |--- |
-| [2.5.1](#2.5.1) |July  02, 2019 |--- |
-| [2.4.1](#2.4.1) |June  20, 2019 |--- |
-| [2.4.0](#2.4.0) |May  05, 2019 |--- |
-| [2.3.0](#2.3.0) |April  04, 2019 |--- |
-| [2.2.3](#2.2.3) |February 11, 2019 |--- |
-| [2.2.2](#2.2.2) |February 06, 2019 |--- |
-| [2.2.1](#2.2.1) |December 24, 2018 |--- |
-| [2.2.0](#2.2.0) |December 07, 2018 |--- |
-| [2.1.3](#2.1.3) |October 15, 2018 |--- |
-| [2.1.2](#2.1.2) |October 04, 2018 |--- |
-| [2.1.1](#2.1.1) |September 27, 2018 |--- |
-| [2.1.0](#2.1.0) |September 21, 2018 |--- |
-| [2.0.0](#2.0.0) |September 07, 2018 |--- |
+| [2.16.0](#2.16.0) |August 27, 2021 | August 31, 2024 |
+| [2.15.1](#2.15.1) |June 21, 2021 | August 31, 2024 |
+| [2.14.1](#2.14.1) |May 10, 2021 | August 31, 2024 |
+| [2.14.0](#2.14.0) |April 16, 2021 | August 31, 2024 |
+| [2.12.0](#2.12.0) |October 7, 2020 | August 31, 2024 |
+| [2.11.6](#2.11.6) |August 12, 2020 | August 31, 2024 |
+| [2.11.5](#2.11.5) |August 4, 2020 | August 31, 2024 |
+| [2.11.4](#2.11.4) |July 30, 2020 | August 31, 2024 |
+| [2.11.3](#2.11.3) |July 29, 2020 | August 31, 2024 |
+| [2.11.2](#2.11.2) |July 14, 2020 | August 31, 2024 |
+| [2.11.1](#2.11.1) |July 1, 2020 | August 31, 2024 |
+| [2.9.2](#2.9.2) |November 15, 2019 | August 31, 2024 |
+| [2.9.1](#2.9.1) |November 13, 2019 | August 31, 2024 |
+| [2.9.0](#2.9.0) |October 30, 2019 | August 31, 2024 |
+| [2.8.1](#2.8.1) |October 11, 2019 | August 31, 2024 |
+| [2.7.0](#2.7.0) |September 23, 2019 | August 31, 2024 |
+| [2.6.0](#2.6.0) |August 30, 2019 | August 31, 2024 |
+| [2.5.1](#2.5.1) |July  02, 2019 | August 31, 2024 |
+| [2.4.1](#2.4.1) |June  20, 2019 | August 31, 2024 |
+| [2.4.0](#2.4.0) |May  05, 2019 | August 31, 2024 |
+| [2.3.0](#2.3.0) |April  04, 2019 | August 31, 2024 |
+| [2.2.3](#2.2.3) |February 11, 2019 | August 31, 2024 |
+| [2.2.2](#2.2.2) |February 06, 2019 | August 31, 2024 |
+| [2.2.1](#2.2.1) |December 24, 2018 | August 31, 2024 |
+| [2.2.0](#2.2.0) |December 07, 2018 | August 31, 2024 |
+| [2.1.3](#2.1.3) |October 15, 2018 | August 31, 2024 |
+| [2.1.2](#2.1.2) |October 04, 2018 | August 31, 2024 |
+| [2.1.1](#2.1.1) |September 27, 2018 | August 31, 2024 |
+| [2.1.0](#2.1.0) |September 21, 2018 | August 31, 2024 |
+| [2.0.0](#2.0.0) |September 07, 2018 | August 31, 2024 |
 | [1.22.0](#1.22.0) |April 19, 2018 | August 31, 2022 |
 | [1.21.1](#1.20.1) |March 09, 2018 | August 31, 2022  |
 | [1.20.2](#1.20.1) |February 21, 2018 | August 31, 2022  |
