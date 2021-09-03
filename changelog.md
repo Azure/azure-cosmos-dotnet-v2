@@ -514,7 +514,7 @@ Below is a list of any know issues affecting the [recommended minimum version](#
 
 Microsoft provides notification at least **12 months** in advance of retiring an SDK in order to smooth the transition to a newer/supported version. New features and functionality and optimizations are only added to the current SDK, as such it is recommended that you always upgrade to the latest SDK version as early as possible. 
 
-After 31 August 2022, Azure Cosmos DB will no longer make bug fixes, add new features, and provide support to versions 1.x of the Azure Cosmos DB .NET or .NET Core SDK for SQL API. If you prefer not to upgrade, requests sent from version 1.x of the SDK will continue to be served by the Azure Cosmos DB service.
+Azure Cosmos DB will no longer make bug fixes, add new features, and provide support to versions 1.x and 2.x of the Azure Cosmos DB .NET or .NET Core SDK for SQL API. If you prefer not to upgrade, requests sent from version 1.x or 2.x of the SDK will continue to be served by the Azure Cosmos DB service.  We recommend following the [instructions](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/migrate-dotnet-v3?tabs=dotnet-v3) to migrate to the latest version of the Azure Cosmos DB .NET SDK.
 
 
 | Version | Release Date | Retirement Date |
