@@ -1,7 +1,7 @@
 
 ## <a name="recommended-version"></a> Recommended version (Deprecated)
 
-Because version 3 of the Azure Cosmos DB .NET SDK includes updated features and improved performance, we’ll retire version 2.x of this SDK on 31 August 2024.  As a result, you’ll need to update your SDK to version 3 by that date. We recommend following the [instructions](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/migrate-dotnet-v3?tabs=dotnet-v3) to migrate to Azure Cosmos DB .NET SDK version 3.
+Because version 3 of the Azure Cosmos DB .NET SDK includes updated features and improved performance, we’ll retire version 2.x of this SDK on 31 August 2024.  As a result, you’ll need to update your SDK to version 3 by that date. We recommend following the [instructions](https://docs.microsoft.com/azure/cosmos-db/sql/migrate-dotnet-v3?tabs=dotnet-v3) to migrate to Azure Cosmos DB .NET SDK version 3.
 
 ## Release notes
 ### <a name="2.16.0"></a> 2.16.0
@@ -514,13 +514,13 @@ Below is a list of any know issues affecting the [recommended minimum version](#
 
 Microsoft provides notification at least **12 months** in advance of retiring an SDK in order to smooth the transition to a newer/supported version. New features and functionality and optimizations are only added to the current SDK, as such it is recommended that you always upgrade to the latest SDK version as early as possible. 
 
-Azure Cosmos DB will no longer make bug fixes, add new features, and provide support to versions 1.x and 2.x of the Azure Cosmos DB .NET or .NET Core SDK for SQL API. If you prefer not to upgrade, requests sent from version 1.x or 2.x of the SDK will continue to be served by the Azure Cosmos DB service.  We recommend following the [instructions](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/migrate-dotnet-v3?tabs=dotnet-v3) to migrate to the latest version of the Azure Cosmos DB .NET SDK.
+Azure Cosmos DB will no longer make bug fixes, add new features, and provide support to versions 1.x and 2.x of the Azure Cosmos DB .NET or .NET Core SDK for SQL API. If you prefer not to upgrade, requests sent from version 1.x or 2.x of the SDK will continue to be served by the Azure Cosmos DB service.  We recommend following the [instructions](https://docs.microsoft.com/azure/cosmos-db/sql/migrate-dotnet-v3?tabs=dotnet-v3) to migrate to the latest version of the Azure Cosmos DB .NET SDK.
 
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
 | [2.16.0](#2.16.0) |August 27, 2021 | August 31, 2024 |
-| [2.15.1](#2.15.1) |June 21, 2021 | August 31, 2024 |
+| [2.15.0](#2.15.0) |June 21, 2021 | August 31, 2024 |
 | [2.14.1](#2.14.1) |May 10, 2021 | August 31, 2024 |
 | [2.14.0](#2.14.0) |April 16, 2021 | August 31, 2024 |
 | [2.12.0](#2.12.0) |October 7, 2020 | August 31, 2024 |
