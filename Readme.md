@@ -1,8 +1,9 @@
+# 🚨Deprecated 🚨
+
+## We've recently announced the deprecation of the Azure Cosmos DB .NET SDK Version 2. Starting August 2024 Microsoft will no longer provide support for this SDK. Existing applications using this library will continue to work as-is. We strongly recommend upgrading to the latest [version of the SDK](https://github.com/Azure/azure-cosmos-dotnet-v3). For details on how to migrate your existing applications, follow our [migration guide](https://docs.microsoft.com/en-us/azure/cosmos-db/sql/migrate-dotnet-v3?tabs=dotnet-v3).
+
 # Microsoft Azure Cosmos DB .NET SDK Version 2
 This project provides a client tools or utilities in .NET that makes it easy to interact with Azure Cosmos DB. Azure cosmos DB is published with nuget name [Microsoft.Azure.DocumentDB](https://www.nuget.org/packages/Microsoft.Azure.DocumentDB/). 
-
-## Microsoft Azure Cosmos DB .NET SDK Version 3 is GA
-Please try out the new [v3 SDK](https://github.com/Azure/azure-cosmos-dotnet-v3).
 
 ## Useful links:
 
