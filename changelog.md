@@ -6,6 +6,13 @@ The **minimum recommended version is [2.16.0](#2.16.0)**.
 Because version 3 of the Azure Cosmos DB .NET SDK includes updated features and improved performance, we’ll retire version 2.x of this SDK on 31 August 2024.  As a result, you’ll need to update your SDK to version 3 by that date. We recommend following the [instructions](https://docs.microsoft.com/azure/cosmos-db/sql/migrate-dotnet-v3?tabs=dotnet-v3) to migrate to Azure Cosmos DB .NET SDK version 3.
 
 ## Release notes
+### <a name="2.16.1"></a> 2.16.1
+* Improved availability for Direct +TCP mode by setting EnableTcpConnectionEndpointRediscovery to on by default.
+* Improved retryWith(449) retry policy by having it retry sooner when multiple 449s are hit for the same request.
+* Fixed queries going to gateway when SDK is configured with Direct + TCP. Only impacts queries without aggregates or no MaxDegreeOfParallelism is set with the ServiceInterop.dll not being available.
+* Fixed InvalidOperationException thrown with stack trace containing StoreClient.UpdateResponseHeader
+* Fixed Memory and CPU usage calculation for Linux and Windows environment in RequestDiagnosticsString
+
 ### <a name="2.16.0"></a> 2.16.0
 * Added memory, thread starvation, and response body size to RequestDiagnosticsString
 * Fixed CVE-2017-0247 issue by bumping WinHttpHandler to 4.5.4
@@ -522,6 +529,7 @@ Azure Cosmos DB will no longer make bug fixes, add new features, and provide sup
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
+| [2.16.1](#2.16.1) |September 25, 2021 | August 31, 2024 |
 | [2.16.0](#2.16.0) |August 27, 2021 | August 31, 2024 |
 | [2.15.0](#2.15.0) |June 21, 2021 | August 31, 2024 |
 | [2.14.1](#2.14.1) |May 10, 2021 | August 31, 2024 |
