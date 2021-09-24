@@ -18,6 +18,7 @@ Because version 3 of the Azure Cosmos DB .NET SDK includes updated features and 
 * Added optimization to reduce header size by only sending session token for the specific partition
 * Added cold start optimization to go to `ConnectionPolicy.PreferredLocations` in parallel instead of waiting for each region to timeout/fail in serial if primary region is down.
 * Added ConnectionPolicy.QueryPlanGenerationMode that can skip or require the Windows Native x64(ServiceInterop.dll) query plan generation
+* Added DocumentClientOperationCanceledException additional context to Message instead of ToString()
 * Fixed query plan generation if an unexpected exception happens when loading the Windows Native x64(ServiceInterop.dll). Now correctly falls back to gateway.
 * Fixed availability issue that could block failover scenarios when CancellationToken was cancelling during the failover attempt.
 
