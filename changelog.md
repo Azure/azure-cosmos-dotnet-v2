@@ -6,6 +6,13 @@ The **minimum recommended version is [2.16.0](#2.16.0)**.
 Because version 3 of the Azure Cosmos DB .NET SDK includes updated features and improved performance, we’ll retire version 2.x of this SDK on 31 August 2024.  As a result, you’ll need to update your SDK to version 3 by that date. We recommend following the [instructions](https://docs.microsoft.com/azure/cosmos-db/sql/migrate-dotnet-v3?tabs=dotnet-v3) to migrate to Azure Cosmos DB .NET SDK version 3.
 
 ## Release notes
+### <a name="2.16.1"></a> 2.16.1
+* Improved availability for Direct + TCP mode by setting EnableTcpConnectionEndpointRediscovery to `true` by default.
+* Improved RetryWith(HTTP 449) retry mechanics by having it retry sooner when multiple 449s are hit for the same request.
+* Fixed queries going to gateway when SDK is configured with Direct + TCP. Only impacts queries without aggregates or no MaxDegreeOfParallelism is set with the ServiceInterop.dll not being available.
+* Fixed InvalidOperationException thrown with stack trace containing StoreClient.UpdateResponseHeader
+* Fixed Memory and CPU usage calculation for Linux and Windows environment in RequestDiagnosticsString
+
 ### <a name="2.16.0"></a> 2.16.0
 * Added memory, thread starvation, and response body size to RequestDiagnosticsString
 * Fixed CVE-2017-0247 issue by bumping WinHttpHandler to 4.5.4
@@ -510,7 +517,7 @@ Below is a list of any know issues affecting the [recommended minimum version](#
 
 | Issue | Impact | Mitigation | Tracking link |
 | --- | --- | --- | --- |
-| When executing queries and using Direct mode but the SDK needs to obtain the Query Plan from Gateway (more details on the [performance guide](/azure/cosmos-db/performance-tips#hosting-recommendations)), the query execution will also go through Gateway instead of honoring Direct mode. |Queries are executed on Gateway mode as HTTP requests. |If possible run on Windows x64 with your application compiled as x64. |https://github.com/Azure/azure-cosmos-dotnet-v2/issues/854 | 
+| When executing queries and using Direct mode but the SDK needs to obtain the Query Plan from Gateway (more details on the [performance guide](/azure/cosmos-db/performance-tips#hosting-recommendations)), the query execution will also go through Gateway instead of honoring Direct mode. |Queries are executed on Gateway mode as HTTP requests. | Upgrade to 2.16.1 version. |https://github.com/Azure/azure-cosmos-dotnet-v2/issues/854 | 
 | When using Direct mode with an account with multiple write locations, the SDK might not detect when a region is added to the account. The background process that [refreshes the account information](/azure/cosmos-db/troubleshoot-sdk-availability#adding-a-region-to-an-account) fails to start. |If a new region is added to the account which is part of the PreferredLocations on a higher order than the current region, the SDK won't detect the new available region. |Restart the application. |https://github.com/Azure/azure-cosmos-dotnet-v2/issues/852 |
 
 ## Release & Retirement dates
@@ -522,6 +529,7 @@ Azure Cosmos DB will no longer make bug fixes, add new features, and provide sup
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
+| [2.16.1](#2.16.1) |September 25, 2021 | August 31, 2024 |
 | [2.16.0](#2.16.0) |August 27, 2021 | August 31, 2024 |
 | [2.15.0](#2.15.0) |June 21, 2021 | August 31, 2024 |
 | [2.14.1](#2.14.1) |May 10, 2021 | August 31, 2024 |
