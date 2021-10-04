@@ -16,7 +16,7 @@ Because version 3 of the Azure Cosmos DB .NET SDK includes updated features and 
 ### <a name="2.16.0"></a> 2.16.0
 * Added memory, thread starvation, and response body size to RequestDiagnosticsString
 * Fixed CVE-2017-0247 issue by bumping WinHttpHandler to 4.5.4
-* Fixed ServiceInterop.dll to be BinSkim compliant by adding [/guard](https://docs.microsoft.com/cpp/build/reference/guard-enable-control-flow-guard?view=msvc-160) [/Qspectre](https://docs.microsoft.com/cpp/build/reference/guard-enable-control-flow-guard?view=msvc-160) flags
+* Fixed ServiceInterop.dll to be BinSkim compliant by adding [/guard](https://docs.microsoft.com/cpp/build/reference/guard-enable-control-flow-guard?view=msvc-160&preserve-view=true) [/Qspectre](https://docs.microsoft.com/cpp/build/reference/guard-enable-control-flow-guard?view=msvc-160&preserve-view=true) flags
 * Fixes failover mechanic that could prevent the detection of a region going offline during GetDatabaseAccount operations
 
 ### <a name="2.15.0"></a> 2.15.0
