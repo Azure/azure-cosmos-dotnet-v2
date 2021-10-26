@@ -1,11 +1,14 @@
 ## <a name="recommended-version"></a> Recommended version (Deprecated)
 
-The **minimum recommended version is [2.16.1](#2.16.1)**.
+The **minimum recommended version is [2.16.2](#2.16.2)**.
 
 **Note:**
 Because version 3 of the Azure Cosmos DB .NET SDK includes updated features and improved performance, we’ll retire version 2.x of this SDK on 31 August 2024.  As a result, you’ll need to update your SDK to version 3 by that date. We recommend following the [instructions](https://docs.microsoft.com/azure/cosmos-db/sql/migrate-dotnet-v3?tabs=dotnet-v3) to migrate to Azure Cosmos DB .NET SDK version 3.
 
 ## Release notes
+### <a name="2.16.2"></a> 2.16.2
+* Fixed memory leak in query for systems running on Windows x64 using the ServiceInterop.dll
+
 ### <a name="2.16.1"></a> 2.16.1
 * Improved availability for Direct + TCP mode by setting EnableTcpConnectionEndpointRediscovery to `true` by default.
 * Improved RetryWith(HTTP 449) retry mechanics by having it retry sooner when multiple 449s are hit for the same request.
@@ -528,6 +531,7 @@ Azure Cosmos DB will no longer make bug fixes, add new features, and provide sup
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
+| [2.16.2](#2.16.2) |October 26, 2021 | August 31, 2024 |
 | [2.16.1](#2.16.1) |September 25, 2021 | August 31, 2024 |
 | [2.16.0](#2.16.0) |August 27, 2021 | August 31, 2024 |
 | [2.15.0](#2.15.0) |June 21, 2021 | August 31, 2024 |
