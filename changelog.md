@@ -12,7 +12,7 @@ Because version 3 of the Azure Cosmos DB .NET SDK includes updated features and 
 ### <a name="2.16.1"></a> 2.16.1
 * Improved availability for Direct + TCP mode by setting EnableTcpConnectionEndpointRediscovery to `true` by default.
 * Improved RetryWith(HTTP 449) retry mechanics by having it retry sooner when multiple 449s are hit for the same request.
-* Fixed queries going to gateway when SDK is configured with Direct mode. Only impacts queries without aggregates or no MaxDegreeOfParallelism is set with the ServiceInterop.dll not being available.
+* Fixed queries going to gateway when SDK is configured with Direct mode. Only impacts queries without aggregates or no MaxDegreeOfParallelism is set with the ServiceInterop.dll not being available. This can fix header too large issues for the specified scenario.
 * Fixed InvalidOperationException thrown with stack trace containing StoreClient.UpdateResponseHeader
 * Fixed Memory and CPU usage calculation for Linux and Windows environment in RequestDiagnosticsString
 
