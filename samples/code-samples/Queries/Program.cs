@@ -1,6 +1,5 @@
-﻿namespace DocumentDB.Samples.Queries
+namespace DocumentDB.Samples.Queries
 {
-    using Shared.Util;
     using Microsoft.Azure.Documents;
     using Microsoft.Azure.Documents.Client;
     using Microsoft.Azure.Documents.Linq;
@@ -37,15 +36,15 @@
         // Set to true for this sample since it deals with different kinds of queries.
         private static readonly FeedOptions DefaultOptions = new FeedOptions { EnableCrossPartitionQuery = true };
 
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             try
             {
-                //Get a Document client
-                using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey, 
-                    new ConnectionPolicy { ConnectionMode = ConnectionMode.Gateway, ConnectionProtocol = Protocol.Https }))
+                // DocumentClient should be a singleton
+                using (client = new DocumentClient(new Uri(endpointUrl), authorizationKey,
+                    new ConnectionPolicy { ConnectionMode = ConnectionMode.Direct, ConnectionProtocol = Protocol.Tcp }))
                 {
-                    RunDemoAsync(DatabaseName, CollectionName).Wait();
+                    await RunDemoAsync(DatabaseName, CollectionName);
                 }
             }
 #if !DEBUG
@@ -81,39 +80,39 @@
             //--------------------------------------------------------------------------------------------------------
 
             // Querying for all documents
-            QueryAllDocuments(collectionUri);
+            await QueryAllDocumentsAsync(collectionUri);
 
             // Querying for equality using ==
-            QueryWithEquality(collectionUri);
+            await QueryWithEquality(collectionUri);
 
             // Querying for inequality using != and NOT
-            QueryWithInequality(collectionUri);
+            await QueryWithInequality(collectionUri);
 
             // Querying using range operators like >, <, >=, <=
-            QueryWithRangeOperatorsOnNumbers(collectionUri);
+            await QueryWithRangeOperatorsOnNumbers(collectionUri);
 
             // Querying using range operators against strings. Needs a different indexing policy or the EnableScanInQuery directive.
-            QueryWithRangeOperatorsOnStrings(collectionUri);
+            await QueryWithRangeOperatorsOnStrings(collectionUri);
 
-            QueryWithRangeOperatorsDateTimes(collectionUri);
+            await QueryWithRangeOperatorsDateTimes(collectionUri);
 
             // Querying with order by
-            QueryWithOrderBy(collectionUri);
+            await QueryWithOrderBy(collectionUri);
 
             // Query with aggregate operators - Sum, Min, Max, Average, and Count
-            QueryWithAggregates(collectionUri);
+            await QueryWithAggregates(collectionUri);
 
             // Work with subdocuments
-            QueryWithSubdocuments(collectionUri);
+            await QueryWithSubdocuments(collectionUri);
 
             // Query with Intra-document Joins
-            QueryWithJoins(collectionUri);
+            await QueryWithJoins(collectionUri);
 
             // Query with string, math and array operators
-            QueryWithStringMathAndArrayOperators(collectionUri);
+            await QueryWithStringMathAndArrayOperators(collectionUri);
 
             // Query with parameterized SQL using SqlQuerySpec
-            QueryWithSqlQuerySpec(collectionUri);
+            await QueryWithSqlQuerySpec(collectionUri);
 
             // Query with explict Paging
             await QueryWithPagingAsync(collectionUri);
@@ -128,25 +127,32 @@
             // await client.DeleteDatabaseAsync(UriFactory.CreateDatabaseUri(databaseId));
         }
 
-        private static void QueryAllDocuments(Uri collectionUri)
+        private static async Task QueryAllDocumentsAsync(Uri collectionUri)
         {
             // LINQ Query
             var families =
                 from f in client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                 select f;
 
-            Assert("Expected two families", families.AsEnumerable().Count() == 2);
+            int count = await families.CountAsync();
+            Assert("Expected two families", count == 2);
 
             // LINQ Lambda
-            families = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions);
-            Assert("Expected two families", families.ToList().Count == 2);
+            IQueryable<Family> allfamiliesQuery = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions);
+            IList<Family> allFamiles = await ExecuteQuery(allfamiliesQuery);
+            Assert("Expected two families", allFamiles.Count == 2);
 
             // SQL
-            families = client.CreateDocumentQuery<Family>(collectionUri, "SELECT * FROM Families", DefaultOptions);
-            Assert("Expected two families", families.ToList().Count == 2);
+            allfamiliesQuery = client.CreateDocumentQuery<Family>(
+                documentCollectionOrDatabaseUri: collectionUri,
+                sqlExpression: "SELECT * FROM Families",
+                feedOptions: DefaultOptions);
+
+            allFamiles = await ExecuteQuery(allfamiliesQuery);
+            Assert("Expected two families", allFamiles.Count == 2);
         }
 
-        private static void QueryWithSqlQuerySpec(Uri collectionUri)
+        private static async Task QueryWithSqlQuerySpec(Uri collectionUri)
         {
             // Simple query with a single property equality comparison
             // in SQL with SQL parameterization instead of inlining the 
@@ -155,13 +161,13 @@
             var query = client.CreateDocumentQuery<Family>(collectionUri, new SqlQuerySpec()
             {
                 QueryText = "SELECT * FROM Families f WHERE (f.id = @id)",
-                Parameters = new SqlParameterCollection() 
-                    { 
+                Parameters = new SqlParameterCollection()
+                    {
                         new SqlParameter("@id", "AndersenFamily")
                     }
             }, DefaultOptions);
 
-            var families = query.ToList();
+            IList<Family> families = await ExecuteQuery(query);
             Assert("Expected only 1 family", families.Count == 1);
 
             // Query using two properties within each document. WHERE Id == "" AND Address.City == ""
@@ -172,38 +178,47 @@
                 new SqlQuerySpec()
                 {
                     QueryText = "SELECT * FROM Families f WHERE f.id = @id AND f.Address.City = @city",
-                    Parameters = new SqlParameterCollection() 
+                    Parameters = new SqlParameterCollection()
                     {
-                        new SqlParameter("@id", "AndersenFamily"), 
+                        new SqlParameter("@id", "AndersenFamily"),
                         new SqlParameter("@city", "Seattle")
                     }
                 }, DefaultOptions);
 
-            families = query.ToList();
+            families = await ExecuteQuery(query);
             Assert("Expected only 1 family", families.Count == 1);
         }
 
-        private static void QueryWithEquality(Uri collectionUri)
+        private static async Task QueryWithEquality(Uri collectionUri)
         {
             // Simple query with a single property equality comparison
-            QueryWithEqualsOnId(collectionUri);
+            await QueryWithEqualsOnId(collectionUri);
 
             // Query using two properties within each document (WHERE Id == "" AND Address.City == "")
             // Notice here how we are doing an equality comparison on the string value of City
-            QueryWithAndFilter(collectionUri);
+            await QueryWithAndFilter(collectionUri);
 
             //Query using a filter on two properties and include a custom projection
             //in to a new anonymous type
-            QueryWithAndFilterAndProjection(collectionUri);
+            await QueryWithAndFilterAndProjection(collectionUri);
         }
 
-        private static void QueryWithAndFilterAndProjection(Uri collectionUri)
+        private static async Task QueryWithAndFilterAndProjection(Uri collectionUri)
         {
             // LINQ Query -- Id == "value" OR City == "value"
             var query =
-                from f in client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
-                where f.Id == "AndersenFamily" || f.Address.City == "NY"
-                select new { Name = f.LastName, City = f.Address.City };
+                (from f in client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+                 where f.Id == "AndersenFamily" || f.Address.City == "NY"
+                 select new { Name = f.LastName, City = f.Address.City }).AsDocumentQuery();
+
+            while (query.HasMoreResults)
+            {
+                var items2 = await query.ExecuteNextAsync();
+                foreach (var item in items2)
+                {
+                    Console.WriteLine("The {0} family live in {1}", item.Name, item.City);
+                }
+            }
 
             var query2 = client.CreateDocumentQuery<Family>(
                 collectionUri,
@@ -212,80 +227,95 @@
                 .Select(f => new { Name = f.LastName })
                 .AsDocumentQuery();
 
-            foreach (var item in query.ToList())
+            while (query2.HasMoreResults)
             {
-                Console.WriteLine("The {0} family live in {1}", item.Name, item.City);
+                var items2 = await query2.ExecuteNextAsync();
+                foreach (var item in items2)
+                {
+                    Console.WriteLine("The {0} family.", item.Name);
+                }
             }
 
             // LINQ Lambda -- Id == "value" OR City == "value"
-            query = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            var query3 = (client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                        .Where(f => f.Id == "AndersenFamily" || f.Address.City == "NY")
-                       .Select(f => new { Name = f.LastName, City = f.Address.City });
+                       .Select(f => new { Name = f.LastName, City = f.Address.City })).AsDocumentQuery();
 
-            foreach (var item in query)
+            while (query3.HasMoreResults)
             {
-                Console.WriteLine("The {0} family live in {1}", item.Name, item.City);
+                var items = await query3.ExecuteNextAsync();
+                foreach (var item in items)
+                {
+                    Console.WriteLine("The {0} family live in {1}", item.Name, item.City);
+                }
             }
 
             // SQL -- Id == "value" OR City == "value"
-            var q = client.CreateDocumentQuery(collectionUri,
+            var query4 = client.CreateDocumentQuery(collectionUri,
                 "SELECT f.LastName AS Name, f.Address.City AS City " +
                 "FROM Families f " +
                 "WHERE f.id='AndersenFamily' OR f.Address.City='NY'", DefaultOptions);
 
-            foreach (var item in q.ToList())
+            var items4 = await ExecuteQuery<dynamic>(query4);
+            foreach (var item in items4)
             {
                 Console.WriteLine("The {0} family live in {1}", item.Name, item.City);
             }
         }
 
-        private static void QueryWithAndFilter(Uri collectionUri)
+        private static async Task QueryWithAndFilter(Uri collectionUri)
         {
             // LINQ Query
-            var families = from f in client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
-                           where f.Id == "AndersenFamily" && f.Address.City == "Seattle"
-                           select f;
+            var query = from f in client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+                        where f.Id == "AndersenFamily" && f.Address.City == "Seattle"
+                        select f;
 
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            var families = await ExecuteQuery(query);
+            Assert("Expected only 1 family", families.Count == 1);
 
             // LINQ Lambda -- Id == "value" AND City == "value"
-            families = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            query = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                 .Where(f => f.Id == "AndersenFamily" && f.Address.City == "Seattle");
 
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            families = await ExecuteQuery(query);
+            Assert("Expected only 1 family", families.Count == 1);
 
             // SQL -- Id == "value" AND City == "value"
-            families = client.CreateDocumentQuery<Family>(
+            query = client.CreateDocumentQuery<Family>(
                 collectionUri,
                 "SELECT * FROM Families f WHERE f.id='AndersenFamily' AND f.Address.City='Seattle'",
                 DefaultOptions);
 
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            families = await ExecuteQuery(query);
+            Assert("Expected only 1 family", families.Count == 1);
         }
 
-        private static void QueryWithEqualsOnId(Uri collectionUri)
+        private static async Task QueryWithEqualsOnId(Uri collectionUri)
         {
             // LINQ Query -- Id == "value"
-            var families =
+            var familiesQuery =
                 from f in client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                 where f.Id == "AndersenFamily"
                 select f;
 
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            var families = await ExecuteQuery(familiesQuery);
+            Assert("Expected only 1 family", families.Count == 1);
 
             // LINQ Lambda -- Id == "value"
-            families = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions).Where(f => f.Id == "AndersenFamily");
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            familiesQuery = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions).Where(f => f.Id == "AndersenFamily");
+            families = await ExecuteQuery(familiesQuery);
+            Assert("Expected only 1 family", families.Count == 1);
 
             // SQL -- Id == "value"
-            families = client.CreateDocumentQuery<Family>(
+            familiesQuery = client.CreateDocumentQuery<Family>(
                 collectionUri,
                 "SELECT * FROM Families f WHERE f.id='AndersenFamily'",
                 DefaultOptions);
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            families = await ExecuteQuery(familiesQuery);
+            Assert("Expected only 1 family", families.Count == 1);
         }
 
-        private static void QueryWithInequality(Uri collectionUri)
+        private static async Task QueryWithInequality(Uri collectionUri)
         {
             // Simple query with a single property inequality comparison
             // LINQ Query
@@ -293,14 +323,14 @@
                         where f.Id != "AndersenFamily"
                         select f;
 
-            var families = query.ToList();
+            var families = await ExecuteQuery(query);
             Assert("Expected only 1 family", families.Count == 1);
 
             // LINQ Lambda
             query = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                        .Where(f => f.Id != "AndersenFamily");
 
-            families = query.ToList();
+            families = await ExecuteQuery(query);
             Assert("Expected only 1 family", families.Count == 1);
 
 
@@ -310,7 +340,7 @@
                 "SELECT * FROM Families f WHERE f.id <> 'AndersenFamily'",
                 DefaultOptions);
 
-            families = query.ToList();
+            families = await ExecuteQuery(query);
             Assert("Expected only 1 family", families.ToList().Count == 1);
 
             //combine equality and inequality
@@ -319,7 +349,7 @@
                 where f.Id == "Wakefield" && f.Address.City != "NY"
                 select f;
 
-            families = query.ToList();
+            families = await ExecuteQuery(query);
             Assert("Expected no results", families.Count == 0);
 
             query = client.CreateDocumentQuery<Family>(
@@ -327,219 +357,237 @@
                 "SELECT * FROM Families f WHERE f.id = 'AndersenFamily' AND f.Address.City != 'NY'",
                 DefaultOptions);
 
-            families = query.ToList();
+            families = await ExecuteQuery(query);
             Assert("Expected only 1 family", families.Count == 1);
         }
 
-        private static void QueryWithRangeOperatorsOnNumbers(Uri collectionUri)
+        private static async Task QueryWithRangeOperatorsOnNumbers(Uri collectionUri)
         {
             // LINQ Query
-            var families = from f in client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
-                           where f.Children[0].Grade > 5
-                           select f;
+            var query = from f in client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+                        where f.Children[0].Grade > 5
+                        select f;
 
+            var families = await ExecuteQuery(query);
             Assert("Expected only 1 family", families.ToList().Count == 1);
 
             // LINQ Lambda
-            families = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            query = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                        .Where(f => f.Children[0].Grade > 5);
 
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            families = await ExecuteQuery(query);
+            Assert("Expected only 1 family", families.Count == 1);
 
             // SQL
-            families = client.CreateDocumentQuery<Family>(collectionUri,
+            query = client.CreateDocumentQuery<Family>(collectionUri,
                 "SELECT * FROM Families f WHERE f.Children[0].Grade > 5",
                 DefaultOptions);
 
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            families = await ExecuteQuery(query);
+            Assert("Expected only 1 family", families.Count == 1);
         }
 
-        private static void QueryWithRangeOperatorsOnStrings(Uri collectionUri)
+        private static async Task QueryWithRangeOperatorsOnStrings(Uri collectionUri)
         {
             // LINQ
-            var families = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            var query = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                 .Where(f => f.Address.State.CompareTo("NY") > 0);
 
+            var families = await ExecuteQuery(query);
+            Assert("Expected only 1 family", families.Count == 1);
+
             // SQL Query
-            families = client.CreateDocumentQuery<Family>(
+            query = client.CreateDocumentQuery<Family>(
                 collectionUri,
                 "SELECT * FROM Families f WHERE f.Address.State > 'NY'",
                 DefaultOptions);
 
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            families = await ExecuteQuery(query);
+            Assert("Expected only 1 family", families.Count == 1);
         }
 
-        private static void QueryWithRangeOperatorsDateTimes(Uri collectionUri)
+        private static async Task QueryWithRangeOperatorsDateTimes(Uri collectionUri)
         {
-            var families = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            var query = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                 .Where(f => f.RegistrationDate >= DateTime.UtcNow.AddDays(-3));
 
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            var families = await ExecuteQuery(query);
+            Assert("Expected only 1 family", families.Count == 1);
 
-            families = client.CreateDocumentQuery<Family>(collectionUri, 
-                string.Format("SELECT * FROM c WHERE c.RegistrationDate >= '{0}'", 
+            query = client.CreateDocumentQuery<Family>(collectionUri,
+                string.Format("SELECT * FROM c WHERE c.RegistrationDate >= '{0}'",
                 DateTime.UtcNow.AddDays(-3).ToString("o")), DefaultOptions);
 
-            Assert("Expected only 1 family", families.ToList().Count == 1);
+            families = await ExecuteQuery(query);
+            Assert("Expected only 1 family", families.Count == 1);
         }
 
-        private static void QueryWithOrderBy(Uri collectionUri)
+        private static async Task QueryWithOrderBy(Uri collectionUri)
         {
             // Order by with numbers. Works with default IndexingPolicy
-            QueryWithOrderByNumbers(collectionUri);
+            await QueryWithOrderByNumbers(collectionUri);
 
             // Order by with strings. Needs custom indexing policy. See GetOrCreateCollectionAsync
-            QueryWithOrderByStrings(collectionUri);
+            await QueryWithOrderByStrings(collectionUri);
         }
 
-        private static void QueryWithOrderByNumbers(Uri collectionUri)
+        private static async Task QueryWithOrderByNumbers(Uri collectionUri)
         {
             // LINQ Query
-            var familiesLinqQuery =
+            IQueryable<Family> query =
                 from f in client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                 where f.LastName == "Andersen"
                 orderby f.Children[0].Grade
                 select f;
 
-            Assert("Expected 1 families", familiesLinqQuery.ToList().Count == 1);
+            var families = await ExecuteQuery(query);
+            Assert("Expected 1 families", families.Count == 1);
 
             // LINQ Lambda
-            familiesLinqQuery = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            query = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                 .Where(f => f.LastName == "Andersen")
                 .OrderBy(f => f.Children[0].Grade);
 
-            Assert("Expected 1 families", familiesLinqQuery.ToList().Count == 1);
+            families = await ExecuteQuery(query);
+            Assert("Expected 1 families", families.Count == 1);
 
             // SQL
-            var familiesSqlQuery = client.CreateDocumentQuery<Family>(
+            query = client.CreateDocumentQuery<Family>(
                 collectionUri,
                 "SELECT * FROM Families f WHERE f.LastName = 'Andersen' ORDER BY f.Children[0].Grade",
                 DefaultOptions);
 
-            Assert("Expected 1 families", familiesSqlQuery.ToList().Count == 1);
+            families = await ExecuteQuery(query);
+            Assert("Expected 1 families", families.Count == 1);
         }
 
-        private static void QueryWithOrderByStrings(Uri collectionUri)
+        private static async Task QueryWithOrderByStrings(Uri collectionUri)
         {
             // LINQ Query
-            var familiesLinqQuery = from f in client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
-                                    where f.LastName == "Andersen"
-                                    orderby f.Address.State descending
-                                    select f;
+            IQueryable<Family> query = from f in client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+                                       where f.LastName == "Andersen"
+                                       orderby f.Address.State descending
+                                       select f;
 
-            Assert("Expected only 1 family", familiesLinqQuery.ToList().Count == 1);
+            var families = await ExecuteQuery(query);
+            Assert("Expected only 1 family", families.Count == 1);
 
             // LINQ Lambda
-            familiesLinqQuery = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            query = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                        .Where(f => f.LastName == "Andersen")
                        .OrderByDescending(f => f.Address.State);
 
-            Assert("Expected only 1 family", familiesLinqQuery.ToList().Count == 1);
+            families = await ExecuteQuery(query);
+            Assert("Expected only 1 family", families.Count == 1);
 
             // SQL
-            var familiesSqlQuery = client.CreateDocumentQuery<Family>(
+            query = client.CreateDocumentQuery<Family>(
                 collectionUri,
                 "SELECT * FROM Families f WHERE f.LastName = 'Andersen' ORDER BY f.Address.State DESC",
                 DefaultOptions);
 
-            Assert("Expected only 1 family", familiesSqlQuery.ToList().Count == 1);
+            families = await ExecuteQuery(query);
+            Assert("Expected only 1 family", families.Count == 1);
         }
 
-        private static void QueryWithAggregates(Uri collectionUri)
+        private static async Task QueryWithAggregates(Uri collectionUri)
         {
             // SQL
-            int count = client.CreateDocumentQuery<int>(
+            var query = client.CreateDocumentQuery<int>(
                 collectionUri,
                 "SELECT VALUE COUNT(f) FROM Families f WHERE f.LastName = 'Andersen'",
-                DefaultOptions)
-                .AsEnumerable().First();
+                DefaultOptions);
 
+            int count = (await ExecuteQuery(query)).First();
             Assert("Expected only 1 family", count == 1);
 
             // LINQ
-            count = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            count = await client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                 .Where(f => f.LastName == "Andersen")
-                .Count();
+                .CountAsync();
 
             Assert("Expected only 1 family", count == 1);
 
             // SQL over an array within documents
-            count = client.CreateDocumentQuery<int>(
+            query = client.CreateDocumentQuery<int>(
                 collectionUri,
                 "SELECT VALUE COUNT(child) FROM child IN f.Children",
-                DefaultOptions)
-                .AsEnumerable().First();
+                DefaultOptions);
 
+            count = (await ExecuteQuery(query)).First();
             Assert("Expected 3 children", count == 3);
 
             // LINQ
-            count = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            count = await client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                 .SelectMany(f => f.Children)
-                .Count();
+                .CountAsync();
 
             Assert("Expected 3 children", count == 3);
 
             // SQL over an array within documents
-            int maxGrade = client.CreateDocumentQuery<int>(
+            var maxGradeQuery = client.CreateDocumentQuery<int>(
                 collectionUri,
                 "SELECT VALUE MAX(child.Grade) FROM child IN f.Children",
-                DefaultOptions)
-                .AsEnumerable().First();
+                DefaultOptions);
 
+            int maxGrade = (await ExecuteQuery(maxGradeQuery)).First();
             Assert("Expected 8th grade", maxGrade == 8);
 
-            maxGrade = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            maxGrade = await client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                 .SelectMany(f => f.Children)
-                .Max(c => c.Grade);
+                .Select(c => c.Grade)
+                .MaxAsync();
 
             Assert("Expected 8th grade", maxGrade == 8);
         }
 
-        private static void QueryWithSubdocuments(Uri collectionUri)
+        private static async Task QueryWithSubdocuments(Uri collectionUri)
         {
             // DocumentDB supports the selection of sub-documents on the server, there
             // is no need to send down the full family record if all you want to display
             // is a single child
 
             // SQL
-            var childrenSqlQuery = client.CreateDocumentQuery<Child>(
+            var query = client.CreateDocumentQuery<Child>(
                 collectionUri,
                 "SELECT VALUE c FROM c IN f.Children",
-                DefaultOptions).ToList();
+                DefaultOptions);
 
-            foreach (var child in childrenSqlQuery)
+            var childrenResult = await ExecuteQuery(query);
+            foreach (var child in childrenResult)
             {
                 Console.WriteLine(JsonConvert.SerializeObject(child));
             }
 
             // LINQ Query
-            var childrenLinqQuery = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            query = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                      .SelectMany(family => family.Children
                      .Select(c => c));
 
-            foreach (var child in childrenLinqQuery)
+            childrenResult = await ExecuteQuery(query);
+            foreach (var child in childrenResult)
             {
                 Console.WriteLine(JsonConvert.SerializeObject(child));
             }
         }
 
-        private static void QueryWithJoins(Uri collectionUri)
+        private static async Task QueryWithJoins(Uri collectionUri)
         {
             // DocumentDB supports the notion of a Intradocument Join, or a self-join
             // which will effectively flatten the hierarchy of a document, just like doing 
             // a self JOIN on a SQL table
 
             // Below are three queries involving JOIN, shown in SQL and in LINQ, each produces the exact same result set
-            QueryWithSingleJoin(collectionUri);
+            await QueryWithSingleJoin(collectionUri);
 
             //now lets add a second level by joining the pets on to children which is joined to family
-            QueryWithTwoJoins(collectionUri);
+            await QueryWithTwoJoins(collectionUri);
 
             // Now let's add a filter to our JOIN query
-            QueryWithTwoJoinsAndFilter(collectionUri);
+            await QueryWithTwoJoinsAndFilter(collectionUri);
         }
 
-        private static void QueryWithTwoJoinsAndFilter(Uri collectionUri)
+        private static async Task QueryWithTwoJoinsAndFilter(Uri collectionUri)
         {
             var query = client.CreateDocumentQuery<dynamic>(collectionUri,
                     "SELECT f.id as family, c.FirstName AS child, p.GivenName AS pet " +
@@ -549,14 +597,14 @@
                     "WHERE p.GivenName = 'Fluffy'",
                     DefaultOptions);
 
-            var items = query.ToList();
+            var items = await ExecuteQuery(query);
             foreach (var item in items)
             {
                 Console.WriteLine(item);
             }
 
             // LINQ
-            var familiesChildrenAndPets = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            var familiesChildrenAndPetsQuery = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                     .SelectMany(family => family.Children
                     .SelectMany(child => child.Pets
                     .Where(pet => pet.GivenName == "Fluffy")
@@ -566,18 +614,22 @@
                         child = child.FirstName,
                         pet = pet.GivenName
                     }
-                    )));
+                    ))).AsDocumentQuery();
 
-            foreach (var pet in familiesChildrenAndPets)
+            while (familiesChildrenAndPetsQuery.HasMoreResults)
             {
-                Console.WriteLine(pet);
+                var familiesChildrenAndPets = await familiesChildrenAndPetsQuery.ExecuteNextAsync();
+                foreach (var pet in familiesChildrenAndPets)
+                {
+                    Console.WriteLine(pet);
+                }
             }
         }
 
-        private static void QueryWithTwoJoins(Uri collectionUri)
+        private static async Task QueryWithTwoJoins(Uri collectionUri)
         {
             // SQL
-            var familiesChildrenAndPets = client.CreateDocumentQuery<dynamic>(
+            var familiesChildrenAndPetsQuery = client.CreateDocumentQuery<dynamic>(
                 collectionUri,
                 "SELECT f.id as family, c.FirstName AS child, p.GivenName AS pet " +
                 "FROM Families f " +
@@ -585,13 +637,14 @@
                 "JOIN p IN c.Pets ",
                 DefaultOptions);
 
+            var familiesChildrenAndPets = await ExecuteQuery(familiesChildrenAndPetsQuery);
             foreach (var item in familiesChildrenAndPets)
             {
                 Console.WriteLine(item);
             }
 
             // LINQ
-            familiesChildrenAndPets = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            var query = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                     .SelectMany(family => family.Children
                     .SelectMany(child => child.Pets
                     .Select(pet => new
@@ -600,15 +653,20 @@
                         child = child.FirstName,
                         pet = pet.GivenName
                     }
-                    )));
+                    ))).AsDocumentQuery();
 
-            foreach (var item in familiesChildrenAndPets)
+            while (query.HasMoreResults)
             {
-                Console.WriteLine(item);
+                var items = await query.ExecuteNextAsync();
+                foreach (var item in items)
+                {
+                    Console.WriteLine(item);
+                }
             }
+
         }
 
-        private static void QueryWithSingleJoin(Uri collectionUri)
+        private static async Task QueryWithSingleJoin(Uri collectionUri)
         {
 
             // SQL
@@ -617,59 +675,68 @@
                 "FROM Families f " +
                 "JOIN c IN f.Children", DefaultOptions);
 
-            foreach (var item in query)
+            var items = await ExecuteQuery(query);
+            foreach (var item in items)
             {
                 Console.WriteLine(JsonConvert.SerializeObject(item));
             }
 
             // LINQ
-            var familiesAndChildren = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            var familiesAndChildrenQuery = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                     .SelectMany(family => family.Children
                     .Select(c => family.Id));
 
+            var familiesAndChildren = await ExecuteQuery(familiesAndChildrenQuery);
             foreach (var item in familiesAndChildren)
             {
                 Console.WriteLine(JsonConvert.SerializeObject(item));
             }
         }
 
-        private static void QueryWithStringMathAndArrayOperators(Uri collectionUri)
+        private static async Task QueryWithStringMathAndArrayOperators(Uri collectionUri)
         {
             // Find all families where the lastName starts with "An" -> should return the Andersens
-            IQueryable<Family> results = client.CreateDocumentQuery<Family>(
+            IQueryable<Family> query = client.CreateDocumentQuery<Family>(
                 collectionUri,
                 "SELECT * FROM family WHERE STARTSWITH(family.LastName, 'An')",
                 DefaultOptions);
-            Assert("Expected only 1 family", results.AsEnumerable().Count() == 1);
+
+            var results = await ExecuteQuery(query);
+            Assert("Expected only 1 family", results.Count == 1);
 
             // Same query in LINQ. You can also use other operators like string.Contains(), string.EndsWith(), string.Trim(), etc.
-            results = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            query = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                 .Where(family => family.LastName.StartsWith("An"));
-            Assert("Expected only 1 family", results.AsEnumerable().Count() == 1);
+            results = await ExecuteQuery(query);
+            Assert("Expected only 1 family", results.Count == 1);
 
             // Round down numbers using FLOOR
-            IQueryable<int> numericResults = client.CreateDocumentQuery<int>(
+            IQueryable<int> numericQuery = client.CreateDocumentQuery<int>(
                 collectionUri,
                 "SELECT VALUE FLOOR(family.Children[0].Grade) FROM family",
                 DefaultOptions);
-            Assert("Expected grades [5, 2]", numericResults.AsEnumerable().SequenceEqual(new[] { 5, 8 }));
+            var numericResults = await ExecuteQuery(numericQuery);
+            Assert("Expected grades [5, 2]", numericResults.SequenceEqual(new[] { 5, 8 }));
 
             // Same query in LINQ. You can also use other Math operators
-            numericResults = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            numericQuery = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                 .Select(family => (int)Math.Round((double)family.Children[0].Grade));
-            Assert("Expected grades [5, 2]", numericResults.AsEnumerable().SequenceEqual(new[] { 5, 8 }));
+            numericResults = await ExecuteQuery(numericQuery);
+            Assert("Expected grades [5, 2]", numericResults.SequenceEqual(new[] { 5, 8 }));
 
             // Get number of children using ARRAY_LENGTH
-            numericResults = client.CreateDocumentQuery<int>(
+            numericQuery = client.CreateDocumentQuery<int>(
                 collectionUri,
                 "SELECT VALUE ARRAY_LENGTH(family.Children) FROM family",
                 DefaultOptions);
-            Assert("Expected children count [1, 2]", numericResults.AsEnumerable().SequenceEqual(new[] { 1, 2 }));
+            numericResults = await ExecuteQuery(numericQuery);
+            Assert("Expected children count [1, 2]", numericResults.SequenceEqual(new[] { 1, 2 }));
 
             // Same query in LINQ
-            numericResults = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
+            numericQuery = client.CreateDocumentQuery<Family>(collectionUri, DefaultOptions)
                 .Select(family => family.Children.Count());
-            Assert("Expected children count [1, 2]", numericResults.AsEnumerable().SequenceEqual(new[] { 1, 2 }));
+            numericResults = await ExecuteQuery(numericQuery);
+            Assert("Expected children count [1, 2]", numericResults.SequenceEqual(new[] { 1, 2 }));
         }
 
         private static async Task QueryWithPagingAsync(Uri collectionUri)
@@ -727,7 +794,7 @@
 
             feedResponse = await query.ExecuteNextAsync<Family>();
 
-            foreach (var f in feedResponse.AsEnumerable().OrderBy(f => f.Id))
+            foreach (var f in feedResponse.OrderBy(f => f.Id))
             {
                 if (f.Id != "WakefieldFamily") throw new ApplicationException("Should only be the second family");
             }
@@ -754,13 +821,11 @@
             var query = client.CreateDocumentQuery<Family>(collectionUri, queryText, options).AsDocumentQuery();
             while (query.HasMoreResults)
             {
-                foreach (Family family in await query.ExecuteNextAsync().ConfigureAwait(false))
-                {
-                    familiesSerial.Add(family);
-                }
+                FeedResponse<Family> response = await query.ExecuteNextAsync<Family>();
+                familiesSerial.AddRange(response);
             }
 
-            Assert("Parallel Query expected two families", familiesSerial.ToList().Count == 2);
+            Assert("Parallel Query expected two families", familiesSerial.Count == 2);
 
             // 1 maximum parallel tasks, 1 dedicated asynchrousnous task to continuously make REST calls
             List<Family> familiesParallel1 = new List<Family>();
@@ -774,13 +839,11 @@
             query = client.CreateDocumentQuery<Family>(collectionUri, options).AsDocumentQuery();
             while (query.HasMoreResults)
             {
-                foreach (Family family in await query.ExecuteNextAsync())
-                {
-                    familiesParallel1.Add(family);
-                }
+                FeedResponse<Family> response = await query.ExecuteNextAsync<Family>();
+                familiesParallel1.AddRange(response);
             }
 
-            Assert("Parallel Query expected two families", familiesParallel1.ToList().Count == 2);
+            Assert("Parallel Query expected two families", familiesParallel1.Count == 2);
             AssertSequenceEqual("Parallel query returns result out of order compared to serial execution", familiesSerial, familiesParallel1);
 
 
@@ -796,10 +859,8 @@
             query = client.CreateDocumentQuery<Family>(collectionUri, options).AsDocumentQuery();
             while (query.HasMoreResults)
             {
-                foreach (Family family in await query.ExecuteNextAsync())
-                {
-                    familiesParallel10.Add(family);
-                }
+                FeedResponse<Family> response = await query.ExecuteNextAsync<Family>();
+                familiesParallel10.AddRange(response);
             }
 
             Assert("Parallel Query expected two families", familiesParallel10.ToList().Count == 2);
@@ -824,13 +885,11 @@
                 EnableCrossPartitionQuery = true
             };
 
-            var query = client.CreateDocumentQuery<Family>(collectionUri, queryText, options).AsDocumentQuery();
+            IDocumentQuery<Family> query = client.CreateDocumentQuery<Family>(collectionUri, queryText, options).AsDocumentQuery();
             while (query.HasMoreResults)
             {
-                foreach (Family family in await query.ExecuteNextAsync())
-                {
-                    familiesSerial.Add(family);
-                }
+                FeedResponse<Family> response = await query.ExecuteNextAsync<Family>();
+                familiesSerial.AddRange(response);
             }
 
             Assert("Order By Query expected two families", familiesSerial.ToList().Count == 2);
@@ -850,10 +909,8 @@
             query = client.CreateDocumentQuery<Family>(collectionUri, queryText, options).AsDocumentQuery();
             while (query.HasMoreResults)
             {
-                foreach (Family family in await query.ExecuteNextAsync())
-                {
-                    familiesParallel1.Add(family);
-                }
+                FeedResponse<Family> response = await query.ExecuteNextAsync<Family>();
+                familiesParallel1.AddRange(response);
             }
 
             Assert("Order By Query expected two families", familiesParallel1.ToList().Count == 2);
@@ -871,14 +928,43 @@
             query = client.CreateDocumentQuery<Family>(collectionUri, queryText, options).AsDocumentQuery();
             while (query.HasMoreResults)
             {
-                foreach (Family family in await query.ExecuteNextAsync())
-                {
-                    familiesParallel10.Add(family);
-                }
+                FeedResponse<Family> response = await query.ExecuteNextAsync<Family>();
+                familiesParallel10.AddRange(response);
             }
 
             Assert("Order By Query expected two families", familiesParallel10.ToList().Count == 2);
             AssertSequenceEqual("Parallel query returns result out of order compared to serial execution", familiesSerial, familiesParallel10);
+        }
+
+        /// <summary>
+        /// Helper function to cast it from IQueryable to IDocumentQuery
+        /// </summary>
+        private static Task<IList<T>> ExecuteQuery<T>(IQueryable<T> query)
+        {
+            return ExecuteQuery<T>(query.AsDocumentQuery<T>());
+        }
+
+        /// <summary>
+        /// Helper function to fully drain the query in asynchonous way.
+        /// </summary>
+        /// <remarks>
+        /// Do NOT use ToList() and/or AsEnumerable(). These are blocking calls which
+        /// can lead to dead locks and latency issues.
+        /// </remarks>
+        /// <returns></returns>
+        private static async Task<IList<T>> ExecuteQuery<T>(IDocumentQuery<T> query)
+        {
+            using (query)
+            {
+                List<T> results = new List<T>();
+                while (query.HasMoreResults)
+                {
+                    FeedResponse<T> queryResult = await query.ExecuteNextAsync<T>();
+                    results.AddRange(queryResult);
+                }
+
+                return results;
+            }
         }
 
         /// <summary>
@@ -892,23 +978,23 @@
             {
                 Id = "AndersenFamily",
                 LastName = "Andersen",
-                Parents = new Parent[] 
+                Parents = new Parent[]
                 {
                     new Parent { FirstName = "Thomas" },
                     new Parent { FirstName = "Mary Kay"}
                 },
-                Children = new Child[] 
+                Children = new Child[]
                 {
                     new Child
-                    { 
-                        FirstName = "Henriette Thaulow", 
-                        Gender = "female", 
-                        Grade = 5, 
-                        Pets = new [] 
+                    {
+                        FirstName = "Henriette Thaulow",
+                        Gender = "female",
+                        Grade = 5,
+                        Pets = new []
                         {
-                            new Pet { GivenName = "Fluffy" } 
+                            new Pet { GivenName = "Fluffy" }
                         }
-                    } 
+                    }
                 },
                 Address = new Address { State = "WA", County = "King", City = "Seattle" },
                 IsRegistered = true,
@@ -928,9 +1014,9 @@
                 Children = new Child[] {
                     new Child
                     {
-                        FamilyName= "Merriam", 
-                        FirstName= "Jesse", 
-                        Gender= "female", 
+                        FamilyName= "Merriam",
+                        FirstName= "Jesse",
+                        Gender= "female",
                         Grade= 8,
                         Pets= new Pet[] {
                             new Pet { GivenName= "Goofy" },
@@ -939,8 +1025,8 @@
                     },
                     new Child
                     {
-                        FirstName= "Lisa", 
-                        Gender= "female", 
+                        FirstName= "Lisa",
+                        Gender= "female",
                         Grade= 1
                     }
                 },
@@ -1052,7 +1138,7 @@
 
             public bool IsRegistered { get; set; }
 
-            public DateTime RegistrationDate { get; set;  }
+            public DateTime RegistrationDate { get; set; }
         }
     }
 }
