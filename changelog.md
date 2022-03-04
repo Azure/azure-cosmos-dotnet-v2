@@ -7,10 +7,15 @@ Because version 3 of the Azure Cosmos DB .NET SDK includes updated features and 
 
 ## Release notes
 ### <a name="2.17.0"></a> 2.17.0
+
+> :warning: 2.17.0 removes the DefaultTraceListener from the SDK TraceSource for [performance reasons](https://docs.microsoft.com/azure/cosmos-db/sql/performance-tips?tabs=trace-net-core#logging-and-tracing) by default when not running in Debug mode.
+
+
 * Fixed request diagnostics to reset thread starvation flag once starvation is detected
 * Fixed request diagnostics to correctly include split responses
 * Fixed session token when the target partition was not in the local cache, the Global Session Token would be sent and could cause BadRequest with large header errors
 * Fixed issue where if cancellation token was equal to or less than request timeout the address cache would not get updated
+* Fixed a bug where SDK would use preferred regions even if EndpointDiscovery is disabled
 * Improved TCP performance by reducing allocated buffer size for requests
 * Improved Service Unavailable errors to include substatus codes for different known scenarios for easier troubleshooting
 * Improved request diagnostics to include service endpoint information
