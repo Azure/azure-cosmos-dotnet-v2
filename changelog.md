@@ -10,10 +10,13 @@ Because version 3 of the Azure Cosmos DB .NET SDK includes updated features and 
 * Fixed request diagnostics to reset thread starvation flag once starvation is detected
 * Fixed request diagnostics to correctly include split responses
 * Fixed session token when the target partition was not in the local cache, the Global Session Token would be sent and could cause BadRequest with large header errors
+* Fixed issue where if cancellation token was equal to or less than request timeout the address cache would not get updated
 * Improved TCP performance by reducing allocated buffer size for requests
 * Improved Service Unavailable errors to include substatus codes for different known scenarios for easier troubleshooting
 * Improved request diagnostics to include service endpoint information
 * Improved client availability by enabling the account information refresh upon client creation, which helps detect regional changes without a required failure happening
+* Improved availability by avoiding retries on replicas that previously failed for that request
+* Improved availability from avoiding replica during cache refreshes
 
 ### <a name="2.16.2"></a> 2.16.2
 * Fixed memory leak in query for systems running on Windows x64 using the ServiceInterop.dll
