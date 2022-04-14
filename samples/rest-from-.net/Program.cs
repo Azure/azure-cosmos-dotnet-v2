@@ -52,6 +52,11 @@ namespace REST_from.NET
         static readonly string databaseId = "sandpit";
         static readonly string collectionId = "data";
         static readonly string documentId = "test";
+
+        // The partition key is required when getting a document.  The value of this is expected
+        // to be a JSON serilized array of strings.
+        static readonly string partitionKey = JsonConvert.SerializeObject(new []{"abc123"});
+
         static bool idBased = true;
 
         static readonly string utc_date = DateTime.UtcNow.ToString("r");
@@ -126,6 +131,8 @@ namespace REST_from.NET
             resourceId = (idBased) ? resourceLink : collectionId.ToLowerInvariant();
 
             authHeader = GenerateMasterKeyAuthorizationSignature(verb, resourceId, resourceType, masterKey, "master", "1.0");
+
+            client.DefaultRequestHeaders.Add("x-ms-documentdb-partitionkey", partitionKey);
 
             client.DefaultRequestHeaders.Remove("authorization");
             client.DefaultRequestHeaders.Add("authorization", authHeader);
