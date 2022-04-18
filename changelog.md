@@ -544,7 +544,7 @@ Below is a list of any know issues affecting the [recommended minimum version](#
 
 | Issue | Impact | Mitigation | Tracking link |
 | --- | --- | --- | --- |
-| When using Direct mode with an account with multiple write locations, the SDK might not detect when a region is added to the account. The background process that [refreshes the account information](/azure/cosmos-db/troubleshoot-sdk-availability#adding-a-region-to-an-account) fails to start. |If a new region is added to the account which is part of the PreferredLocations on a higher order than the current region, the SDK won't detect the new available region. |Upgrade to 2.17.0. |https://github.com/Azure/azure-cosmos-dotnet-v2/issues/852 |
+| When using Direct mode with an account with multiple write locations, the SDK might not detect when a region is added to the account. The background process that [refreshes the account information](/azure/cosmos-db/troubleshoot-sdk-availability#adding-a-region-to-an-account) fails to start. |If a new region is added to the account which is part of the PreferredLocations on a higher order than the current region, the SDK won't detect the new available region. |Upgrade to 2.18.0. |https://github.com/Azure/azure-cosmos-dotnet-v2/issues/852 |
 
 ## Release & Retirement dates
 
@@ -555,6 +555,7 @@ Azure Cosmos DB will no longer make bug fixes, add new features, and provide sup
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
+| [2.18.0](#2.18.0) |April 15, 2022 | August 31, 2024 |
 | [2.17.0](#2.17.0) |March 3, 2022 | August 31, 2024 |
 | [2.16.2](#2.16.2) |October 26, 2021 | August 31, 2024 |
 | [2.16.1](#2.16.1) |September 25, 2021 | August 31, 2024 |
