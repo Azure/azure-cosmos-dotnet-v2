@@ -6,7 +6,13 @@ The **minimum recommended version is [2.16.2](#2.16.2)**.
 Because version 3 of the Azure Cosmos DB .NET SDK includes updated features and improved performance, we’ll retire version 2.x of this SDK on 31 August 2024.  As a result, you’ll need to update your SDK to version 3 by that date. We recommend following the [instructions](https://docs.microsoft.com/azure/cosmos-db/sql/migrate-dotnet-v3?tabs=dotnet-v3) to migrate to Azure Cosmos DB .NET SDK version 3.
 
 ## Release notes
-### <a name="2.17.0"></a> 2.17.0
+### <a name="2.18.0"></a> 2.18.0
+* Fixed regression introduced in 2.17.0 causing unobserved exception ("System.ObjectDisposedException: The semaphore has been disposed.")
+* Removed noisy session token parse trace message
+* Improved availabilty by using nonblocking cache for partition key ranges
+* Fixed DocumentClient initialization to keep retrying. Previously it would keep returning same cached exception. 
+
+### <a name="2.17.0"></a> 2.17.0 - Unlisted from a regression on broken connection causing unobserved exception. "System.ObjectDisposedException: The semaphore has been disposed."
 
 > :warning: 2.17.0 removes the DefaultTraceListener from the SDK TraceSource for [performance reasons](https://docs.microsoft.com/azure/cosmos-db/sql/performance-tips?tabs=trace-net-core#logging-and-tracing) by default when not running in Debug mode.
 
@@ -22,6 +28,7 @@ Because version 3 of the Azure Cosmos DB .NET SDK includes updated features and 
 * Improved client availability by enabling the account information refresh upon client creation, which helps detect regional changes without a required failure happening
 * Improved availability by avoiding retries on replicas that previously failed for that request
 * Improved availability from avoiding replica during cache refreshes
+* Added substatus code to all 503(Service Unavailable) exceptions
 
 ### <a name="2.16.2"></a> 2.16.2
 * Fixed memory leak in query for systems running on Windows x64 using the ServiceInterop.dll
@@ -537,7 +544,7 @@ Below is a list of any know issues affecting the [recommended minimum version](#
 
 | Issue | Impact | Mitigation | Tracking link |
 | --- | --- | --- | --- |
-| When using Direct mode with an account with multiple write locations, the SDK might not detect when a region is added to the account. The background process that [refreshes the account information](/azure/cosmos-db/troubleshoot-sdk-availability#adding-a-region-to-an-account) fails to start. |If a new region is added to the account which is part of the PreferredLocations on a higher order than the current region, the SDK won't detect the new available region. |Upgrade to 2.17.0. |https://github.com/Azure/azure-cosmos-dotnet-v2/issues/852 |
+
 
 ## Release & Retirement dates
 
@@ -548,6 +555,7 @@ Azure Cosmos DB will no longer make bug fixes, add new features, and provide sup
 
 | Version | Release Date | Retirement Date |
 | --- | --- | --- |
+| [2.18.0](#2.18.0) |April 15, 2022 | August 31, 2024 |
 | [2.17.0](#2.17.0) |March 3, 2022 | August 31, 2024 |
 | [2.16.2](#2.16.2) |October 26, 2021 | August 31, 2024 |
 | [2.16.1](#2.16.1) |September 25, 2021 | August 31, 2024 |
