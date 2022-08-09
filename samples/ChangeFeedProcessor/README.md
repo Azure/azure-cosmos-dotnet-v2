@@ -1,6 +1,10 @@
 # Change Feed Processor library
 This library provides a host for distributing change feed events in partitioned collection across multiple observers. Instances of the host can scale up (by adding) or down (by removing) dynamically, and the load will be automatically distributed among active instances in about-equal way.
 
+## NB Superseded by production-quality component
+
+This sample has graduated to become a first class component [with it's own repo - see `azure-documentdb-changefeedprocessor-dotnet`](https://github.com/Azure/azure-documentdb-changefeedprocessor-dotnet)
+
 ## Design highlights
 For illustration, let's assume we are processign the change feed from **Monitored collection**, which is partitioned by **city**. The arrows in the preceding diagram indicate the current position (continuation) in the change feed.
 
