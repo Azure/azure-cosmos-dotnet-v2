@@ -1090,7 +1090,7 @@ namespace DocumentDB.Samples.Queries
         private static void AssertSequenceEqual(string message, List<Family> list1, List<Family> list2)
         {
             if (!string.Join(",", list1.Select(family => family.Id).ToArray()).Equals(
-                string.Join(",", list1.Select(family => family.Id).ToArray())))
+                string.Join(",", list2.Select(family => family.Id).ToArray())))
             {
                 throw new ApplicationException(message);
             }
